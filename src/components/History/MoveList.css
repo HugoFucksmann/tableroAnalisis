@@ -95,3 +95,32 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+.explore-mode-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 171, 0, 0.15);
+  border-bottom: 1px solid rgba(255, 171, 0, 0.3);
+  color: #ffb142;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.restore-main-btn {
+  background: #ffb142;
+  color: #2d3436;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.restore-main-btn:hover {
+  background: #ffc048;
+  transform: translateY(-1px);
+}

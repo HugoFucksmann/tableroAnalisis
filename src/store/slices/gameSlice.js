@@ -33,6 +33,8 @@ const ANALYSIS_RESET = {
   ecoCode: '',
   openingPly: -1,
   openingDetected: false,
+  isExploreMode: false,
+  mainLineData: null,
 };
 
 export const createGameSlice = (set, get) => ({
@@ -57,21 +59,106 @@ export const createGameSlice = (set, get) => ({
       const gameCopy = replayTo(state.history, state.currentMoveIndex);
       const result = gameCopy.move(move);
       if (!result) return null;
+      
+      const nextMove = state.history[state.currentMoveIndex + 1];
+      if (nextMove && nextMove.san === result.san) {
+        // The user manually played the EXACT same move that is next in the history.
+        // Instead of branching and deleting the rest of the game, just step forward!
+        const safeIndex = state.currentMoveIndex + 1;
+        const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
+        const currentEval = evalObj ? evalObj.score : 0;
+        set({
+          game: gameCopy,
+          fen: gameCopy.fen(),
+          currentMoveIndex: safeIndex,
+          evaluation: currentEval,
+          arrows: []
+        });
+        return result;
+      }
+      
+      // If it's a DIFFERENT move, we branch off
+      // Save the main line data if we are not already exploring
+      const isEnteringExploreMode = !state.isExploreMode;
+      const mainLineData = isEnteringExploreMode ? {
+        history: [...state.history],
+        evaluationHistory: [...state.evaluationHistory],
+        bestMoves: { ...state.bestMoves },
+        moveEvaluations: { ...state.moveEvaluations },
+        alternativeLines: { ...state.alternativeLines },
+        branchIndex: state.currentMoveIndex,
+      } : state.mainLineData;
+
       const newHistory = [
         ...state.history.slice(0, state.currentMoveIndex + 1),
         result,
       ];
+      
+      // Stop ongoing background analysis as user branches off
+      analysisQueue.cancel();
+
+      // Clean up analysis data for future moves that are now overwritten
+      const newBestMoves = { ...state.bestMoves };
+      const newMoveEvaluations = { ...state.moveEvaluations };
+      const newAlternativeLines = { ...state.alternativeLines };
+      const newEvaluationHistory = state.evaluationHistory.filter(e => e.moveIndex <= state.currentMoveIndex);
+
+      for (const key of Object.keys(newBestMoves)) {
+        if (parseInt(key) >= state.currentMoveIndex + 1) delete newBestMoves[key];
+      }
+      for (const key of Object.keys(newMoveEvaluations)) {
+        if (parseInt(key) >= state.currentMoveIndex + 1) delete newMoveEvaluations[key];
+      }
+      for (const key of Object.keys(newAlternativeLines)) {
+        if (parseInt(key) >= state.currentMoveIndex + 1) delete newAlternativeLines[key];
+      }
+
       set({
         game: gameCopy,
         fen: gameCopy.fen(),
         history: newHistory,
         currentMoveIndex: newHistory.length - 1,
         evaluation: 0,
+        bestMoves: newBestMoves,
+        moveEvaluations: newMoveEvaluations,
+        alternativeLines: newAlternativeLines,
+        evaluationHistory: newEvaluationHistory,
+        isAnalyzing: false, // Ensure analysis UI resets for the new move
+        analysisReady: true, // Hide the modal since we aborted full game analysis
+        arrows: [], // Clear any stale arrows from the previous position
+        isExploreMode: true,
+        mainLineData,
       });
       return result;
     } catch {
       return null;
     }
+  },
+
+  restoreMainLine: () => {
+    const state = get();
+    if (!state.isExploreMode || !state.mainLineData) return;
+
+    const targetIndex = state.mainLineData.branchIndex;
+    const gameCopy = replayTo(state.mainLineData.history, targetIndex);
+    const evalObj = state.mainLineData.evaluationHistory.find(e => e.moveIndex === targetIndex);
+
+    set({
+      game: gameCopy,
+      fen: gameCopy.fen(),
+      history: state.mainLineData.history,
+      currentMoveIndex: targetIndex,
+      evaluation: evalObj ? evalObj.score : 0,
+      
+      evaluationHistory: state.mainLineData.evaluationHistory,
+      bestMoves: state.mainLineData.bestMoves,
+      moveEvaluations: state.mainLineData.moveEvaluations,
+      alternativeLines: state.mainLineData.alternativeLines,
+      
+      isExploreMode: false,
+      mainLineData: null,
+      arrows: [],
+    });
   },
 
   goToMove: (index) => {
@@ -81,7 +168,7 @@ export const createGameSlice = (set, get) => ({
       const gameCopy = replayTo(state.history, safeIndex);
       const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
       const currentEval = evalObj ? evalObj.score : 0;
-      set({ game: gameCopy, fen: gameCopy.fen(), currentMoveIndex: safeIndex, evaluation: currentEval });
+      set({ game: gameCopy, fen: gameCopy.fen(), currentMoveIndex: safeIndex, evaluation: currentEval, arrows: [] });
     } catch (e) {
       console.error('goToMove error:', e);
     }
@@ -135,5 +222,5 @@ export const createGameSlice = (set, get) => ({
     }
   },
 
-  setCurrentMoveIndex: (index) => set({ currentMoveIndex: index }),
+  setCurrentMoveIndex: (index) => set({ currentMoveIndex: index, arrows: [] }),
 });

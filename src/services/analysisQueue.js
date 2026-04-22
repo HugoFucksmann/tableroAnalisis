@@ -83,7 +83,9 @@ function cpToScore(cp, mate, isBlackTurn) {
 /**
  * Clasifica un movimiento según la caída de win probability.
  */
-function classifyMove(scoreBefore, scoreAfter, isWhiteMove) {
+function classifyMove(scoreBefore, scoreAfter, isWhiteMove, isEngineBestMove) {
+    if (isEngineBestMove) return 'Mejor';
+
     let loss = isWhiteMove
         ? (scoreBefore - scoreAfter)
         : (scoreAfter - scoreBefore);
@@ -348,6 +350,8 @@ class AnalysisQueue {
                     const before = evalResults[moveIdx];
                     const after = evalResults[moveIdx + 1];
                     const isWhiteMove = !positions[moveIdx].includes(' b ');
+                    const movePlayed = history[moveIdx];
+                    const isEngineBestMove = before.bestMove === movePlayed.lan;
 
                     // Intentar obtener info de apertura si ya llegó
                     const opening = await Promise.race([
@@ -356,7 +360,7 @@ class AnalysisQueue {
                     ]);
 
                     const isBook = opening?.bookPlies.has(moveIdx) ?? false;
-                    const label = isBook ? 'Libro' : classifyMove(before.score, after.score, isWhiteMove);
+                    const label = isBook ? 'Libro' : classifyMove(before.score, after.score, isWhiteMove, isEngineBestMove);
 
                     onMoveResult?.({
                         index: moveIdx,
@@ -366,7 +370,10 @@ class AnalysisQueue {
                         lines: moveIdx === currentIndex ? after.lines : null,
                     });
 
-                    return { isWhiteMove, wpLoss: isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp), isBook };
+                    let wpLoss = isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp);
+                    if (isEngineBestMove && wpLoss > 0) wpLoss = 0;
+
+                    return { isWhiteMove, wpLoss, isBook };
                 }
                 return null;
             };
@@ -427,7 +434,12 @@ class AnalysisQueue {
                     if (before && after) {
                         const isWhiteMove = !positions[i].includes(' b ');
                         const isBook = finalOpening.bookPlies.has(i);
-                        const wpLoss = isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp);
+                        const movePlayed = history[i];
+                        const isEngineBestMove = before.bestMove === movePlayed.lan;
+                        
+                        let wpLoss = isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp);
+                        if (isEngineBestMove && wpLoss > 0) wpLoss = 0;
+                        
                         finalMoveData.push({ isWhiteMove, wpLoss, isBook });
                     }
                 }
@@ -448,8 +460,15 @@ class AnalysisQueue {
 
     async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
         const { onResult, onStatus } = callbacks;
+        
+        this.cancel(); // Cancel any previous analysis
+        this.abortController = new AbortController();
+        const { signal } = this.abortController;
+        this.isRunning = true;
+        
         try {
             await stockfishService.init();
+            if (signal.aborted) return;
             onStatus?.(true);
 
             const isBlackTurn = fen.includes(' b ');
@@ -457,7 +476,7 @@ class AnalysisQueue {
             const result = await stockfishService.analyzePosition(
                 fen,
                 DEPTH_CURRENT,
-                null,
+                signal,
                 ({ score, mate, bestMove }) => {
                     onResult?.({
                         score: cpToScore(score, mate, isBlackTurn),
@@ -467,7 +486,7 @@ class AnalysisQueue {
                 },
             );
 
-            if (result) {
+            if (result && !signal.aborted) {
                 onResult?.({
                     score: cpToScore(result.score, result.mate, isBlackTurn),
                     bestMove: result.bestMove,
@@ -478,7 +497,10 @@ class AnalysisQueue {
         } catch (e) {
             if (e.name !== 'AbortError') console.warn('analyzeCurrentPosition error:', e);
         } finally {
-            onStatus?.(false);
+            if (!signal.aborted) {
+                onStatus?.(false);
+                this.isRunning = false;
+            }
         }
     }
 

@@ -4,7 +4,7 @@ import { EVAL_CONFIG, PIECE_ICONS } from '../../constants/chessConstants.jsx';
 import './MoveList.css';
 
 export const MoveList = () => {
-  const { history, moveEvaluations, currentMoveIndex, goToMove } = useGameStore();
+  const { history, moveEvaluations, currentMoveIndex, goToMove, isExploreMode, restoreMainLine } = useGameStore();
   const scrollRef = React.useRef(null);
 
   // Auto-scroll al movimiento activo
@@ -70,6 +70,12 @@ export const MoveList = () => {
         <span>Negras</span>
       </div>
       <div className="move-list-body">
+        {isExploreMode && (
+          <div className="explore-mode-banner">
+            <span>Modo Exploración</span>
+            <button onClick={restoreMainLine} className="restore-main-btn">Volver a la partida</button>
+          </div>
+        )}
         {movePairs.map((pair) => (
           <div key={pair.round} className="move-row">
             <span className="round-num">{pair.round}.</span>

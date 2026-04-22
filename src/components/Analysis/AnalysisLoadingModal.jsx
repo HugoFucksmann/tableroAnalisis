@@ -26,10 +26,11 @@ export const AnalysisLoadingModal = () => {
         openingName,
         ecoCode,
         openingDetected,
+        gameId,
     } = useGameStore();
 
-    // No mostrar si no hay partida o si ya terminó el análisis
-    if (history.length === 0 || analysisReady) return null;
+    // No mostrar si no hay partida, si ya terminó el análisis completo, o si es juego libre (sin gameId)
+    if (history.length === 0 || analysisReady || !gameId) return null;
 
     // Fase actual basada en el progreso
     const phase = !openingDetected
