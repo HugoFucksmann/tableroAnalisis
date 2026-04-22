@@ -1,3 +1,7 @@
+/* ═══════════════════════════════════════════════════════════════
+   Dashboard — layout
+   ═══════════════════════════════════════════════════════════════ */
+
 .dashboard-container {
   height: 100vh;
   padding: 10px;
@@ -14,6 +18,8 @@
   min-height: 0;
 }
 
+/* ── Board ──────────────────────────────────────────────────── */
+
 .board-section {
   display: flex;
   gap: 15px;
@@ -25,19 +31,20 @@
 
 .eval-bar-wrapper-dashboard {
   height: 80%;
-  /* Ajustado para que coincida visualmente con el tablero */
   width: 14px;
+  flex-shrink: 0;
 }
 
 .board-wrapper {
   flex: 1;
   max-width: 80vh;
-  /* Mantener proporción cuadrada del tablero */
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
+/* ── Side panels ─────────────────────────────────────────────── */
 
 .side-panels {
   display: grid;
@@ -65,6 +72,7 @@
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
+  user-select: none;
 }
 
 .panel-header h3 {
@@ -77,10 +85,14 @@
 .collapse-toggle {
   color: var(--text-muted);
   font-weight: bold;
+  line-height: 1;
+  width: 20px;
+  text-align: center;
 }
 
-.import-panel.collapsed {
-  grid-row: span 1;
+/* Collapsed state shared by import and explorer */
+.import-panel.collapsed,
+.explorer-panel.collapsed {
   padding-bottom: 12px;
 }
 
@@ -88,13 +100,124 @@
   min-height: 300px;
 }
 
+/* ── Tablet (≤ 1100px) ──────────────────────────────────────── */
+
 @media (max-width: 1100px) {
   .dashboard-content {
     grid-template-columns: 1fr;
     overflow-y: auto;
   }
 
+  .board-section {
+    overflow: visible;
+  }
+
   .side-panels {
-    grid-template-rows: auto 400px auto;
+    /* All rows auto — no fixed 400px that overflows on small screens */
+    grid-template-rows: auto auto auto auto;
+  }
+
+  .import-panel:not(.collapsed) {
+    min-height: 260px;
+  }
+}
+
+/* ── Mobile (≤ 768px) ───────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .dashboard-container {
+    /* dvh adjusts when the mobile browser bar shows/hides */
+    height: auto;
+    min-height: 100dvh;
+    padding: 6px;
+  }
+
+  .dashboard-content {
+    gap: 6px;
+  }
+
+  /* Tighter board section */
+  .board-section {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .eval-bar-wrapper-dashboard {
+    width: 10px;
+    height: auto;
+    align-self: stretch;
+    /* match board height exactly */
+  }
+
+  .board-wrapper {
+    /* On mobile width is the constraint, not height */
+    max-width: 100%;
+  }
+
+  .side-panels {
+    gap: 6px;
+    /* Reset rows — each panel sizes to its content */
+    grid-template-rows: unset;
+  }
+
+  /* ── Mobile panel order ──────────────────────────────────── */
+  /* Controls directly under board, then moves, then explorer, then import */
+  .bottom-controls-section {
+    order: 1;
+  }
+
+  .move-history-panel {
+    order: 2;
+  }
+
+  .explorer-panel {
+    order: 3;
+  }
+
+  .import-panel {
+    order: 4;
+  }
+
+  .panel-container {
+    padding: 8px 10px;
+    gap: 6px;
+  }
+
+  .panel-header h3 {
+    font-size: 0.65rem;
+  }
+
+  /* Cap move list so it doesn't push everything off screen */
+  .move-history-panel {
+    max-height: 220px;
+  }
+
+  /* Import doesn't need the tall min-height on mobile */
+  .import-panel:not(.collapsed) {
+    min-height: unset;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+}
+
+/* ── Small phones (≤ 480px) ─────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .dashboard-container {
+    padding: 4px;
+  }
+
+  .board-section {
+    padding: 6px;
+    gap: 6px;
+    border-radius: 8px;
+  }
+
+  .eval-bar-wrapper-dashboard {
+    width: 8px;
+  }
+
+  .move-history-panel {
+    max-height: 180px;
   }
 }

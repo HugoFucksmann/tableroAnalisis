@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { EVAL_CONFIG, PIECE_ICONS } from '../../constants/chessConstants.jsx';
+import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
+import { getPieceIcon } from '../../utils/chessUtils';
 import './MoveList.css';
 
 export const MoveList = () => {
@@ -24,14 +25,14 @@ export const MoveList = () => {
   for (let i = 0; i < history.length; i += 2) {
     movePairs.push({
       round: Math.floor(i / 2) + 1,
-      white: { san: getSan(history[i]), index: i, eval: moveEvaluations[i] },
+      white: { ...history[i], san: getSan(history[i]), index: i, eval: moveEvaluations[i] },
       black: history[i + 1]
-        ? { san: getSan(history[i + 1]), index: i + 1, eval: moveEvaluations[i + 1] }
+        ? { ...history[i + 1], san: getSan(history[i + 1]), index: i + 1, eval: moveEvaluations[i + 1] }
         : null,
     });
   }
 
-  const renderMove = (move) => {
+  const renderMove = (move, side) => {
     if (!move) return null;
     const config = EVAL_CONFIG[move.eval];
 
@@ -42,13 +43,13 @@ export const MoveList = () => {
     return (
       <div
         key={move.index}
-        className={`move-item ${currentMoveIndex === move.index ? 'active' : ''}`}
+        className={`move-item ${currentMoveIndex === move.index ? 'active' : ''} ${side}`}
         title={move.eval || ''}
         onClick={() => goToMove(move.index)}
       >
         <span className="san">
-          {piece && <span className="piece-icon">{PIECE_ICONS[piece]}</span>}
-          {moveText}
+          {piece && <span className={`piece-icon ${side}`}>{getPieceIcon(piece, side)}</span>}
+          <span className="move-text">{moveText}</span>
         </span>
         {config && (
           <span
@@ -79,8 +80,8 @@ export const MoveList = () => {
         {movePairs.map((pair) => (
           <div key={pair.round} className="move-row">
             <span className="round-num">{pair.round}.</span>
-            {renderMove(pair.white)}
-            {renderMove(pair.black)}
+            {renderMove(pair.white, 'white')}
+            {renderMove(pair.black, 'black')}
           </div>
         ))}
         {history.length === 0 && (

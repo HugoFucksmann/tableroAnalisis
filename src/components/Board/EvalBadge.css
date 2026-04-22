@@ -1,0 +1,45 @@
+/* ── EvalBadgeOverlay ────────────────────────────────────────────────── */
+
+.eval-badge-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.eval-badge {
+    position: absolute;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    font-weight: 900;
+    color: #fff;
+    font-family: 'Courier New', monospace;
+
+    /* Depth */
+    box-shadow:
+        0 2px 8px rgba(0, 0, 0, 0.7),
+        0 0 0 2px rgba(255, 255, 255, 0.2),
+        inset 0 1px 0 rgba(255, 255, 255, 0.25);
+
+    /* Entry animation */
+    animation: badge-enter 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    transform-origin: center;
+
+    /* Subtle shimmer ring on appear */
+    will-change: transform, opacity;
+}
+
+@keyframes badge-enter {
+    from {
+        transform: scale(0) rotate(-20deg);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}

@@ -1,0 +1,179 @@
+/* ═══════════════════════════════════════════════════════════════
+   PlayerArea — premium player strip
+   ═══════════════════════════════════════════════════════════════ */
+
+.player-area {
+    width: 100%;
+    height: 52px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    background: var(--bg-tertiary);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-left: 3px solid transparent;
+    transition:
+        background 0.35s ease,
+        border-left-color 0.35s ease,
+        box-shadow 0.35s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle shimmer that slides in when active */
+.player-area::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(78, 154, 241, 0.07) 0%, transparent 65%);
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    pointer-events: none;
+}
+
+/* ── Active state ──────────────────────────────────────────── */
+
+.player-area.active {
+    box-shadow: 0 2px 18px rgba(0, 0, 0, 0.35);
+}
+
+.player-area.active::before {
+    opacity: 1;
+}
+
+.player-area.white.active {
+    border-left-color: #dfe6e9;
+    background: linear-gradient(100deg, rgba(223, 230, 233, 0.06) 0%, var(--bg-tertiary) 55%);
+}
+
+.player-area.black.active {
+    border-left-color: #636e72;
+    background: linear-gradient(100deg, rgba(99, 110, 114, 0.09) 0%, var(--bg-tertiary) 55%);
+}
+
+/* ── Identity (left side) ─────────────────────────────────── */
+
+.player-identity {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex: 1;
+    min-width: 0;
+}
+
+.player-avatar {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #252837, #16181f);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.72rem;
+    font-weight: 800;
+    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    font-family: 'Courier New', monospace;
+    user-select: none;
+}
+
+.player-name {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.15px;
+}
+
+/* ── Right side: pieces + clock ──────────────────────────── */
+
+.player-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* ── Captured pieces ─────────────────────────────────────── */
+
+.captured-pieces {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    max-width: 96px;
+}
+
+.captured-piece {
+    font-size: 1rem;
+    line-height: 1;
+    transition: transform 0.15s ease;
+}
+
+.captured-piece:hover {
+    transform: translateY(-2px) scale(1.15);
+}
+
+.captured-piece.white {
+    color: #e0e6ed;
+}
+
+/* Mid-tone gray: legible on dark bg (#1f222d) without any glow */
+.captured-piece.black {
+    color: #7a8899;
+}
+
+/* ── Material diff badge ─────────────────────────────────── */
+
+.material-diff {
+    font-size: 0.7rem;
+    font-weight: 800;
+    background: rgba(255, 255, 255, 0.07);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    padding: 2px 5px;
+    border-radius: 4px;
+    color: var(--text-secondary);
+    letter-spacing: 0.4px;
+}
+
+/* ── Clock ───────────────────────────────────────────────── */
+
+.clock-time {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 1.15rem;
+    font-weight: 900;
+    color: var(--text-muted);
+    min-width: 56px;
+    text-align: right;
+    letter-spacing: 1px;
+    transition: color 0.3s ease;
+}
+
+.clock-time.ticking {
+    color: var(--accent-primary);
+}
+
+/* Blinking colon only when clock is running */
+.clock-colon {
+    display: inline-block;
+}
+
+.clock-time.ticking .clock-colon {
+    animation: colon-blink 1s step-end infinite;
+}
+
+@keyframes colon-blink {
+
+    0%,
+    100% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0;
+    }
+}

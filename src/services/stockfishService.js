@@ -22,10 +22,14 @@ function getOptimalThreads() {
 class StockfishService {
     constructor() {
         this.worker = null;
-        this.ready = false;
         this.resolvers = [];
         this._initPromise = null;
         this._threads = getOptimalThreads();
+        
+        // Concurrency queue
+        this.isSearching = false;
+        this._idlePromise = Promise.resolve();
+        this._resolveIdle = null;
     }
 
     init() {
@@ -64,6 +68,12 @@ class StockfishService {
                 console.error('Stockfish worker error:', e);
                 this.ready = false;
                 this._initPromise = null;
+                this.resolvers = [];
+                if (this._resolveIdle) {
+                    this._resolveIdle();
+                    this._resolveIdle = null;
+                }
+                this.isSearching = false;
                 reject(e);
             };
 
@@ -84,30 +94,49 @@ class StockfishService {
      *   lines:    Array<{ multipv, score, mate, pv, move }>
      * }>}
      */
-    analyzePosition(fen, depth, signal, onProgress, multiPv = MULTIPV_COUNT) {
+    async analyzePosition(fen, depth, signal, onProgress, multiPv = MULTIPV_COUNT) {
+        // Guarantee we don't interleave commands before the engine is fully idle
+        await this._idlePromise;
+
         return new Promise((resolve, reject) => {
             if (!this.ready) {
                 reject(new Error('Stockfish no está listo'));
                 return;
             }
+            
+            let isIdleResolved = false;
+            
+            const setIdle = () => {
+                if (!isIdleResolved) {
+                    isIdleResolved = true;
+                    this.isSearching = false;
+                    if (this._resolveIdle) {
+                        this._resolveIdle();
+                        this._resolveIdle = null;
+                    }
+                }
+            };
+
             if (signal?.aborted) {
+                setIdle();
                 reject(new DOMException('Aborted', 'AbortError'));
                 return;
             }
 
+            this.isSearching = true;
+            this._idlePromise = new Promise(r => { this._resolveIdle = r; });
+
             const lines = {};
             let lastBestMove = '';
 
-            const cleanup = () => {
-                this.resolvers.shift();
-                signal?.removeEventListener('abort', onAbort);
-            };
-
             const onAbort = () => {
                 this.worker.postMessage('stop');
-                cleanup();
+                // We DO NOT call setIdle() or remove the messageHandler here.
+                // We MUST wait for the engine to output 'bestmove' so it truly stops.
+                signal?.removeEventListener('abort', onAbort);
                 reject(new DOMException('Aborted', 'AbortError'));
             };
+            
             signal?.addEventListener('abort', onAbort);
 
             const messageHandler = (line) => {
@@ -139,7 +168,11 @@ class StockfishService {
                     if (!lines[1]) lines[1] = { multipv: 1, score: 0, mate: null, pv: '', move: lastBestMove };
                     if (!lines[1].move) lines[1].move = lastBestMove;
 
-                    cleanup();
+                    // Analysis is officially complete, remove handler and free queue
+                    this.resolvers.shift();
+                    signal?.removeEventListener('abort', onAbort);
+                    setIdle();
+
                     resolve({
                         score: lines[1].score,
                         mate: lines[1].mate ?? null,
@@ -176,6 +209,12 @@ class StockfishService {
         this.ready = false;
         this._initPromise = null;
         this.resolvers = [];
+        this.isSearching = false;
+        if (this._resolveIdle) {
+            this._resolveIdle();
+            this._resolveIdle = null;
+        }
+        this._idlePromise = Promise.resolve();
     }
 }
 

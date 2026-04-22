@@ -24,7 +24,12 @@ export const EVAL_CONFIG = {
 };
 
 export const PIECE_ICONS = {
-  N: '♘', B: '♗', R: '♖', Q: '♕', K: '♔',
+  P: { white: '♙', black: '♟' },
+  N: { white: '♘', black: '♞' },
+  B: { white: '♗', black: '♝' },
+  R: { white: '♖', black: '♜' },
+  Q: { white: '♕', black: '♛' },
+  K: { white: '♔', black: '♚' },
 };
 
 // Usados por OpeningExplorer para display (ya no para escribir evaluaciones)

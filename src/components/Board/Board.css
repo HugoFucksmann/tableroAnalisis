@@ -1,90 +1,35 @@
+/* ── Board layout ────────────────────────────────────────────────────────
+   Only board-level concerns live here.
+   Player-area styles → PlayerArea.css
+   Eval-badge styles  → EvalBadge.css
+   ──────────────────────────────────────────────────────────────────────── */
+
 .board-container {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   align-items: center;
 }
 
+/* ── Outer frame gives the board a sunken, inlaid look ─────────────── */
+.board-frame {
+  width: 100%;
+  padding: 4px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.25));
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.6),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
 
+/* ── Board surface ──────────────────────────────────────────────────── */
 .board-main-area {
   width: 100%;
   aspect-ratio: 1 / 1;
   background: var(--bg-secondary);
-  border-radius: 4px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
   overflow: hidden;
   position: relative;
-}
-
-.clock-display {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 8px 15px;
-  background: var(--bg-tertiary);
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-}
-
-.clock-label {
-  font-size: 0.7rem;
-  font-weight: bold;
-  letter-spacing: 1px;
-  color: var(--text-muted);
-}
-
-.clock-time {
-  font-family: 'Courier New', Courier, monospace;
-  font-size: 1.1rem;
-  font-weight: bold;
-  color: var(--text-primary);
-}
-
-.clock-display.white {
-  border-left: 4px solid var(--eval-white);
-}
-
-.clock-display.black {
-  border-left: 4px solid var(--eval-black);
-}
-
-/* ── Eval badge overlay ─────────────────────────────────────────── */
-
-.eval-badge-overlay {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 10;
-}
-
-.eval-badge {
-  position: absolute;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.95rem;
-  font-weight: 900;
-  color: #fff;
-  font-family: 'Inter', sans-serif;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
-  border: 2.5px solid rgba(255, 255, 255, 0.35);
-  animation: badge-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
-  transform-origin: center;
-}
-
-@keyframes badge-pop {
-  from {
-    transform: scale(0);
-    opacity: 0;
-  }
-
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
