@@ -1,0 +1,48 @@
+.evaluation-graph-container {
+  height: 80px;
+  width: 100%;
+  background: var(--bg-tertiary);
+  margin-bottom: 10px;
+  overflow: hidden;
+  padding: 0 !important;
+}
+
+.graph-placeholder {
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.baseline {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-width: 1;
+}
+
+.eval-line {
+  fill: none;
+  stroke: var(--accent-primary);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.eval-dot {
+  fill: var(--accent-primary);
+  stroke: var(--bg-tertiary);
+  stroke-width: 1;
+}
+
+.eval-dot.active {
+  fill: var(--warning);
+  r: 4;
+}
+
+.current-marker {
+  stroke: var(--warning);
+  stroke-width: 2;
+  stroke-dasharray: 2;
+  opacity: 0.6;
+}

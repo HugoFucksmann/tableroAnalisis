@@ -1,0 +1,41 @@
+.eval-bar-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.eval-bar-container {
+  width: 12px;
+  background: var(--eval-white);
+  border-radius: 6px;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.eval-bar-fill {
+  width: 100%;
+  background: var(--eval-black);
+  position: absolute;
+  top: 0;
+}
+
+.eval-marker.center {
+  position: absolute;
+  top: 50%;
+  width: 100%;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.eval-value-display {
+  font-family: 'Monaco', monospace;
+  font-weight: bold;
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  background: var(--bg-tertiary);
+  border-radius: 4px;
+}

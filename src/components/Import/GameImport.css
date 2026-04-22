@@ -1,0 +1,117 @@
+.game-import-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.platform-switch {
+  display: flex;
+  gap: 4px;
+  background: var(--bg-tertiary);
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.switch-btn {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 6px 0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.switch-btn.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.search-icon {
+  color: var(--text-muted);
+  margin-right: 10px;
+}
+
+.search-bar input {
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
+  width: 100%;
+  outline: none;
+  font-size: 0.9rem;
+}
+
+.mock-games-list h4 {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.game-card {
+  background: var(--bg-tertiary);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid transparent;
+}
+
+.game-card:hover {
+  background: var(--bg-secondary);
+  border-color: var(--accent-primary);
+  transform: translateX(5px);
+}
+
+.players {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 4px;
+}
+
+.vs {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.game-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.result {
+  color: var(--warning);
+  font-weight: bold;
+}
+
+.load-icon {
+  color: var(--text-muted);
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.game-card:hover .load-icon {
+  opacity: 1;
+}

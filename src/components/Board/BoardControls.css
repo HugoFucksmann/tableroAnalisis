@@ -1,0 +1,50 @@
+.board-controls-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+.navigation-group, .utility-group {
+  display: flex;
+  gap: 6px;
+}
+
+.control-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  padding: 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.control-btn:hover:not(:disabled) {
+  background: var(--accent-primary);
+  color: white;
+  transform: translateY(-1px);
+}
+
+.control-btn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.control-btn.secondary:hover {
+  background: var(--text-muted);
+}
+
+.control-btn.danger:hover {
+  background: var(--danger);
+}
+
+.control-btn:active {
+  transform: translateY(0);
+}
