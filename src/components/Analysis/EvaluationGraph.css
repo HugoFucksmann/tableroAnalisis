@@ -1,10 +1,7 @@
 .evaluation-graph-container {
-  height: 80px;
-  width: 100%;
-  background: var(--bg-tertiary);
-  margin-bottom: 10px;
-  overflow: hidden;
-  padding: 0 !important;
+  padding: 8px 10px 6px;
+  border-radius: var(--border-radius);
+  background: var(--bg-secondary);
 }
 
 .graph-placeholder {
@@ -12,37 +9,127 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.graph-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.graph-title {
+  font-size: 0.7rem;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   color: var(--text-muted);
 }
 
+.graph-current-eval {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: monospace;
+}
+
+.graph-current-eval.positive {
+  color: #f1f1f1;
+}
+
+.graph-current-eval.negative {
+  color: var(--text-muted);
+}
+
+/* Punto parpadeante que indica análisis en curso */
+.graph-analyzing-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  margin-left: auto;
+  animation: pulse-dot 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.4;
+    transform: scale(0.7);
+  }
+}
+
+/* SVG */
+.graph-svg {
+  cursor: crosshair;
+  display: block;
+  width: 100%;
+}
+
 .baseline {
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: rgba(255, 255, 255, 0.15);
   stroke-width: 1;
+  stroke-dasharray: 3 3;
 }
 
 .eval-line {
   fill: none;
-  stroke: var(--accent-primary);
-  stroke-width: 2;
+  stroke: rgba(255, 255, 255, 0.7);
+  stroke-width: 1.5;
   stroke-linejoin: round;
   stroke-linecap: round;
 }
 
+.current-marker {
+  stroke: var(--accent-primary);
+  stroke-width: 1.5;
+  opacity: 0.9;
+}
+
 .eval-dot {
   fill: var(--accent-primary);
-  stroke: var(--bg-tertiary);
-  stroke-width: 1;
+  stroke: var(--bg-secondary);
+  stroke-width: 1.5;
 }
 
-.eval-dot.active {
-  fill: var(--warning);
-  r: 4;
+/* Fila de precisión */
+.accuracy-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.current-marker {
-  stroke: var(--warning);
-  stroke-width: 2;
-  stroke-dasharray: 2;
-  opacity: 0.6;
+.accuracy-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.chip-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
+.accuracy-label-center {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }

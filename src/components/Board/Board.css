@@ -40,8 +40,9 @@
   aspect-ratio: 1 / 1;
   background: var(--bg-secondary);
   border-radius: 4px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   overflow: hidden;
+  position: relative;
 }
 
 .clock-display {
@@ -75,4 +76,43 @@
 
 .clock-display.black {
   border-left: 4px solid var(--eval-black);
+}
+
+/* ── Eval badge overlay ─────────────────────────────────────────── */
+
+.eval-badge-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.eval-badge {
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.6);
+  border: 2.5px solid rgba(255, 255, 255, 0.35);
+  animation: badge-pop 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  transform-origin: center;
+}
+
+@keyframes badge-pop {
+  from {
+    transform: scale(0);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }

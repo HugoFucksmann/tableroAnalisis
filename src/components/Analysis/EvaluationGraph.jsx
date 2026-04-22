@@ -2,59 +2,159 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import './EvaluationGraph.css';
 
+const WIDTH = 400;
+const HEIGHT = 80;
+const PADDING = 6;
+
+function clampScore(s) {
+  return Math.max(-5, Math.min(5, s ?? 0));
+}
+
+function getY(score) {
+  return HEIGHT - ((clampScore(score) + 5) / 10) * (HEIGHT - 2 * PADDING) - PADDING;
+}
+
+function getX(index, total) {
+  if (total <= 1) return PADDING;
+  return (index / (total - 1)) * (WIDTH - 2 * PADDING) + PADDING;
+}
+
 export const EvaluationGraph = () => {
-  const { evaluationHistory, currentMoveIndex, history } = useGameStore();
+  const { evaluationHistory, currentMoveIndex, history, goToMove, gameScore, isAnalyzing } =
+    useGameStore();
 
-  const totalMoves = Math.max(history.length, evaluationHistory.length);
-  if (totalMoves === 0) return <div className="graph-placeholder">Esperando análisis...</div>;
+  const total = history.length;
 
-  const width = 300;
-  const height = 80;
-  const padding = 5;
-  
-  const getY = (score) => {
-    const clamped = Math.max(-5, Math.min(5, score));
-    return height - ((clamped + 5) / 10 * (height - 2 * padding) + padding);
+  // Ordenar por moveIndex para que el path sea correcto
+  const sorted = [...evaluationHistory].sort((a, b) => a.moveIndex - b.moveIndex);
+
+  // Click en el SVG → navegar al movimiento correspondiente
+  const handleSvgClick = (e) => {
+    if (total <= 1) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const xRatio = (e.clientX - rect.left) / rect.width;
+    const index = Math.round(xRatio * (total - 1));
+    goToMove(Math.max(0, Math.min(total - 1, index)));
   };
 
-  const getX = (index) => {
-    if (totalMoves <= 1) return padding;
-    return (index / (totalMoves - 1)) * (width - 2 * padding) + padding;
-  };
+  if (total === 0) {
+    return (
+      <div className="evaluation-graph-container glass-panel">
+        <div className="graph-placeholder">
+          {isAnalyzing ? 'Analizando partida...' : 'Cargá una partida para ver el gráfico'}
+        </div>
+      </div>
+    );
+  }
 
-  const points = evaluationHistory.map((d) => `${getX(d.moveIndex)},${getY(d.score)}`).join(' ');
+  // Construir path del área rellena
+  const midY = getY(0);
+
+  const linePoints = sorted.map(d => `${getX(d.moveIndex, total)},${getY(d.score)}`);
+
+  // Area path: línea de evaluación + cierre hacia la baseline
+  let areaPath = '';
+  if (sorted.length > 0) {
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    areaPath = [
+      `M ${getX(first.moveIndex, total)} ${midY}`,
+      ...sorted.map(d => `L ${getX(d.moveIndex, total)} ${getY(d.score)}`),
+      `L ${getX(last.moveIndex, total)} ${midY}`,
+      'Z',
+    ].join(' ');
+  }
+
+  const currentEval = evaluationHistory.find(e => e.moveIndex === currentMoveIndex);
 
   return (
     <div className="evaluation-graph-container glass-panel">
-      <svg width="100%" height={height} viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none">
-        {/* Baseline */}
-        <line x1="0" y1={height/2} x2={width} y2={height/2} className="baseline" />
-        
-        {/* Evaluation Line */}
-        <polyline points={points} className="eval-line" />
-        
-        {/* Data Points */}
-        {evaluationHistory.map((d, i) => (
-          <circle 
-            key={i} 
-            cx={getX(d.moveIndex)} 
-            cy={getY(d.score)} 
-            r="2" 
-            className={`eval-dot ${d.moveIndex === currentMoveIndex ? 'active' : ''}`} 
-          />
-        ))}
-        
-        {/* Current Move Marker */}
+      <div className="graph-header">
+        <span className="graph-title">Evaluación</span>
+        {currentEval && (
+          <span className={`graph-current-eval ${currentEval.score >= 0 ? 'positive' : 'negative'}`}>
+            {currentEval.score >= 0 ? '+' : ''}{currentEval.score.toFixed(2)}
+          </span>
+        )}
+        {isAnalyzing && <span className="graph-analyzing-dot" title="Analizando..." />}
+      </div>
+
+      <svg
+        width="100%"
+        height={HEIGHT}
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        preserveAspectRatio="none"
+        className="graph-svg"
+        onClick={handleSvgClick}
+      >
+        <defs>
+          <linearGradient id="evalGradientWhite" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#f1f1f1" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="#f1f1f1" stopOpacity="0.05" />
+          </linearGradient>
+          <linearGradient id="evalGradientBlack" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor="#2d3436" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#2d3436" stopOpacity="0.05" />
+          </linearGradient>
+          {/* Clip superior (ventaja blancas) */}
+          <clipPath id="clipAbove">
+            <rect x="0" y="0" width={WIDTH} height={midY} />
+          </clipPath>
+          {/* Clip inferior (ventaja negras) */}
+          <clipPath id="clipBelow">
+            <rect x="0" y={midY} width={WIDTH} height={HEIGHT - midY} />
+          </clipPath>
+        </defs>
+
+        {/* Área ventaja blancas */}
+        <path d={areaPath} fill="url(#evalGradientWhite)" clipPath="url(#clipAbove)" />
+        {/* Área ventaja negras */}
+        <path d={areaPath} fill="url(#evalGradientBlack)" clipPath="url(#clipBelow)" />
+
+        {/* Baseline (0.0) */}
+        <line x1={PADDING} y1={midY} x2={WIDTH - PADDING} y2={midY} className="baseline" />
+
+        {/* Línea de evaluación */}
+        {sorted.length > 1 && (
+          <polyline points={linePoints.join(' ')} className="eval-line" />
+        )}
+
+        {/* Marcador del movimiento actual */}
         {currentMoveIndex >= 0 && (
-          <line 
-            x1={getX(currentMoveIndex)} 
-            y1="0" 
-            x2={getX(currentMoveIndex)} 
-            y2={height} 
-            className="current-marker" 
+          <line
+            x1={getX(currentMoveIndex, total)}
+            y1={PADDING}
+            x2={getX(currentMoveIndex, total)}
+            y2={HEIGHT - PADDING}
+            className="current-marker"
+          />
+        )}
+
+        {/* Punto activo */}
+        {currentEval && (
+          <circle
+            cx={getX(currentEval.moveIndex, total)}
+            cy={getY(currentEval.score)}
+            r="3.5"
+            className="eval-dot active"
           />
         )}
       </svg>
+
+      {/* Precisión final */}
+      {gameScore && !isAnalyzing && (
+        <div className="accuracy-row">
+          <div className="accuracy-chip white">
+            <span className="chip-color-dot" style={{ background: '#f1f1f1' }} />
+            <span>{gameScore.white}%</span>
+          </div>
+          <span className="accuracy-label-center">precisión</span>
+          <div className="accuracy-chip black">
+            <span>{gameScore.black}%</span>
+            <span className="chip-color-dot" style={{ background: '#333' }} />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
