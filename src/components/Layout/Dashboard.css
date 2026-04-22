@@ -24,13 +24,15 @@
 }
 
 .eval-bar-wrapper-dashboard {
-  height: 80%; /* Ajustado para que coincida visualmente con el tablero */
+  height: 80%;
+  /* Ajustado para que coincida visualmente con el tablero */
   width: 14px;
 }
 
 .board-wrapper {
   flex: 1;
-  max-width: 80vh; /* Mantener proporción cuadrada del tablero */
+  max-width: 80vh;
+  /* Mantener proporción cuadrada del tablero */
   aspect-ratio: 1 / 1;
   display: flex;
   align-items: center;
@@ -123,7 +125,7 @@
     grid-template-columns: 1fr;
     overflow-y: auto;
   }
-  
+
   .side-panels {
     grid-template-rows: auto 400px auto;
   }

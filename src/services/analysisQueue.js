@@ -7,80 +7,48 @@
  *      actual hacia afuera (primero las cercanas, luego las lejanas)
  *   3. Notifica al store con cada resultado parcial para actualización en tiempo real
  *
- * Usa AbortController para cancelar cualquier análisis en curso cuando
- * se carga una nueva partida.
+ * bestMoves se indexan por el moveIndex de la posición que MUESTRA el tablero:
+ *   - currentMoveIndex = -1  → posición inicial → bestMoves[-1]
+ *   - currentMoveIndex =  N  → posición tras el movimiento N → bestMoves[N]
  */
 
 import { Chess } from 'chess.js';
 import { stockfishService, DEPTH_CURRENT, DEPTH_BACKGROUND } from './stockfishService';
 
-/**
- * Convierte centipawns a un score normalizado en el rango [-10, +10]
- * siempre desde la perspectiva de las blancas.
- *
- * @param {number} cp        centipawns (perspectiva del jugador que mueve)
- * @param {number|null} mate número de movimientos hasta mate (null si no hay)
- * @param {boolean} isBlackTurn si es true, invertimos el signo
- * @returns {number}
- */
 function cpToScore(cp, mate, isBlackTurn) {
     if (mate !== null) {
-        // Mate: máximo valor, signo según quién da el mate
         const sign = mate > 0 ? 1 : -1;
         return isBlackTurn ? -sign * 10 : sign * 10;
     }
-    // Convertir a pawns y limitar a ±10
     const pawns = cp / 100;
     const normalized = Math.max(-10, Math.min(10, pawns));
     return isBlackTurn ? -normalized : normalized;
 }
 
-/**
- * Clasifica la calidad de un movimiento comparando la evaluación
- * antes y después del movimiento (siempre desde perspectiva de blancas).
- *
- * @param {number} scoreBefore  score ANTES del movimiento (perspectiva blancas)
- * @param {number} scoreAfter   score DESPUÉS del movimiento (perspectiva blancas)
- * @param {boolean} isWhiteMove si es true, blancas hicieron el movimiento
- * @returns {string} etiqueta de evaluación
- */
 function classifyMove(scoreBefore, scoreAfter, isWhiteMove) {
-    // La pérdida siempre es negativa para quien mueve
     const loss = isWhiteMove
-        ? scoreBefore - scoreAfter   // blancas quieren score alto
-        : scoreAfter - scoreBefore;  // negras quieren score bajo
+        ? scoreBefore - scoreAfter
+        : scoreAfter - scoreBefore;
 
-    if (loss <= -3.0) return 'Brillante';   // ganó mucho terreno
-    if (loss <= -0.5) return 'Mejor';       // mejoró la posición
-    if (loss <= 0.1) return 'Excelente';   // prácticamente igual
+    if (loss <= -3.0) return 'Brillante';
+    if (loss <= -0.5) return 'Mejor';
+    if (loss <= 0.1) return 'Excelente';
     if (loss <= 0.3) return 'Bueno';
     if (loss <= 0.6) return 'Imprecisión';
     if (loss <= 1.5) return 'Error';
     return 'Error grave';
 }
 
-/**
- * Calcula la precisión total de la partida (0–100) estilo Chess.com.
- * Usa la suma de pérdidas por movimiento normalizada.
- */
 function calculateAccuracy(moveEvals) {
     if (moveEvals.length === 0) return { white: 100, black: 100 };
-
     const whiteLosses = moveEvals.filter((_, i) => i % 2 === 0).map(e => Math.max(0, e.loss));
     const blackLosses = moveEvals.filter((_, i) => i % 2 === 1).map(e => Math.max(0, e.loss));
-
-    const avgLoss = (losses) => {
-        if (losses.length === 0) return 0;
-        return losses.reduce((a, b) => a + b, 0) / losses.length;
-    };
-
-    // Fórmula: accuracy = 103.1668 * e^(-0.04354 * avgLoss_in_centipawns) - 3.1669
-    // Adaptada de la fórmula pública de Chess.com
+    const avgLoss = (losses) =>
+        losses.length === 0 ? 0 : losses.reduce((a, b) => a + b, 0) / losses.length;
     const formula = (avgLossCp) => {
         const result = 103.1668 * Math.exp(-0.04354 * avgLossCp) - 3.1669;
         return Math.max(0, Math.min(100, result));
     };
-
     return {
         white: Math.round(formula(avgLoss(whiteLosses) * 100)),
         black: Math.round(formula(avgLoss(blackLosses) * 100)),
@@ -93,9 +61,6 @@ class AnalysisQueue {
         this.isRunning = false;
     }
 
-    /**
-     * Cancela cualquier análisis en curso.
-     */
     cancel() {
         if (this.abortController) {
             this.abortController.abort();
@@ -108,14 +73,12 @@ class AnalysisQueue {
     /**
      * Analiza una partida completa.
      *
-     * @param {object[]} history     historial verbose del store (objetos con .from .to .san)
-     * @param {number} currentIndex  índice del movimiento actualmente visible
-     * @param {object} storeActions  { setMoveEvaluation, setEvaluation, setAnalyzing,
-     *                                 setGameScore, setAnalysisProgress, setBestMove }
+     * @param {object[]} history     historial verbose del store
+     * @param {number}   currentIndex  índice del movimiento actualmente visible
+     * @param {object}   storeActions  acciones del store
      */
     async analyzeGame(history, currentIndex, storeActions) {
-        this.cancel(); // Cancelar análisis anterior si existe
-
+        this.cancel();
         if (history.length === 0) return;
 
         this.abortController = new AbortController();
@@ -128,7 +91,7 @@ class AnalysisQueue {
             setAnalyzing,
             setGameScore,
             setAnalysisProgress,
-            setBestMove,
+            setBestMoveForIndex,  // ← nuevo (reemplaza setBestMove)
         } = storeActions;
 
         try {
@@ -142,50 +105,62 @@ class AnalysisQueue {
         setAnalyzing(true);
         setAnalysisProgress(0);
 
-        // Construir lista de FENs para cada posición (posición ANTES de cada movimiento)
-        // + posición final
         const positions = buildPositions(history);
-        const totalPositions = positions.length; // history.length posiciones a analizar
+        const totalPositions = positions.length;
 
-        // Orden de análisis: primero el movimiento actual, luego el resto por distancia
         const analysisOrder = buildAnalysisOrder(history.length, currentIndex);
 
-        const scores = new Array(totalPositions).fill(null); // score en cada posición
-        const moveData = []; // { index, loss } para calcular precisión al final
+        // scores[i]    = evaluación numérica de positions[i] (perspectiva blancas)
+        // bestMoveCache[i] = mejor movimiento UCI en positions[i]
+        const scores = new Array(totalPositions).fill(null);
+        const bestMoveCache = new Array(totalPositions).fill(null);
 
+        const moveData = [];
         let completed = 0;
 
         for (const moveIndex of analysisOrder) {
             if (signal.aborted) break;
 
-            // Posición ANTES del movimiento (para comparar con después)
             const fenBefore = positions[moveIndex];
             const fenAfter = positions[moveIndex + 1];
             if (!fenBefore || !fenAfter) continue;
 
             const isBlackTurn = fenBefore.includes(' b ');
             const isWhiteMove = !isBlackTurn;
+            const depth = moveIndex === currentIndex ? DEPTH_CURRENT : DEPTH_BACKGROUND;
 
             try {
-                // Analizar posición antes del movimiento
-                const depth = moveIndex === currentIndex ? DEPTH_CURRENT : DEPTH_BACKGROUND;
-
-                let resultBefore = null;
+                // ── Analizar posición ANTES del movimiento ──────────────────
                 if (scores[moveIndex] === null) {
-                    resultBefore = await stockfishService.analyzePosition(fenBefore, depth, signal);
+                    const result = await stockfishService.analyzePosition(fenBefore, depth, signal);
                     if (signal.aborted) break;
-                    scores[moveIndex] = cpToScore(resultBefore.score, resultBefore.mate, isBlackTurn);
+                    scores[moveIndex] = cpToScore(result.score, result.mate, isBlackTurn);
+                    bestMoveCache[moveIndex] = result.bestMove;
+
+                    // positions[0] = posición inicial → bestMoves[-1]
+                    if (moveIndex === 0) {
+                        setBestMoveForIndex(-1, result.bestMove);
+                    }
                 }
 
-                // Analizar posición después del movimiento
-                let resultAfter = null;
+                // ── Analizar posición DESPUÉS del movimiento ────────────────
                 if (scores[moveIndex + 1] === null) {
                     const isNextBlack = fenAfter.includes(' b ');
-                    resultAfter = await stockfishService.analyzePosition(fenAfter, depth, signal);
+                    const result = await stockfishService.analyzePosition(fenAfter, depth, signal);
                     if (signal.aborted) break;
-                    scores[moveIndex + 1] = cpToScore(resultAfter.score, resultAfter.mate, isNextBlack);
+                    scores[moveIndex + 1] = cpToScore(result.score, result.mate, isNextBlack);
+                    bestMoveCache[moveIndex + 1] = result.bestMove;
                 }
 
+                // ── Guardar mejor jugada para la posición visible ───────────
+                // Cuando currentMoveIndex = moveIndex, el tablero muestra
+                // positions[moveIndex + 1] → su mejor jugada es bestMoveCache[moveIndex + 1]
+                const bestMoveForThisPos = bestMoveCache[moveIndex + 1];
+                if (bestMoveForThisPos) {
+                    setBestMoveForIndex(moveIndex, bestMoveForThisPos);
+                }
+
+                // ── Clasificar el movimiento ────────────────────────────────
                 const scoreBefore = scores[moveIndex];
                 const scoreAfter = scores[moveIndex + 1];
                 const evalLabel = classifyMove(scoreBefore, scoreAfter, isWhiteMove);
@@ -195,14 +170,8 @@ class AnalysisQueue {
 
                 moveData.push({ index: moveIndex, loss });
 
-                // Actualizar store en tiempo real
                 setMoveEvaluation(moveIndex, evalLabel);
                 setEvaluation(scoreAfter, moveIndex);
-
-                // Si es el movimiento actual, actualizar también bestMove y barra de evaluación
-                if (moveIndex === currentIndex && resultBefore) {
-                    setBestMove(resultBefore.bestMove);
-                }
 
                 completed++;
                 setAnalysisProgress(Math.round((completed / history.length) * 100));
@@ -214,7 +183,6 @@ class AnalysisQueue {
         }
 
         if (!signal.aborted) {
-            // Calcular y guardar precisión total
             const accuracy = calculateAccuracy(moveData);
             setGameScore(accuracy);
             setAnalyzing(false);
@@ -223,40 +191,70 @@ class AnalysisQueue {
 
         this.isRunning = false;
     }
+
+    /**
+     * Análisis rápido on-demand de una posición FEN concreta.
+     * Usado por el botón "Mejor Jugada" en BoardControls.
+     *
+     * @param {string} fen
+     * @param {number} moveIndex  índice que se mostrará (para indexar en bestMoves)
+     * @param {object} storeActions
+     */
+    async analyzeCurrentPosition(fen, moveIndex, storeActions) {
+        const { setBestMoveForIndex, setAnalyzing, setEvaluation } = storeActions;
+
+        try {
+            await stockfishService.init();
+            setAnalyzing(true);
+            
+            const isBlackTurn = fen.includes(' b ');
+            
+            const onProgress = ({ score, mate, bestMove }) => {
+                if (setEvaluation) {
+                    setEvaluation(cpToScore(score, mate, isBlackTurn), moveIndex);
+                }
+                if (bestMove) {
+                    setBestMoveForIndex(moveIndex, bestMove);
+                }
+            };
+
+            const result = await stockfishService.analyzePosition(fen, DEPTH_CURRENT, null, onProgress);
+            
+            if (result) {
+                if (setEvaluation) {
+                    setEvaluation(cpToScore(result.score, result.mate, isBlackTurn), moveIndex);
+                }
+                if (result.bestMove) {
+                    setBestMoveForIndex(moveIndex, result.bestMove);
+                }
+            }
+        } catch (e) {
+            console.warn('analyzeCurrentPosition error:', e);
+        } finally {
+            setAnalyzing(false);
+        }
+    }
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-/**
- * Construye un array de FENs con una entrada por posición:
- * [posición inicial, después del mov 0, después del mov 1, ...]
- */
 function buildPositions(history) {
     const positions = [];
     const game = new Chess();
-    positions.push(game.fen()); // posición inicial
-
+    positions.push(game.fen());
     for (const move of history) {
         game.move(move);
         positions.push(game.fen());
     }
-
     return positions;
 }
 
-/**
- * Devuelve los índices de movimientos ordenados para análisis:
- * primero el currentIndex, luego los demás por distancia creciente.
- */
 function buildAnalysisOrder(totalMoves, currentIndex) {
     const indices = Array.from({ length: totalMoves }, (_, i) => i);
-    indices.sort((a, b) => {
-        const da = Math.abs(a - currentIndex);
-        const db = Math.abs(b - currentIndex);
-        return da - db;
-    });
-    return indices;
+    // Priorizamos el movimiento actual para feedback inmediato, 
+    // y luego analizamos el resto en orden secuencial (del inicio al fin)
+    const others = indices.filter(i => i !== currentIndex);
+    return currentIndex >= 0 ? [currentIndex, ...others] : others;
 }
 
-// Singleton
 export const analysisQueue = new AnalysisQueue();

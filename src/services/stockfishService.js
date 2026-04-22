@@ -79,9 +79,10 @@ class StockfishService {
      * @param {string} fen
      * @param {number} depth
      * @param {AbortSignal} signal - para cancelar análisis en curso
+     * @param {function} onProgress - callback para actualizaciones en tiempo real (opcional)
      * @returns {Promise<{score: number, mate: number|null, bestMove: string, pv: string}>}
      */
-    analyzePosition(fen, depth, signal) {
+    analyzePosition(fen, depth, signal, onProgress) {
         return new Promise((resolve, reject) => {
             if (!this.ready) {
                 reject(new Error('Stockfish no está listo'));
@@ -123,6 +124,10 @@ class StockfishService {
                     if (mateMatch) lastMate = parseInt(mateMatch[1]);
                     if (pvMatch) lastPv = pvMatch[1].trim();
                     if (bmMatch) lastBestMove = bmMatch[1];
+                    
+                    if (onProgress && (cpMatch || mateMatch)) {
+                        onProgress({ score: lastScore, mate: lastMate, bestMove: lastBestMove });
+                    }
                 }
 
                 // "bestmove" marca el fin del análisis

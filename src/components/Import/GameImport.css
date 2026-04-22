@@ -1,87 +1,347 @@
-/* Agregar al final de tu GameImport.css existente */
+/* ═══════════════════════════════════════════════════════
+   GameImport — scoped with gi- prefix
+═══════════════════════════════════════════════════════ */
 
-/* ── Progreso de análisis ──────────────────────────────────────────── */
-.analysis-progress {
-  background: var(--bg-tertiary);
-  border-radius: 6px;
-  padding: 8px 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+.gi-root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 12px;
 }
 
-.progress-header {
+/* ── Platform toggle ── */
+.gi-platform-toggle {
+  display: flex;
+  background: var(--bg-tertiary);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.gi-toggle-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.gi-toggle-btn.active {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
+
+.gi-toggle-btn:hover:not(.active) {
+  color: var(--text-secondary);
+}
+
+.gi-platform-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+/* ── Search ── */
+.gi-search-wrap {
+  display: flex;
+  align-items: center;
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s;
+}
+
+.gi-search-wrap:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.gi-search-input {
+  flex: 1;
+  padding: 8px 10px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.gi-search-input::placeholder {
+  color: var(--text-muted);
+}
+
+.gi-search-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  height: 100%;
+  background: var(--accent-primary);
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  transition: opacity 0.15s;
+}
+
+.gi-search-btn:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.gi-search-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Token toggle and input ── */
+.gi-token-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  background: transparent;
+  border: none;
+  border-left: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.gi-token-toggle-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.gi-token-toggle-btn.has-token {
+  color: var(--accent-primary);
+}
+
+.gi-token-input-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: -4px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+  border: 1px dashed rgba(255, 255, 255, 0.1);
+}
+
+.gi-token-input {
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--bg-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  outline: none;
+}
+
+.gi-token-input:focus {
+  border-color: var(--accent-primary);
+}
+
+.gi-token-hint {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── Analysis progress ── */
+.gi-analysis-bar {
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 7px;
+  padding: 8px 10px;
+}
+
+.gi-analysis-header {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 0.72rem;
+  font-size: 0.71rem;
   color: var(--text-muted);
   margin-bottom: 6px;
 }
 
-.progress-pct {
+.gi-analysis-pct {
   margin-left: auto;
-  font-weight: bold;
+  font-weight: 700;
   color: var(--accent-primary);
+  font-size: 0.75rem;
 }
 
-.progress-bar-track {
-  height: 4px;
+.gi-track {
+  height: 3px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 2px;
   overflow: hidden;
 }
 
-.progress-bar-fill {
+.gi-fill {
   height: 100%;
   background: var(--accent-primary);
   border-radius: 2px;
   transition: width 0.3s ease;
 }
 
-/* ── Precisión de la partida ───────────────────────────────────────── */
-.game-score-display {
+/* ── Error ── */
+.gi-error {
   display: flex;
   align-items: center;
-  background: var(--bg-tertiary);
+  gap: 6px;
+  color: #ff5555;
+  background: rgba(255, 85, 85, 0.08);
+  border: 1px solid rgba(255, 85, 85, 0.18);
+  padding: 7px 10px;
   border-radius: 6px;
-  padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.78rem;
 }
 
-.accuracy-item {
+/* ── List section ── */
+.gi-list-section {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
+  min-height: 0;
+}
+
+.gi-list-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin: 0;
+  padding: 0 2px;
+}
+
+/* ── Fetching loader ── */
+.gi-fetching {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 28px 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+}
+
+/* ── Game list scroll ── */
+.gi-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  overflow-y: auto;
+  max-height: 340px;
+}
+
+/* ── Game card ── */
+.gi-card {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 9px 11px;
+  background: var(--bg-tertiary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 7px;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, border-color 0.12s, transform 0.1s;
+}
+
+.gi-card:hover:not(:disabled):not(.loading) {
+  background: var(--bg-secondary);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateX(2px);
+}
+
+.gi-card:disabled {
+  cursor: default;
+}
+
+.gi-card.loading {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.gi-card-players {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
   flex: 1;
 }
 
-.accuracy-item.black {
-  align-items: flex-end;
+.gi-player {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90px;
 }
 
-.accuracy-label {
-  font-size: 0.65rem;
-  color: var(--text-muted);
-}
-
-.accuracy-value {
-  font-size: 1.1rem;
-  font-weight: 800;
+.gi-player.white {
   color: var(--text-primary);
 }
 
-.accuracy-divider {
-  width: 1px;
-  height: 28px;
-  background: rgba(255, 255, 255, 0.1);
-  margin: 0 12px;
+.gi-player.black {
+  color: var(--text-muted);
 }
 
-/* Spinner para estado loading */
-.spin {
-  animation: spin 1s linear infinite;
+.gi-result {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
-@keyframes spin {
+.gi-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.gi-date {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.gi-ext-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  transition: color 0.12s;
+}
+
+.gi-card:hover .gi-ext-icon {
+  color: var(--accent-primary);
+}
+
+/* ── Spinner ── */
+.gi-spin {
+  animation: gi-spin 0.9s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes gi-spin {
   from {
     transform: rotate(0deg);
   }
@@ -89,10 +349,4 @@
   to {
     transform: rotate(360deg);
   }
-}
-
-/* Game card en estado loading */
-.game-card.loading {
-  opacity: 0.6;
-  pointer-events: none;
 }

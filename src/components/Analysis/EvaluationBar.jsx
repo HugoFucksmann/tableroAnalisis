@@ -5,7 +5,7 @@ import './EvaluationBar.css';
 
 export const EvaluationBar = () => {
   const { evaluation } = useGameStore();
-  
+
   // Normalizar la evaluación para el porcentaje (limitando a +/- 5)
   const clampedEval = Math.max(-5, Math.min(5, evaluation));
   const percentage = ((clampedEval + 5) / 10) * 100;
@@ -13,7 +13,7 @@ export const EvaluationBar = () => {
   return (
     <div className="eval-bar-wrapper">
       <div className="eval-bar-container">
-        <motion.div 
+        <motion.div
           className="eval-bar-fill"
           initial={{ height: '50%' }}
           animate={{ height: `${100 - percentage}%` }}
