@@ -102,8 +102,13 @@ export const createGameSlice = (set, get) => ({
       // Limpiar cache de la partida anterior
       if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
 
+      // Nombres de jugadores
+      const headers = newGame.header();
+      state.setPlayers(headers.White ?? 'Blancas', headers.Black ?? 'Negras');
+      state.setClocks(null, null); // Reset por defecto
+
       // Orientación automática
-      const blackPlayer = newGame.header()?.Black?.toLowerCase() ?? '';
+      const blackPlayer = (headers.Black ?? '').toLowerCase();
       const currentUser = state.searchUsername?.toLowerCase() ?? '';
       if (blackPlayer === currentUser && currentUser !== '') {
         state.setBoardOrientation('black');

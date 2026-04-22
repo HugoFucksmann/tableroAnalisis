@@ -30,7 +30,7 @@ const MAX_BOOK_PLY = 20;
  * Mínimo de partidas en la base de datos para considerar una posición "en teoría".
  * Usamos un umbral de 50 partidas de alto nivel (2200+) para filtrar teoría real.
  */
-const MIN_THEORY_GAMES_THRESHOLD = 50;
+const MIN_THEORY_GAMES_THRESHOLD = 500;
 
 /** Delay entre requests al Explorer para respetar rate-limit de Lichess */
 const OPENING_API_DELAY_MS = 300;
@@ -83,18 +83,36 @@ function cpToScore(cp, mate, isBlackTurn) {
 /**
  * Clasifica un movimiento según la caída de win probability.
  */
-function classifyMove(wpBefore, wpAfter, isWhiteMove) {
-    const loss = isWhiteMove
-        ? (wpBefore - wpAfter) * 100
-        : (wpAfter - wpBefore) * 100;
+function classifyMove(scoreBefore, scoreAfter, isWhiteMove) {
+    let loss = isWhiteMove
+        ? (scoreBefore - scoreAfter)
+        : (scoreAfter - scoreBefore);
 
-    if (loss <= -5) return 'Brillante';
-    if (loss <= 2) return 'Mejor';
-    if (loss <= 5) return 'Excelente';
-    if (loss <= 10) return 'Bueno';
-    if (loss <= 20) return 'Imprecisión';
-    if (loss <= 40) return 'Error';
-    return 'Error grave';
+    const advBefore = isWhiteMove ? scoreBefore : -scoreBefore;
+    const advAfter = isWhiteMove ? scoreAfter : -scoreAfter;
+
+    // Salvaguarda: Si estás ganando por mucho (ej. +4) y sigues ganando (+3),
+    // reducimos la "pérdida" percibida para evitar marcar '??' injustos.
+    if (advBefore > 3.0 && advAfter > 2.0 && loss > 0) {
+        loss = loss / 2;
+        if (advAfter > 5.0) loss = loss / 3;
+    }
+
+    // Detección de Omisión (Miss): 
+    // Tenías una ventaja clara (>= 1.5) y dejaste que la posición volviera a estar igualada.
+    // Perdiste la oportunidad, pero no arruinaste la partida al punto de estar perdido.
+    if (loss >= 1.0 && advBefore >= 1.5 && advAfter >= -1.0 && advAfter <= 0.5) {
+        return 'Omisión';
+    }
+
+    // Umbrales basados EXCELENTEMENTE en CP Loss matemáticos
+    if (loss <= -0.5) return 'Brillante';
+    if (loss <= 0.1) return 'Mejor';
+    if (loss <= 0.20) return 'Excelente';
+    if (loss <= 0.29) return 'Bueno';         // 0.0 a 0.29
+    if (loss <= 0.74) return 'Imprecisión';   // 0.30 a 0.74
+    if (loss <= 1.49) return 'Error';         // 0.75 a 1.49
+    return 'Error grave';                     // >= 1.50
 }
 
 // ─── Accuracy (WDL-based) ─────────────────────────────────────────────────────
@@ -176,14 +194,7 @@ async function queryExplorer(fen, token = '') {
         if (!res.ok) return { inTheory: false, openingName: null, ecoCode: null, totalGames: 0 };
 
         const data = await res.json();
-        const total = (data.white ?? 0) + (data.draws ?? 0) + (data.black ?? 0);
-
-        return {
-            inTheory: total >= MIN_THEORY_GAMES_THRESHOLD,
-            openingName: data.opening?.name ?? null,
-            ecoCode: data.opening?.eco ?? null,
-            totalGames: total,
-        };
+        return data; // Retornamos toda la data para evaluar rank y popularidad
     } catch (error) {
         console.error("Error en queryExplorer:", error);
         return { inTheory: false, openingName: null, ecoCode: null, totalGames: 0 };
@@ -194,7 +205,7 @@ async function queryExplorer(fen, token = '') {
  * Detecta aperturas consultando el Explorer FEN a FEN.
  * Corre SÍNCRONAMENTE (con await) dentro de analyzeGame(), ANTES de Stockfish.
  */
-async function detectOpenings({ positions, pgnHeaders, gameId, token, signal, onProgress }) {
+async function detectOpenings({ positions, history, pgnHeaders, gameId, token, signal, onProgress }) {
     if (openingCache.has(gameId)) {
         return openingCache.get(gameId);
     }
@@ -204,30 +215,45 @@ async function detectOpenings({ positions, pgnHeaders, gameId, token, signal, on
     let openingPly = -1;
     const bookPlies = new Set();
 
-    const maxPly = Math.min(positions.length - 1, MAX_BOOK_PLY);
+    const maxPly = Math.min(history.length, MAX_BOOK_PLY);
 
     onProgress?.(`Detectando apertura… (0/${maxPly})`);
 
-    for (let ply = 1; ply <= maxPly; ply++) {
+    for (let ply = 0; ply < maxPly; ply++) {
         if (signal?.aborted) break;
 
+        // Consultamos la posición PREVIA al movimiento
         const result = await queryExplorer(positions[ply], token);
 
         if (signal?.aborted) break;
 
-        if (!result.inTheory) break; // salimos de la teoría de maestros, parar
+        const movePlayed = history[ply];
+        if (!result || !result.moves || result.moves.length === 0) break;
 
-        // ply-1 = índice del movimiento que llevó a esta posición
-        bookPlies.add(ply - 1);
-        openingPly = ply - 1;
+        // Buscamos qué tan popular fue el movimiento elegido
+        const explorerMoveIndex = result.moves.findIndex(m => m.uci === movePlayed.lan);
 
-        if (result.openingName) openingName = result.openingName;
-        if (result.ecoCode) ecoCode = result.ecoCode;
+        if (explorerMoveIndex === -1) break; // Movimiento fuera de la base de datos Master
 
-        onProgress?.(`Detectando apertura… (${ply}/${maxPly})`);
+        const explorerMove = result.moves[explorerMoveIndex];
+        const moveGames = (explorerMove.white || 0) + (explorerMove.draws || 0) + (explorerMove.black || 0);
 
-        if (ply < maxPly) {
-            // No bloqueamos completamente el engine, pero mantenemos el delay para Lichess
+        // REGLAS PARA MARCAR COMO LIBRO:
+        // 1. Debe ser una de las 4 opciones principales (índice 0 a 3).
+        // 2. Debe haber sido jugada al menos 20 veces por Maestros.
+        if (explorerMoveIndex > 3 || moveGames < 20) {
+            break; // Se acabó la teoría principal
+        }
+
+        bookPlies.add(ply);
+        openingPly = ply;
+
+        if (result.opening?.name) openingName = result.opening.name;
+        if (result.opening?.eco) ecoCode = result.opening.eco;
+
+        onProgress?.(`Detectando apertura… (${ply + 1}/${maxPly})`);
+
+        if (ply < maxPly - 1) {
             await sleep(OPENING_API_DELAY_MS);
         }
     }
@@ -285,132 +311,133 @@ class AnalysisQueue {
             // ── 1. Reiniciar Stockfish ────────────────────────────────────────────────
             stockfishService.destroy();
             await stockfishService.init();
-            
+
             if (signal.aborted) return;
 
             const positions = buildPositions(history);
 
-        // ── 2. Lanzar detección de apertura en segundo plano ─────────────────────
-        let currentPct = 0;
-        const openingPromise = detectOpenings({
-            positions,
-            pgnHeaders,
-            gameId,
-            token: lichessToken,
-            signal,
-            onProgress: (msg) => onProgress?.(currentPct, msg),
-        }).then(res => {
-            if (!signal.aborted) {
-                onOpeningDetected?.(res);
-                // Notificar individualmente los movimientos de libro
-                res.bookPlies.forEach(idx => {
-                    onMoveResult?.({ index: idx, label: 'Libro', isBook: true });
-                });
-            }
-            return res;
-        });
+            // ── 2. Lanzar detección de apertura en segundo plano ─────────────────────
+            let currentPct = 0;
+            const openingPromise = detectOpenings({
+                positions,
+                history,
+                pgnHeaders,
+                gameId,
+                token: lichessToken,
+                signal,
+                onProgress: (msg) => onProgress?.(currentPct, msg),
+            }).then(res => {
+                if (!signal.aborted) {
+                    onOpeningDetected?.(res);
+                    // Notificar individualmente los movimientos de libro
+                    res.bookPlies.forEach(idx => {
+                        onMoveResult?.({ index: idx, label: 'Libro', isBook: true });
+                    });
+                }
+                return res;
+            });
 
-        // ── 3. Cola Stockfish Optimizada ──────────────────────────────────────────
-        const analysisOrder = buildAnalysisOrder(positions.length, currentIndex);
-        const evalResults = new Array(positions.length).fill(null);
-        const completedMoveIndices = new Set();
+            // ── 3. Cola Stockfish Optimizada ──────────────────────────────────────────
+            const analysisOrder = buildAnalysisOrder(positions.length, currentIndex);
+            const evalResults = new Array(positions.length).fill(null);
+            const completedMoveIndices = new Set();
 
-        const checkAndReportMove = async (moveIdx) => {
-            if (moveIdx < 0 || moveIdx >= history.length) return;
-            if (evalResults[moveIdx] && evalResults[moveIdx + 1]) {
-                const before = evalResults[moveIdx];
-                const after = evalResults[moveIdx + 1];
-                const isWhiteMove = !positions[moveIdx].includes(' b ');
-                
-                // Intentar obtener info de apertura si ya llegó
-                const opening = await Promise.race([
-                    openingPromise,
-                    Promise.resolve(null) 
-                ]);
-                
-                const isBook = opening?.bookPlies.has(moveIdx) ?? false;
-                const label = isBook ? 'Libro' : classifyMove(before.wp, after.wp, isWhiteMove);
-                
-                onMoveResult?.({
-                    index: moveIdx,
-                    score: after.score,
-                    label,
-                    bestMove: after.bestMove,
-                    lines: moveIdx === currentIndex ? after.lines : null,
-                });
+            const checkAndReportMove = async (moveIdx) => {
+                if (moveIdx < 0 || moveIdx >= history.length) return;
+                if (evalResults[moveIdx] && evalResults[moveIdx + 1]) {
+                    const before = evalResults[moveIdx];
+                    const after = evalResults[moveIdx + 1];
+                    const isWhiteMove = !positions[moveIdx].includes(' b ');
 
-                return { isWhiteMove, wpLoss: isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp), isBook };
-            }
-            return null;
-        };
+                    // Intentar obtener info de apertura si ya llegó
+                    const opening = await Promise.race([
+                        openingPromise,
+                        Promise.resolve(null)
+                    ]);
 
-        const moveData = [];
+                    const isBook = opening?.bookPlies.has(moveIdx) ?? false;
+                    const label = isBook ? 'Libro' : classifyMove(before.score, after.score, isWhiteMove);
 
-        for (const posIndex of analysisOrder) {
-            if (signal.aborted) break;
+                    onMoveResult?.({
+                        index: moveIdx,
+                        score: after.score,
+                        label,
+                        bestMove: after.bestMove,
+                        lines: moveIdx === currentIndex ? after.lines : null,
+                    });
 
-            const fen = positions[posIndex];
-            const isBlackTurn = fen.includes(' b ');
+                    return { isWhiteMove, wpLoss: isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp), isBook };
+                }
+                return null;
+            };
 
-            // Prioridad: El movimiento actual y el siguiente (para tener el "after" del actual)
-            // usan profundidad mayor y MultiPV completo.
-            const isHighPriority = (posIndex === currentIndex || posIndex === currentIndex + 1);
-            const depth = isHighPriority ? DEPTH_CURRENT : DEPTH_BACKGROUND;
-            const mPv = isHighPriority ? stockfishService.MULTIPV_COUNT : 1;
+            const moveData = [];
 
-            try {
-                const r = await stockfishService.analyzePosition(fen, depth, signal, null, mPv);
+            for (const posIndex of analysisOrder) {
                 if (signal.aborted) break;
 
-                evalResults[posIndex] = {
-                    wp: toWhiteWinProb(r.score, r.mate, isBlackTurn),
-                    score: cpToScore(r.score, r.mate, isBlackTurn),
-                    bestMove: r.bestMove,
-                    lines: r.lines
-                };
+                const fen = positions[posIndex];
+                const isBlackTurn = fen.includes(' b ');
 
-                // Si es la posición inicial, reportar bestMove para el "antes" del primer movimiento
-                if (posIndex === 0) {
-                    onMoveResult?.({ index: -1, bestMove: r.bestMove, lines: r.lines });
-                }
+                // Prioridad: El movimiento actual y el siguiente (para tener el "after" del actual)
+                // usan profundidad mayor y MultiPV completo.
+                const isHighPriority = (posIndex === currentIndex || posIndex === currentIndex + 1);
+                const depth = isHighPriority ? DEPTH_CURRENT : DEPTH_BACKGROUND;
+                const mPv = isHighPriority ? stockfishService.MULTIPV_COUNT : 1;
 
-                // Intentar clasificar movimientos adyacentes
-                const m1 = await checkAndReportMove(posIndex - 1);
-                const m2 = await checkAndReportMove(posIndex);
-                
-                if (m1) { moveData[posIndex - 1] = m1; completedMoveIndices.add(posIndex - 1); }
-                if (m2) { moveData[posIndex] = m2; completedMoveIndices.add(posIndex); }
+                try {
+                    const r = await stockfishService.analyzePosition(fen, depth, signal, null, mPv);
+                    if (signal.aborted) break;
 
-                currentPct = Math.round((completedMoveIndices.size / history.length) * 100);
-                onProgress?.(Math.min(99, currentPct), `Analizando… ${currentPct}%`);
+                    evalResults[posIndex] = {
+                        wp: toWhiteWinProb(r.score, r.mate, isBlackTurn),
+                        score: cpToScore(r.score, r.mate, isBlackTurn),
+                        bestMove: r.bestMove,
+                        lines: r.lines
+                    };
 
-            } catch (e) {
-                if (e.name === 'AbortError') break;
-                console.warn(`Error analizando posición ${posIndex}:`, e);
-            }
-        }
+                    // Si es la posición inicial, reportar bestMove para el "antes" del primer movimiento
+                    if (posIndex === 0) {
+                        onMoveResult?.({ index: -1, bestMove: r.bestMove, lines: r.lines });
+                    }
 
-        if (!signal.aborted) {
-            const finalOpening = await openingPromise;
-            // Asegurar que todos los movimientos se clasifiquen al final
-            const finalMoveData = [];
-            for (let i = 0; i < history.length; i++) {
-                const before = evalResults[i];
-                const after = evalResults[i+1];
-                if (before && after) {
-                    const isWhiteMove = !positions[i].includes(' b ');
-                    const isBook = finalOpening.bookPlies.has(i);
-                    const wpLoss = isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp);
-                    finalMoveData.push({ isWhiteMove, wpLoss, isBook });
+                    // Intentar clasificar movimientos adyacentes
+                    const m1 = await checkAndReportMove(posIndex - 1);
+                    const m2 = await checkAndReportMove(posIndex);
+
+                    if (m1) { moveData[posIndex - 1] = m1; completedMoveIndices.add(posIndex - 1); }
+                    if (m2) { moveData[posIndex] = m2; completedMoveIndices.add(posIndex); }
+
+                    currentPct = Math.round((completedMoveIndices.size / history.length) * 100);
+                    onProgress?.(Math.min(99, currentPct), `Analizando… ${currentPct}%`);
+
+                } catch (e) {
+                    if (e.name === 'AbortError') break;
+                    console.warn(`Error analizando posición ${posIndex}:`, e);
                 }
             }
 
-            const accuracy = calculateAccuracy(finalMoveData);
-            onComplete?.(accuracy);
-            onProgress?.(100, 'Análisis completado');
-        }
-    } catch (e) {
-        if (e.name !== 'AbortError') {
+            if (!signal.aborted) {
+                const finalOpening = await openingPromise;
+                // Asegurar que todos los movimientos se clasifiquen al final
+                const finalMoveData = [];
+                for (let i = 0; i < history.length; i++) {
+                    const before = evalResults[i];
+                    const after = evalResults[i + 1];
+                    if (before && after) {
+                        const isWhiteMove = !positions[i].includes(' b ');
+                        const isBook = finalOpening.bookPlies.has(i);
+                        const wpLoss = isWhiteMove ? (before.wp - after.wp) : (after.wp - before.wp);
+                        finalMoveData.push({ isWhiteMove, wpLoss, isBook });
+                    }
+                }
+
+                const accuracy = calculateAccuracy(finalMoveData);
+                onComplete?.(accuracy);
+                onProgress?.(100, 'Análisis completado');
+            }
+        } catch (e) {
+            if (e.name !== 'AbortError') {
                 console.error('Error en analyzeGame:', e);
             }
         } finally {

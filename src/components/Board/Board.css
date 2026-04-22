@@ -6,34 +6,6 @@
   align-items: center;
 }
 
-.board-header-info {
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 5px 10px;
-  margin-bottom: 5px;
-}
-
-.opening-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--accent-primary);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.phase-badge {
-  font-size: 0.65rem;
-  font-weight: bold;
-  text-transform: uppercase;
-  background: var(--bg-tertiary);
-  padding: 3px 8px;
-  border-radius: 4px;
-  color: var(--text-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-}
 
 .board-main-area {
   width: 100%;

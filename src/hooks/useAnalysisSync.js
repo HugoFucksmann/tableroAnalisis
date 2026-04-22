@@ -37,6 +37,7 @@ export const useAnalysisSync = () => {
     setOpeningPly,
     setOpeningDetected,
     setOpeningName,
+    setClocks,
 
     lichessToken,
   } = useGameStore();
@@ -106,4 +107,31 @@ export const useAnalysisSync = () => {
       },
     });
   }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Efecto terciario: Sincronizar reloj desde comentarios PGN ────────────────
+  React.useEffect(() => {
+    if (history.length === 0) {
+      setClocks(null, null);
+      return;
+    }
+ 
+    let whiteTime = null;
+    let blackTime = null;
+ 
+    // Escaneamos hasta el movimiento actual para encontrar los últimos tiempos registrados
+    for (let i = 0; i <= currentMoveIndex; i++) {
+      const move = history[i];
+      if (!move) continue;
+      const clkComment = move.comments?.find(c => c.includes('[%clk'));
+      if (clkComment) {
+        const match = clkComment.match(/\[%clk\s+([^\]]+)\]/);
+        if (match) {
+          if (move.color === 'w') whiteTime = match[1];
+          else blackTime = match[1];
+        }
+      }
+    }
+ 
+    setClocks(whiteTime, blackTime);
+  }, [currentMoveIndex, history, setClocks]);
 };

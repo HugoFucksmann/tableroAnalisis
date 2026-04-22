@@ -26,8 +26,7 @@ export const Board = () => {
     fen,
     makeMove,
     clocks,
-    gamePhase,
-    openingName,
+    players,
     history,
     currentMoveIndex,
     moveEvaluations,
@@ -88,16 +87,15 @@ export const Board = () => {
     return move !== null;
   }
 
+  const topPlayer = boardOrientation === 'white' ? 'black' : 'white';
+  const bottomPlayer = boardOrientation === 'white' ? 'white' : 'black';
+
   return (
     <div className="board-container">
-      <div className="board-header-info">
-        <span className="opening-label">{openingName}</span>
-        <span className="phase-badge">{gamePhase}</span>
-      </div>
-
-      <div className="clock-display black">
-        <span className="clock-label">NEGRAS</span>
-        <span className="clock-time">{clocks.black}</span>
+      {/* Top Player (Opponent if orientation is correct) */}
+      <div className={`clock-display ${topPlayer}`}>
+        <span className="clock-label">{players[topPlayer]}</span>
+        {clocks[topPlayer] && <span className="clock-time">{clocks[topPlayer]}</span>}
       </div>
 
       <div className="board-main-area">
@@ -121,9 +119,10 @@ export const Board = () => {
         />
       </div>
 
-      <div className="clock-display white">
-        <span className="clock-label">BLANCAS</span>
-        <span className="clock-time">{clocks.white}</span>
+      {/* Bottom Player (Current User perspective) */}
+      <div className={`clock-display ${bottomPlayer}`}>
+        <span className="clock-label">{players[bottomPlayer]}</span>
+        {clocks[bottomPlayer] && <span className="clock-time">{clocks[bottomPlayer]}</span>}
       </div>
     </div>
   );
