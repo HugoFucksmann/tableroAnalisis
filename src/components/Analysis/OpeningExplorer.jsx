@@ -57,7 +57,7 @@ export const OpeningExplorer = () => {
 
         // ── Marcar jugada actual como "Libro" si estamos en una apertura conocida ──
         if (
-          explorerData.opening && 
+          explorerData.opening &&
           explorerData.opening !== 'Posición no encontrada' &&
           currentMoveIndex >= 0
         ) {

@@ -6,7 +6,6 @@ import { GameImport } from '../Import/GameImport';
 import { OpeningExplorer } from '../Analysis/OpeningExplorer';
 import { BoardControls } from '../Board/BoardControls';
 import { EvaluationGraph } from '../Analysis/EvaluationGraph';
-import { TrendingUp, History, Download } from 'lucide-react';
 import './Dashboard.css';
 
 export const Dashboard = () => {

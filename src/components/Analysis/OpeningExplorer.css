@@ -96,16 +96,18 @@
   white-space: nowrap;
 }
 
-.bar-segment.white { 
-  background-color: #f1f1f1; 
+.bar-segment.white {
+  background-color: #f1f1f1;
   color: #333;
 }
-.bar-segment.draw { 
-  background-color: #888888; 
+
+.bar-segment.draw {
+  background-color: #888888;
   color: #fff;
 }
-.bar-segment.black { 
-  background-color: #333333; 
+
+.bar-segment.black {
+  background-color: #333333;
   color: #eee;
 }
 
@@ -156,6 +158,11 @@
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }

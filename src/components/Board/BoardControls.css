@@ -8,7 +8,8 @@
   margin-top: 10px;
 }
 
-.navigation-group, .utility-group {
+.navigation-group,
+.utility-group {
   display: flex;
   gap: 6px;
 }
