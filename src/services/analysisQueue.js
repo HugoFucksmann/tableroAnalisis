@@ -3,13 +3,8 @@
  *
  * Orquesta el análisis completo de una partida:
  *   1. Analiza primero la posición actualmente visible (profundidad alta)
- *   2. Analiza el resto en background (profundidad menor), de la posición
- *      actual hacia afuera (primero las cercanas, luego las lejanas)
- *   3. Notifica al store con cada resultado parcial para actualización en tiempo real
- *
- * bestMoves se indexan por el moveIndex de la posición que MUESTRA el tablero:
- *   - currentMoveIndex = -1  → posición inicial → bestMoves[-1]
- *   - currentMoveIndex =  N  → posición tras el movimiento N → bestMoves[N]
+ *   2. Analiza el resto en background (profundidad menor)
+ *   3. Notifica mediante callbacks los resultados parciales
  */
 
 import { Chess } from 'chess.js';
@@ -73,11 +68,13 @@ class AnalysisQueue {
     /**
      * Analiza una partida completa.
      *
-     * @param {object[]} history     historial verbose del store
-     * @param {number}   currentIndex  índice del movimiento actualmente visible
-     * @param {object}   storeActions  acciones del store
+     * @param {object[]} history     historial verbose
+     * @param {number}   currentIndex  índice actual
+     * @param {object}   callbacks     { onMoveResult, onProgress, onStatus, onComplete }
      */
-    async analyzeGame(history, currentIndex, storeActions) {
+    async analyzeGame(history, currentIndex, callbacks = {}) {
+        const { onMoveResult, onProgress, onStatus, onComplete } = callbacks;
+        
         this.cancel();
         if (history.length === 0) return;
 
@@ -85,36 +82,23 @@ class AnalysisQueue {
         const { signal } = this.abortController;
         this.isRunning = true;
 
-        const {
-            setMoveEvaluation,
-            setEvaluation,
-            setAnalyzing,
-            setGameScore,
-            setAnalysisProgress,
-            setBestMoveForIndex,  // ← nuevo (reemplaza setBestMove)
-        } = storeActions;
-
         try {
             await stockfishService.init();
         } catch (e) {
             console.error('No se pudo inicializar Stockfish:', e);
-            setAnalyzing(false);
+            onStatus?.(false);
             return;
         }
 
-        setAnalyzing(true);
-        setAnalysisProgress(0);
+        onStatus?.(true);
+        onProgress?.(0);
 
         const positions = buildPositions(history);
         const totalPositions = positions.length;
-
         const analysisOrder = buildAnalysisOrder(history.length, currentIndex);
 
-        // scores[i]    = evaluación numérica de positions[i] (perspectiva blancas)
-        // bestMoveCache[i] = mejor movimiento UCI en positions[i]
         const scores = new Array(totalPositions).fill(null);
         const bestMoveCache = new Array(totalPositions).fill(null);
-
         const moveData = [];
         let completed = 0;
 
@@ -130,20 +114,19 @@ class AnalysisQueue {
             const depth = moveIndex === currentIndex ? DEPTH_CURRENT : DEPTH_BACKGROUND;
 
             try {
-                // ── Analizar posición ANTES del movimiento ──────────────────
+                // 1. Antes del movimiento
                 if (scores[moveIndex] === null) {
                     const result = await stockfishService.analyzePosition(fenBefore, depth, signal);
                     if (signal.aborted) break;
                     scores[moveIndex] = cpToScore(result.score, result.mate, isBlackTurn);
                     bestMoveCache[moveIndex] = result.bestMove;
 
-                    // positions[0] = posición inicial → bestMoves[-1]
-                    if (moveIndex === 0) {
-                        setBestMoveForIndex(-1, result.bestMove);
+                    if (moveIndex === 0 && onMoveResult) {
+                        onMoveResult({ index: -1, bestMove: result.bestMove });
                     }
                 }
 
-                // ── Analizar posición DESPUÉS del movimiento ────────────────
+                // 2. Después del movimiento
                 if (scores[moveIndex + 1] === null) {
                     const isNextBlack = fenAfter.includes(' b ');
                     const result = await stockfishService.analyzePosition(fenAfter, depth, signal);
@@ -152,29 +135,23 @@ class AnalysisQueue {
                     bestMoveCache[moveIndex + 1] = result.bestMove;
                 }
 
-                // ── Guardar mejor jugada para la posición visible ───────────
-                // Cuando currentMoveIndex = moveIndex, el tablero muestra
-                // positions[moveIndex + 1] → su mejor jugada es bestMoveCache[moveIndex + 1]
-                const bestMoveForThisPos = bestMoveCache[moveIndex + 1];
-                if (bestMoveForThisPos) {
-                    setBestMoveForIndex(moveIndex, bestMoveForThisPos);
-                }
-
-                // ── Clasificar el movimiento ────────────────────────────────
+                // 3. Clasificación y notificación
                 const scoreBefore = scores[moveIndex];
                 const scoreAfter = scores[moveIndex + 1];
                 const evalLabel = classifyMove(scoreBefore, scoreAfter, isWhiteMove);
-                const loss = isWhiteMove
-                    ? scoreBefore - scoreAfter
-                    : scoreAfter - scoreBefore;
+                const loss = isWhiteMove ? scoreBefore - scoreAfter : scoreAfter - scoreBefore;
 
                 moveData.push({ index: moveIndex, loss });
 
-                setMoveEvaluation(moveIndex, evalLabel);
-                setEvaluation(scoreAfter, moveIndex);
+                onMoveResult?.({
+                    index: moveIndex,
+                    score: scoreAfter,
+                    label: evalLabel,
+                    bestMove: bestMoveCache[moveIndex + 1]
+                });
 
                 completed++;
-                setAnalysisProgress(Math.round((completed / history.length) * 100));
+                onProgress?.(Math.round((completed / history.length) * 100));
 
             } catch (e) {
                 if (e.name === 'AbortError') break;
@@ -184,59 +161,48 @@ class AnalysisQueue {
 
         if (!signal.aborted) {
             const accuracy = calculateAccuracy(moveData);
-            setGameScore(accuracy);
-            setAnalyzing(false);
-            setAnalysisProgress(100);
+            onComplete?.(accuracy);
+            onStatus?.(false);
+            onProgress?.(100);
         }
 
         this.isRunning = false;
     }
 
     /**
-     * Análisis rápido on-demand de una posición FEN concreta.
-     * Usado por el botón "Mejor Jugada" en BoardControls.
-     *
-     * @param {string} fen
-     * @param {number} moveIndex  índice que se mostrará (para indexar en bestMoves)
-     * @param {object} storeActions
+     * Análisis rápido de una posición.
      */
-    async analyzeCurrentPosition(fen, moveIndex, storeActions) {
-        const { setBestMoveForIndex, setAnalyzing, setEvaluation } = storeActions;
-
+    async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
+        const { onResult, onStatus } = callbacks;
         try {
             await stockfishService.init();
-            setAnalyzing(true);
+            onStatus?.(true);
             
             const isBlackTurn = fen.includes(' b ');
-            
             const onProgress = ({ score, mate, bestMove }) => {
-                if (setEvaluation) {
-                    setEvaluation(cpToScore(score, mate, isBlackTurn), moveIndex);
-                }
-                if (bestMove) {
-                    setBestMoveForIndex(moveIndex, bestMove);
-                }
+                onResult?.({
+                    score: cpToScore(score, mate, isBlackTurn),
+                    bestMove,
+                    moveIndex
+                });
             };
 
             const result = await stockfishService.analyzePosition(fen, DEPTH_CURRENT, null, onProgress);
             
             if (result) {
-                if (setEvaluation) {
-                    setEvaluation(cpToScore(result.score, result.mate, isBlackTurn), moveIndex);
-                }
-                if (result.bestMove) {
-                    setBestMoveForIndex(moveIndex, result.bestMove);
-                }
+                onResult?.({
+                    score: cpToScore(result.score, result.mate, isBlackTurn),
+                    bestMove: result.bestMove,
+                    moveIndex
+                });
             }
         } catch (e) {
             console.warn('analyzeCurrentPosition error:', e);
         } finally {
-            setAnalyzing(false);
+            onStatus?.(false);
         }
     }
 }
-
-// ── Helpers ────────────────────────────────────────────────────────────────
 
 function buildPositions(history) {
     const positions = [];
@@ -251,8 +217,6 @@ function buildPositions(history) {
 
 function buildAnalysisOrder(totalMoves, currentIndex) {
     const indices = Array.from({ length: totalMoves }, (_, i) => i);
-    // Priorizamos el movimiento actual para feedback inmediato, 
-    // y luego analizamos el resto en orden secuencial (del inicio al fin)
     const others = indices.filter(i => i !== currentIndex);
     return currentIndex >= 0 ? [currentIndex, ...others] : others;
 }

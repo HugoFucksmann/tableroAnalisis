@@ -79,12 +79,16 @@ export const GameImport = ({ onGameSelect }) => {
     const { history: newHistory, currentMoveIndex: newIndex } = useGameStore.getState();
 
     await analysisQueue.analyzeGame(newHistory, newIndex, {
-      setMoveEvaluation,
-      setEvaluation,
-      setAnalyzing,
-      setGameScore,
-      setAnalysisProgress,
-      setBestMoveForIndex,   // ← actualizado
+      onStatus: setAnalyzing,
+      onProgress: setAnalysisProgress,
+      onMoveResult: ({ index, score, label, bestMove }) => {
+        if (score !== undefined) setEvaluation(score, index);
+        if (label) setMoveEvaluation(index, label);
+        if (bestMove) setBestMoveForIndex(index, bestMove);
+      },
+      onComplete: (accuracy) => {
+        setGameScore(accuracy);
+      }
     });
   };
 

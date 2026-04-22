@@ -20,6 +20,8 @@ function sanToArrow(san, chessInstance, color = 'rgb(0, 100, 255)') {
   }
 }
 
+import { BOOK_MOVE_LIMIT, MIN_GAMES_THRESHOLD } from '../../constants/chessConstants.jsx';
+
 export const OpeningExplorer = () => {
   const {
     setArrows,
@@ -55,12 +57,16 @@ export const OpeningExplorer = () => {
           setOpeningName(explorerData.opening);
         }
 
-        // ── Marcar jugada actual como "Libro" si estamos en una apertura conocida ──
-        if (
-          explorerData.opening &&
+        // ── Lógica de marcado "Libro" filtrada ──
+        const totalGames = (explorerData.moves ?? []).reduce((sum, m) => sum + (m.games || 0), 0);
+        
+        const isTheory = 
+          explorerData.opening && 
           explorerData.opening !== 'Posición no encontrada' &&
-          currentMoveIndex >= 0
-        ) {
+          currentMoveIndex < BOOK_MOVE_LIMIT &&
+          totalGames >= MIN_GAMES_THRESHOLD;
+
+        if (isTheory && currentMoveIndex >= 0) {
           setMoveEvaluation(currentMoveIndex, 'Libro');
         }
 

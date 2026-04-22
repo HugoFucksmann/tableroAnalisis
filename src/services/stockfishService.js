@@ -28,7 +28,7 @@ class StockfishService {
         this._initPromise = null;
     }
 
-    /** Inicializa el worker y espera readyok de Stockfish. */
+    /** Inicializa el worker y espera la secuencia UCI completa. */
     init() {
         if (this._initPromise) return this._initPromise;
 
@@ -36,21 +36,29 @@ class StockfishService {
             try {
                 this.worker = new Worker(STOCKFISH_PATH);
             } catch (e) {
-                reject(new Error(`No se pudo cargar Stockfish desde ${STOCKFISH_PATH}: ${e.message}`));
+                reject(new Error(`No se pudo cargar Stockfish: ${e.message}`));
                 return;
             }
 
+            let uciOk = false;
+
             this.worker.onmessage = (e) => {
                 const line = e.data;
+                // console.log('SF:', line); // Debug
 
-                // Resolver la promesa de readyok al inicio
-                if (line === 'readyok' && !this.ready) {
-                    this.ready = true;
-                    resolve();
-                    return;
+                if (line === 'uciok') {
+                    uciOk = true;
+                    this.worker.postMessage('setoption name Threads value 1');
+                    this.worker.postMessage('setoption name Hash value 16');
+                    this.worker.postMessage('isready');
                 }
 
-                // Distribuir el mensaje al resolver activo
+                if (line === 'readyok') {
+                    this.ready = true;
+                    resolve();
+                }
+
+                // Distribuir a los resolvers si estamos analizando
                 if (this.resolvers.length > 0) {
                     this.resolvers[0](line);
                 }
@@ -58,14 +66,13 @@ class StockfishService {
 
             this.worker.onerror = (e) => {
                 console.error('Stockfish worker error:', e);
+                this.ready = false;
+                this._initPromise = null;
                 reject(e);
             };
 
-            // Secuencia de inicialización UCI
+            // Iniciar secuencia
             this.worker.postMessage('uci');
-            this.worker.postMessage('setoption name Threads value 4');
-            this.worker.postMessage('setoption name Hash value 128');
-            this.worker.postMessage('isready');
         });
 
         return this._initPromise;
@@ -147,6 +154,7 @@ class StockfishService {
             this.resolvers.push(messageHandler);
 
             this.worker.postMessage('ucinewgame');
+            this.worker.postMessage('isready'); // Asegurar estado limpio
             this.worker.postMessage(`position fen ${fen}`);
             this.worker.postMessage(`go depth ${depth}`);
         });

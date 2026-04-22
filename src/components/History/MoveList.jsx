@@ -1,33 +1,22 @@
+import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import {
-  Star,
-  BookOpen,
-  ThumbsUp,
-  Check,
-  X
-} from 'lucide-react';
+import { EVAL_CONFIG, PIECE_ICONS } from '../../constants/chessConstants.jsx';
 import './MoveList.css';
-
-const EVAL_ICONS = {
-  'Brillante': { icon: '!!', color: '#fff', bg: '#00c1b1' },
-  'Genial': { icon: '!', color: '#fff', bg: '#409cde' },
-  'Libro': { icon: <BookOpen size={12} />, color: '#fff', bg: '#917961' },
-  'Mejor': { icon: <Star size={12} fill="white" />, color: '#fff', bg: '#79a83a' },
-  'Excelente': { icon: <ThumbsUp size={12} fill="white" />, color: '#fff', bg: '#86a45e' },
-  'Bueno': { icon: <Check size={12} />, color: '#fff', bg: '#7e9561' },
-  'Imprecisión': { icon: '?!', color: '#fff', bg: '#f2b134' },
-  'Error': { icon: '?', color: '#fff', bg: '#e6912c' },
-  'Omisión': { icon: <X size={12} />, color: '#fff', bg: '#d46d5a' },
-  'Error grave': { icon: '??', color: '#fff', bg: '#c23e30' },
-};
-
-const PIECE_ICONS = { N: '♘', B: '♗', R: '♖', Q: '♕', K: '♔' };
 
 export const MoveList = () => {
   const { history, moveEvaluations, currentMoveIndex, goToMove } = useGameStore();
+  const scrollRef = React.useRef(null);
 
-  // history es ahora un array de objetos verbose: { san, from, to, ... }
-  // Extraemos el string SAN de cada entrada de forma segura.
+  // Auto-scroll al movimiento activo
+  React.useEffect(() => {
+    if (scrollRef.current) {
+      const activeItem = scrollRef.current.querySelector('.move-item.active');
+      if (activeItem) {
+        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }
+  }, [currentMoveIndex]);
+
   const getSan = (entry) =>
     entry && typeof entry === 'object' ? entry.san : entry;
 
@@ -44,7 +33,7 @@ export const MoveList = () => {
 
   const renderMove = (move) => {
     if (!move) return null;
-    const evaluation = EVAL_ICONS[move.eval];
+    const config = EVAL_CONFIG[move.eval];
 
     const pieceMatch = move.san.match(/^([NBRQK])/);
     const piece = pieceMatch ? pieceMatch[1] : null;
@@ -52,6 +41,7 @@ export const MoveList = () => {
 
     return (
       <div
+        key={move.index}
         className={`move-item ${currentMoveIndex === move.index ? 'active' : ''}`}
         title={move.eval || ''}
         onClick={() => goToMove(move.index)}
@@ -60,12 +50,12 @@ export const MoveList = () => {
           {piece && <span className="piece-icon">{PIECE_ICONS[piece]}</span>}
           {moveText}
         </span>
-        {evaluation && (
+        {config && (
           <span
             className="eval-icon"
-            style={{ color: evaluation.color, backgroundColor: evaluation.bg }}
+            style={{ color: config.color, backgroundColor: config.bg }}
           >
-            {evaluation.icon}
+            {config.icon}
           </span>
         )}
       </div>
@@ -73,7 +63,7 @@ export const MoveList = () => {
   };
 
   return (
-    <div className="move-list-container premium-scroll">
+    <div className="move-list-container premium-scroll" ref={scrollRef}>
       <div className="move-list-header">
         <span>#</span>
         <span>Blancas</span>

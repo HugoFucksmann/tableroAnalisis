@@ -1,21 +1,11 @@
 import React from 'react';
 import { Chessboard } from 'react-chessboard';
 import { useGameStore } from '../../store/useGameStore';
-import { analysisQueue } from '../../services/analysisQueue';
+import { useAnalysisSync } from '../../hooks/useAnalysisSync';
 import './Board.css';
 
-const EVAL_ICONS = {
-  'Brillante': { icon: '!!', bg: '#00c1b1' },
-  'Genial': { icon: '!', bg: '#409cde' },
-  'Libro': { icon: '📖', bg: '#917961' },
-  'Mejor': { icon: '★', bg: '#79a83a' },
-  'Excelente': { icon: '👍', bg: '#86a45e' },
-  'Bueno': { icon: '✓', bg: '#7e9561' },
-  'Imprecisión': { icon: '?!', bg: '#f2b134' },
-  'Error': { icon: '?', bg: '#e6912c' },
-  'Omisión': { icon: '✗', bg: '#d46d5a' },
-  'Error grave': { icon: '??', bg: '#c23e30' },
-};
+import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
+import './Board.css';
 
 const BADGE_SIZE = 36;
 
@@ -29,6 +19,9 @@ function uciToArrow(uci, color = 'rgb(0, 193, 177)') {
 }
 
 export const Board = () => {
+  // Inyectamos la lógica de análisis
+  useAnalysisSync();
+
   const {
     fen,
     makeMove,
@@ -40,26 +33,10 @@ export const Board = () => {
     moveEvaluations,
     bestMoves,
     arrows,          // Arrow[] del store (vienen de OpeningExplorer u otros)
-    evaluationHistory,
-    isAnalyzing,
-    setBestMoveForIndex,
-    setAnalyzing,
-    setEvaluation,
+    boardOrientation,
   } = useGameStore();
 
-  const lastAnalyzedFen = React.useRef(null);
-
-  React.useEffect(() => {
-    const hasEval = evaluationHistory?.some(e => e.moveIndex === currentMoveIndex);
-    if (!hasEval && !isAnalyzing && currentMoveIndex >= -1 && lastAnalyzedFen.current !== fen) {
-      lastAnalyzedFen.current = fen;
-      analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
-        setBestMoveForIndex,
-        setAnalyzing,
-        setEvaluation,
-      });
-    }
-  }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing, setBestMoveForIndex, setAnalyzing, setEvaluation]);
+  // ── Highlight de la última jugada ────────────────────────────────────────
 
   // ── Highlight de la última jugada ────────────────────────────────────────
   const squareStyles = React.useMemo(() => {
@@ -128,7 +105,7 @@ export const Board = () => {
           options={{
             position: fen,
             onPieceDrop: onDrop,
-            boardOrientation: 'white',
+            boardOrientation: boardOrientation,
             darkSquareStyle: { backgroundColor: '#2d3436' },
             lightSquareStyle: { backgroundColor: '#636e72' },
             arrows: combinedArrows,
@@ -140,6 +117,7 @@ export const Board = () => {
           currentMoveIndex={currentMoveIndex}
           history={history}
           moveEvaluations={moveEvaluations}
+          orientation={boardOrientation}
         />
       </div>
 
@@ -152,16 +130,26 @@ export const Board = () => {
 };
 
 // ── Badge de evaluación sobre el tablero ─────────────────────────────────
-const EvalBadgeOverlay = ({ currentMoveIndex, history, moveEvaluations }) => {
+const EvalBadgeOverlay = ({ currentMoveIndex, history, moveEvaluations, orientation }) => {
   if (currentMoveIndex < 0) return null;
   const currentMove = history[currentMoveIndex];
   if (!currentMove) return null;
-  const evalData = EVAL_ICONS[moveEvaluations[currentMoveIndex]];
+  const evalData = EVAL_CONFIG[moveEvaluations[currentMoveIndex]];
   if (!evalData) return null;
 
-  const file = currentMove.to.charCodeAt(0) - 'a'.charCodeAt(0);
-  const rank = parseInt(currentMove.to[1]) - 1;
-  const leftPct = ((file + 1) / 8) * 100;
+  // Calculamos la posición 0-7
+  let file = currentMove.to.charCodeAt(0) - 'a'.charCodeAt(0);
+  let rank = parseInt(currentMove.to[1]) - 1;
+
+  // Si el tablero está girado, invertimos las coordenadas
+  if (orientation === 'black') {
+    file = 7 - file;
+    rank = 7 - rank;
+  }
+
+  // En el sistema de coordenadas de CSS (top:0 es arriba), la fila 0 (rank 1) está abajo.
+  // Por lo tanto, necesitamos invertir el rank para el topPct.
+  const leftPct = (file / 8) * 100;
   const topPct = ((7 - rank) / 8) * 100;
 
   return (
@@ -169,8 +157,8 @@ const EvalBadgeOverlay = ({ currentMoveIndex, history, moveEvaluations }) => {
       <div
         className="eval-badge"
         style={{
-          left: `calc(${leftPct}% - ${BADGE_SIZE}px + 4px)`,
-          top: `calc(${topPct}%  + 4px)`,
+          left: `calc(${leftPct}% + (100% / 8) - ${BADGE_SIZE}px + 4px)`,
+          top: `calc(${topPct}% + 4px)`,
           backgroundColor: evalData.bg,
         }}
       >

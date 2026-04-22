@@ -24,9 +24,36 @@ export const EvaluationGraph = () => {
     useGameStore();
 
   const total = history.length;
+  const midY = getY(0);
 
-  // Ordenar por moveIndex para que el path sea correcto
-  const sorted = [...evaluationHistory].sort((a, b) => a.moveIndex - b.moveIndex);
+  // Memoizamos los cálculos pesados del gráfico
+  const { sorted, areaPath, linePoints } = React.useMemo(() => {
+    // 1. Ordenar por moveIndex para que el path sea correcto
+    const sortedData = [...evaluationHistory].sort((a, b) => a.moveIndex - b.moveIndex);
+    
+    // 2. Construir puntos de la línea
+    const linePts = sortedData.map(d => `${getX(d.moveIndex, total)},${getY(d.score)}`);
+
+    // 3. Construir path del área rellena
+    let areaP = '';
+    if (sortedData.length > 0) {
+      const first = sortedData[0];
+      const last = sortedData[sortedData.length - 1];
+      areaP = [
+        `M ${getX(first.moveIndex, total)} ${midY}`,
+        ...sortedData.map(d => `L ${getX(d.moveIndex, total)} ${getY(d.score)}`),
+        `L ${getX(last.moveIndex, total)} ${midY}`,
+        'Z',
+      ].join(' ');
+    }
+
+    return { sorted: sortedData, areaPath: areaP, linePoints: linePts };
+  }, [evaluationHistory, total, midY]);
+
+  const currentEval = React.useMemo(() => 
+    evaluationHistory.find(e => e.moveIndex === currentMoveIndex),
+    [evaluationHistory, currentMoveIndex]
+  );
 
   // Click en el SVG → navegar al movimiento correspondiente
   const handleSvgClick = (e) => {
@@ -37,6 +64,7 @@ export const EvaluationGraph = () => {
     goToMove(Math.max(0, Math.min(total - 1, index)));
   };
 
+  // El return condicional DEBE ir después de todos los hooks
   if (total === 0) {
     return (
       <div className="evaluation-graph-container glass-panel">
@@ -46,26 +74,6 @@ export const EvaluationGraph = () => {
       </div>
     );
   }
-
-  // Construir path del área rellena
-  const midY = getY(0);
-
-  const linePoints = sorted.map(d => `${getX(d.moveIndex, total)},${getY(d.score)}`);
-
-  // Area path: línea de evaluación + cierre hacia la baseline
-  let areaPath = '';
-  if (sorted.length > 0) {
-    const first = sorted[0];
-    const last = sorted[sorted.length - 1];
-    areaPath = [
-      `M ${getX(first.moveIndex, total)} ${midY}`,
-      ...sorted.map(d => `L ${getX(d.moveIndex, total)} ${getY(d.score)}`),
-      `L ${getX(last.moveIndex, total)} ${midY}`,
-      'Z',
-    ].join(' ');
-  }
-
-  const currentEval = evaluationHistory.find(e => e.moveIndex === currentMoveIndex);
 
   return (
     <div className="evaluation-graph-container glass-panel">

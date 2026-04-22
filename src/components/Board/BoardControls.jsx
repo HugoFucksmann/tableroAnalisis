@@ -18,7 +18,12 @@ export const BoardControls = () => {
     currentMoveIndex, history, fen,
     isAnalyzing,
     setBestMoveForIndex, setAnalyzing, setEvaluation,
+    boardOrientation, setBoardOrientation,
   } = useGameStore();
+
+  const handleToggleOrientation = () => {
+    setBoardOrientation(boardOrientation === 'white' ? 'black' : 'white');
+  };
 
   const isAtStart = currentMoveIndex === -1;
   const isAtEnd = currentMoveIndex === history.length - 1;
@@ -31,9 +36,11 @@ export const BoardControls = () => {
   const handleHint = async () => {
     if (isAnalyzing) return;
     await analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
-      setBestMoveForIndex,
-      setAnalyzing,
-      setEvaluation,
+      onStatus: setAnalyzing,
+      onResult: (result) => {
+        if (result.score !== undefined) setEvaluation(result.score, result.moveIndex);
+        if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
+      }
     });
   };
 
@@ -83,7 +90,7 @@ export const BoardControls = () => {
         >
           <Lightbulb size={18} />
         </button>
-        <button className="control-btn secondary" title="Girar Tablero">
+        <button className="control-btn secondary" title="Girar Tablero" onClick={handleToggleOrientation}>
           <RefreshCcw size={18} />
         </button>
         <button className="control-btn danger" title="Reiniciar" onClick={resetGame}>
