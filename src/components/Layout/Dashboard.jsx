@@ -6,6 +6,7 @@ import { GameImport } from '../Import/GameImport';
 import { OpeningExplorer } from '../Analysis/OpeningExplorer';
 import { BoardControls } from '../Board/BoardControls';
 import { EvaluationGraph } from '../Analysis/EvaluationGraph';
+import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -13,8 +14,11 @@ export const Dashboard = () => {
 
   return (
     <div className="dashboard-container">
+      {/* Modal bloqueante de análisis — se auto-oculta cuando termina */}
+      <AnalysisLoadingModal />
+
       <main className="dashboard-content">
-        {/* Left Side: Board and Evaluation */}
+        {/* Left Side */}
         <section className="board-section glass-panel">
           <div className="eval-bar-wrapper-dashboard">
             <EvaluationBar />
@@ -23,8 +27,8 @@ export const Dashboard = () => {
             <Board />
           </div>
         </section>
-        
-        {/* Right Side: Information Panels */}
+
+        {/* Right Side */}
         <aside className="side-panels">
           <div className="panel-container glass-panel explorer-panel">
             <div className="panel-header">

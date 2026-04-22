@@ -1,0 +1,129 @@
+/* AnalysisLoadingModal.css */
+
+.analysis-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.75);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.analysis-modal-card {
+    background: #1a1d23;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    padding: 36px 40px;
+    min-width: 320px;
+    max-width: 440px;
+    width: 90%;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.6);
+    animation: slideUp 0.25s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(16px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.analysis-modal-icon {
+    color: #00c1b1;
+    margin-bottom: 4px;
+}
+
+.knight-spinner {
+    width: 48px;
+    height: 48px;
+    animation: spin 1.4s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.analysis-modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #f0f0f0;
+    margin: 0;
+}
+
+.analysis-modal-opening {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.eco-badge {
+    background: #917961;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.05em;
+}
+
+.opening-text {
+    font-size: 0.9rem;
+    color: #b0b8c8;
+    font-style: italic;
+}
+
+.analysis-modal-phase {
+    font-size: 0.85rem;
+    color: #8892a0;
+    margin: 0;
+    min-height: 1.2em;
+}
+
+/* Barra de progreso */
+.analysis-modal-progress-track {
+    width: 100%;
+    height: 5px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.analysis-modal-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00c1b1, #409cde);
+    border-radius: 99px;
+    transition: width 0.4s ease;
+}
+
+.analysis-modal-hint {
+    font-size: 0.75rem;
+    color: #555e6e;
+    margin: 0;
+}

@@ -1,14 +1,19 @@
+/**
+ * OpeningExplorer.jsx  v3
+ *
+ * Cambios:
+ *  - Ya NO escribe moveEvaluations. Solo muestra datos del Explorer.
+ *    Toda la lógica de Book Move vive en analysisQueue.js.
+ *  - Lee openingName y ecoCode del store (seteados por analysisQueue)
+ *    en lugar de llamar setOpeningName aquí.
+ *  - Se mantiene la lógica de flechas (solo visual, no afecta evaluaciones).
+ */
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { fetchOpeningExplorer } from '../../services/gameApi';
 import { Loader, AlertCircle } from 'lucide-react';
 import './OpeningExplorer.css';
 
-/**
- * Convierte un movimiento SAN a objeto Arrow de react-chessboard v5.
- * v5 usa: { startSquare: string, endSquare: string, color: string }
- * (ya NO usa arrays [from, to, color])
- */
 function sanToArrow(san, chessInstance, color = 'rgb(0, 100, 255)') {
   try {
     const moves = chessInstance.moves({ verbose: true });
@@ -20,102 +25,69 @@ function sanToArrow(san, chessInstance, color = 'rgb(0, 100, 255)') {
   }
 }
 
-import { BOOK_MOVE_LIMIT, MIN_GAMES_THRESHOLD } from '../../constants/chessConstants.jsx';
-
 export const OpeningExplorer = () => {
   const {
     setArrows,
-    setMoveEvaluation,
     game,
     fen,
-    history,
-    currentMoveIndex,
-    setOpeningName,
     lichessToken,
+    // Leer nombre del store (seteado por analysisQueue, no por este componente)
+    openingName,
+    ecoCode,
   } = useGameStore();
 
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState(null);
-  const [hoveredMove, setHoveredMove] = React.useState(null);
+  const [hoveredMove, setHovered] = React.useState(null);
 
   React.useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError(null);
 
-    const loadData = async () => {
-      if (!data) setLoading(true);
-      setError(null);
-
-      try {
-        const explorerData = await fetchOpeningExplorer(fen, lichessToken);
-
+    fetchOpeningExplorer(fen, lichessToken)
+      .then(explorerData => {
         if (!active) return;
-
         setData(explorerData);
 
-        if (explorerData.opening) {
-          setOpeningName(explorerData.opening);
-        }
-
-        // ── Lógica de marcado "Libro" filtrada ──
-        const totalGames = (explorerData.moves ?? []).reduce((sum, m) => sum + (m.games || 0), 0);
-        
-        const isTheory = 
-          explorerData.opening && 
-          explorerData.opening !== 'Posición no encontrada' &&
-          currentMoveIndex < BOOK_MOVE_LIMIT &&
-          totalGames >= MIN_GAMES_THRESHOLD;
-
-        if (isTheory && currentMoveIndex >= 0) {
-          setMoveEvaluation(currentMoveIndex, 'Libro');
-        }
-
-        // Mostrar flechas de las 2 principales jugadas de libro (estilo tenue)
-        // Reducimos de 3 a 2 para evitar saturar el tablero (1 motor + 2 libro = 3 total)
+        // Flechas de las 2 jugadas principales (visual únicamente)
         const bookArrows = (explorerData.moves ?? [])
           .slice(0, 2)
           .map(m => sanToArrow(m.san, game, 'rgba(100, 149, 237, 0.45)'))
           .filter(Boolean);
         setArrows(bookArrows);
-
-      } catch (err) {
+      })
+      .catch(err => {
         console.warn('OpeningExplorer fetch failed:', err);
-        if (active) setError('No se pudo conectar con la base de datos de Lichess.');
-      } finally {
-        if (active) setLoading(false);
-      }
-    };
+        if (active) setError('No se pudo conectar con Lichess.');
+      })
+      .finally(() => { if (active) setLoading(false); });
 
-    loadData();
     return () => { active = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fen, lichessToken]);
+  }, [fen, lichessToken]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Hover: mostrar flecha destacada para la jugada bajo el cursor ────────
   const handleMoveHover = React.useCallback((san) => {
-    setHoveredMove(san);
+    setHovered(san);
     const arrow = sanToArrow(san, game, 'rgba(0, 120, 255, 0.8)');
     setArrows(arrow ? [arrow] : []);
   }, [game, setArrows]);
 
-  // ── Al salir de una fila: volver a mostrar las 3 principales ────────────
   const handleMouseLeave = React.useCallback(() => {
-    setHoveredMove(null);
+    setHovered(null);
     if (!data) return;
-    const allArrows = (data.moves ?? [])
+    const arrows = (data.moves ?? [])
       .slice(0, 3)
       .map(m => sanToArrow(m.san, game, 'rgba(100, 149, 237, 0.45)'))
       .filter(Boolean);
-    setArrows(allArrows);
+    setArrows(arrows);
   }, [game, setArrows, data]);
 
-  // ── Al salir del contenedor completo: limpiar todas las flechas ──────────
   const handleContainerLeave = React.useCallback(() => {
-    setHoveredMove(null);
+    setHovered(null);
     setArrows([]);
   }, [setArrows]);
 
-  // ── Estados de carga / error / vacío ────────────────────────────────────
   if (loading && !data) {
     return (
       <div className="explorer-container loading">
@@ -138,18 +110,19 @@ export const OpeningExplorer = () => {
     return (
       <div className="explorer-container empty">
         <AlertCircle size={16} />
-        <span>No hay datos disponibles para esta posición.</span>
+        <span>No hay datos para esta posición.</span>
       </div>
     );
   }
 
+  // Usar el nombre del store si está disponible (más específico), o el de la API
+  const displayName = openingName || data.opening;
+
   return (
-    <div
-      className="explorer-container"
-      onMouseLeave={handleContainerLeave}
-    >
+    <div className="explorer-container" onMouseLeave={handleContainerLeave}>
       <div className="opening-name">
-        {data.opening}
+        {ecoCode && <span style={{ opacity: 0.6, marginRight: 6, fontSize: '0.8em' }}>{ecoCode}</span>}
+        {displayName}
       </div>
 
       <div className="moves-stats-list">
@@ -173,9 +146,7 @@ export const OpeningExplorer = () => {
               </div>
             </div>
             <div className="games-count">
-              {move.games >= 1000
-                ? `${(move.games / 1000).toFixed(1)}k`
-                : move.games}
+              {move.games >= 1000 ? `${(move.games / 1000).toFixed(1)}k` : move.games}
             </div>
           </div>
         ))}

@@ -1,11 +1,39 @@
+/**
+ * gameSlice.js  v3
+ *
+ * Cambios:
+ *  - loadPgn / resetGame limpian analysisReady y los nuevos campos de apertura
+ *  - analysisQueue.clearOpeningCache(gameId) al cargar nueva partida
+ */
 import { Chess } from 'chess.js';
+import { analysisQueue } from '../../services/analysisQueue';
 
 function replayTo(history, index) {
   const g = new Chess();
   const moves = index < 0 ? [] : history.slice(0, index + 1);
-  for (const m of moves) g.move(m);
+  for (const m of moves) {
+    try { g.move(m); } catch { }
+  }
   return g;
 }
+
+// Campos de análisis que se resetean al cargar una nueva partida
+const ANALYSIS_RESET = {
+  evaluation: 0,
+  evaluationHistory: [],
+  moveEvaluations: {},
+  bestMoves: {},
+  alternativeLines: {},
+  isAnalyzing: false,
+  analysisProgress: 0,
+  analysisReady: false,
+  gameScore: null,
+  arrows: [],
+  highlights: {},
+  ecoCode: '',
+  openingPly: -1,
+  openingDetected: false,
+};
 
 export const createGameSlice = (set, get) => ({
   game: new Chess(),
@@ -38,7 +66,7 @@ export const createGameSlice = (set, get) => ({
         fen: gameCopy.fen(),
         history: newHistory,
         currentMoveIndex: newHistory.length - 1,
-        evaluation: 0, // Reseteamos eval al mover
+        evaluation: 0,
       });
       return result;
     } catch {
@@ -51,39 +79,18 @@ export const createGameSlice = (set, get) => ({
     const safeIndex = Math.max(-1, Math.min(index, state.history.length - 1));
     try {
       const gameCopy = replayTo(state.history, safeIndex);
-      
-      // Sincronizar la evaluación con el historial de análisis
       const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
       const currentEval = evalObj ? evalObj.score : 0;
-
-      set({ 
-        game: gameCopy, 
-        fen: gameCopy.fen(), 
-        currentMoveIndex: safeIndex,
-        evaluation: currentEval
-      });
+      set({ game: gameCopy, fen: gameCopy.fen(), currentMoveIndex: safeIndex, evaluation: currentEval });
     } catch (e) {
       console.error('goToMove error:', e);
     }
   },
 
   resetGame: () => {
-    const newGame = new Chess();
-    set({
-      game: newGame,
-      fen: newGame.fen(),
-      history: [],
-      currentMoveIndex: -1,
-      evaluation: 0,
-      evaluationHistory: [],
-      moveEvaluations: {},
-      bestMoves: {},
-      isAnalyzing: false,
-      analysisProgress: 0,
-      gameScore: null,
-      arrows: [],
-      highlights: {},
-    });
+    const state = get();
+    if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+    set({ game: new Chess(), fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', history: [], currentMoveIndex: -1, ...ANALYSIS_RESET });
   },
 
   loadPgn: (pgn) => {
@@ -91,23 +98,21 @@ export const createGameSlice = (set, get) => ({
       const state = get();
       const newGame = new Chess();
       newGame.loadPgn(pgn);
-      
-      // Orientación automática: si el usuario buscado juega con negras, giramos el tablero
-      const blackPlayer = newGame.header()?.Black?.toLowerCase() || '';
-      const currentUser = state.searchUsername?.toLowerCase() || '';
-      
+
+      // Limpiar cache de la partida anterior
+      if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+
+      // Orientación automática
+      const blackPlayer = newGame.header()?.Black?.toLowerCase() ?? '';
+      const currentUser = state.searchUsername?.toLowerCase() ?? '';
       if (blackPlayer === currentUser && currentUser !== '') {
         state.setBoardOrientation('black');
       } else {
         state.setBoardOrientation('white');
       }
 
-      // Limpiar análisis previo antes de cargar la nueva partida
+      // Nuevo gameId → dispara el useEffect de análisis
       state.setGameId(Date.now());
-      state.setEvaluationHistory([]);
-      state.setMoveEvaluations({});
-      state.setBestMoves({});
-      state.setGameScore(null);
 
       const verboseHistory = newGame.history({ verbose: true });
       set({
@@ -115,15 +120,9 @@ export const createGameSlice = (set, get) => ({
         fen: newGame.fen(),
         history: verboseHistory,
         currentMoveIndex: verboseHistory.length - 1,
-        evaluation: 0,
-        evaluationHistory: [],
-        moveEvaluations: {},
-        bestMoves: {},
-        isAnalyzing: false,
-        analysisProgress: 0,
-        gameScore: null,
-        arrows: [],
+        ...ANALYSIS_RESET,
       });
+
       return true;
     } catch (e) {
       console.error('loadPgn error:', e);

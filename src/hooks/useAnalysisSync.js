@@ -1,59 +1,109 @@
+/**
+ * useAnalysisSync.js  v3
+ *
+ * Cambios:
+ *  - Un único efecto dispara analyzeGame() al cambiar gameId
+ *  - Recibe onOpeningDetected y lo mapea al store
+ *  - analysisReady se pone true en onComplete → Dashboard muestra el tablero
+ *  - El efecto de análisis individual (posición sin evaluación) se mantiene
+ *    para cuando el usuario mueve manualmente fuera del análisis guardado
+ */
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { analysisQueue } from '../services/analysisQueue';
 
-/**
- * Hook para sincronizar el análisis de Stockfish con el estado del tablero.
- * Se encarga de disparar el análisis de la posición actual cuando cambia el FEN.
- */
 export const useAnalysisSync = () => {
   const {
     fen,
+    game,
+    history,
     currentMoveIndex,
+    gameId,
+
     evaluationHistory,
     isAnalyzing,
-    setBestMoveForIndex,
+
     setAnalyzing,
+    setAnalysisProgress,
+    setAnalysisReady,
     setEvaluation,
-    gameId
+    setMoveEvaluation,
+    setBestMoveForIndex,
+    setAlternativeLinesForIndex,
+    setGameScore,
+
+    // Apertura
+    setEcoCode,
+    setOpeningPly,
+    setOpeningDetected,
+    setOpeningName,
+
+    lichessToken,
   } = useGameStore();
 
+  const lastGameId = React.useRef(null);
   const lastAnalyzedFen = React.useRef(null);
 
-  // Resetear el ref cuando cambia la partida
+  // ── Efecto principal: análisis completo al cargar partida ────────────────────
   React.useEffect(() => {
+    if (!gameId || gameId === lastGameId.current) return;
+    if (history.length === 0) return;
+
+    lastGameId.current = gameId;
     lastAnalyzedFen.current = null;
-  }, [gameId]);
 
+    const pgnHeaders = game?.header?.() ?? {};
+
+    analysisQueue.analyzeGame(history, currentMoveIndex, {
+      gameId,
+      pgnHeaders,
+      lichessToken,
+
+      onStatus: (v) => setAnalyzing(v),
+      onProgress: (pct, _msg) => setAnalysisProgress(pct),
+
+      onOpeningDetected: ({ openingName, ecoCode, openingPly, bookPlies }) => {
+        // Marcar todos los plies book ANTES de que Stockfish empiece
+        bookPlies.forEach(ply => setMoveEvaluation(ply, 'Libro'));
+        setOpeningName(openingName);
+        setEcoCode(ecoCode);
+        setOpeningPly(openingPly);
+        setOpeningDetected(true);
+      },
+
+      onMoveResult: ({ index, score, label, bestMove, lines }) => {
+        if (score !== undefined) setEvaluation(score, index);
+        if (label) setMoveEvaluation(index, label);
+        if (bestMove) setBestMoveForIndex(index, bestMove);
+        if (lines?.length) setAlternativeLinesForIndex(index, lines);
+      },
+
+      onComplete: (accuracy) => {
+        setGameScore(accuracy);
+        setAnalysisReady(true);   // ← desbloquea la UI
+        setAnalyzing(false);
+      },
+    });
+  }, [gameId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Efecto secundario: posición sin evaluación al navegar ────────────────────
+  // Útil cuando el usuario navega a un ply que aún no fue analizado
+  // (raro si analyzeGame terminó, pero cubre el caso de movimientos manuales)
   React.useEffect(() => {
-    // Si no hay historial de evaluación, forzamos el análisis ignorando el ref
-    const isNewGame = evaluationHistory.length === 0;
     const hasEval = evaluationHistory?.some(e => e.moveIndex === currentMoveIndex);
-    
-    const shouldAnalyze = (!hasEval && !isAnalyzing && currentMoveIndex >= -1) && 
-                          (isNewGame || lastAnalyzedFen.current !== fen);
+    const sameFen = lastAnalyzedFen.current === fen;
 
-    if (shouldAnalyze) {
-      lastAnalyzedFen.current = fen;
-      analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
-        onStatus: (status) => setAnalyzing(status),
-        onResult: (result) => {
-          if (result.score !== undefined) {
-            setEvaluation(result.score, result.moveIndex);
-          }
-          if (result.bestMove) {
-            setBestMoveForIndex(result.moveIndex, result.bestMove);
-          }
-        }
-      });
-    }
-  }, [
-    fen, 
-    currentMoveIndex, 
-    evaluationHistory, 
-    isAnalyzing, 
-    setBestMoveForIndex, 
-    setAnalyzing, 
-    setEvaluation
-  ]);
+    if (hasEval || isAnalyzing || currentMoveIndex < -1 || sameFen) return;
+
+    lastAnalyzedFen.current = fen;
+
+    analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
+      onStatus: (v) => setAnalyzing(v),
+      onResult: (result) => {
+        if (result.score !== undefined) setEvaluation(result.score, result.moveIndex);
+        if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
+        if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
+      },
+    });
+  }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]); // eslint-disable-line react-hooks/exhaustive-deps
 };
