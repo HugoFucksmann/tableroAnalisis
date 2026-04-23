@@ -6,6 +6,13 @@ const WIDTH = 400;
 const HEIGHT = 80;
 const PADDING = 6;
 
+// ── Mistake classification ────────────────────────────────────────────────────
+const MISTAKE_STYLES = {
+  'Error grave': { color: '#e05555', symbol: '??' },
+  'Error': { color: '#e09a30', symbol: '?' },
+  'Imprecisión': { color: '#c8b830', symbol: '?!' },
+};
+
 function clampScore(s) {
   return Math.max(-5, Math.min(5, s ?? 0));
 }
@@ -20,21 +27,16 @@ function getX(index, total) {
 }
 
 export const EvaluationGraph = () => {
-  const { evaluationHistory, currentMoveIndex, history, goToMove, gameScore, isAnalyzing } =
+  const { evaluationHistory, currentMoveIndex, history, goToMove, gameScore, isAnalyzing, moveEvaluations } =
     useGameStore();
 
   const total = history.length;
   const midY = getY(0);
 
-  // Memoizamos los cálculos pesados del gráfico
   const { sorted, areaPath, linePoints } = React.useMemo(() => {
-    // 1. Ordenar por moveIndex para que el path sea correcto
     const sortedData = [...evaluationHistory].sort((a, b) => a.moveIndex - b.moveIndex);
-    
-    // 2. Construir puntos de la línea
     const linePts = sortedData.map(d => `${getX(d.moveIndex, total)},${getY(d.score)}`);
 
-    // 3. Construir path del área rellena
     let areaP = '';
     if (sortedData.length > 0) {
       const first = sortedData[0];
@@ -50,12 +52,24 @@ export const EvaluationGraph = () => {
     return { sorted: sortedData, areaPath: areaP, linePoints: linePts };
   }, [evaluationHistory, total, midY]);
 
-  const currentEval = React.useMemo(() => 
+  const currentEval = React.useMemo(() =>
     evaluationHistory.find(e => e.moveIndex === currentMoveIndex),
     [evaluationHistory, currentMoveIndex]
   );
 
-  // Click en el SVG → navegar al movimiento correspondiente
+  // ── Mistake markers derived from moveEvaluations + evaluationHistory ─────
+  const mistakeMarkers = React.useMemo(() => {
+    if (!moveEvaluations || total === 0) return [];
+    return Object.entries(moveEvaluations)
+      .filter(([, type]) => MISTAKE_STYLES[type])
+      .map(([idxStr, type]) => {
+        const idx = parseInt(idxStr);
+        const evalObj = evaluationHistory.find(e => e.moveIndex === idx);
+        const score = evalObj?.score ?? 0;
+        return { idx, type, x: getX(idx, total), y: getY(score), style: MISTAKE_STYLES[type] };
+      });
+  }, [moveEvaluations, evaluationHistory, total]);
+
   const handleSvgClick = (e) => {
     if (total <= 1) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -64,7 +78,6 @@ export const EvaluationGraph = () => {
     goToMove(Math.max(0, Math.min(total - 1, index)));
   };
 
-  // El return condicional DEBE ir después de todos los hooks
   if (total === 0) {
     return (
       <div className="evaluation-graph-container glass-panel">
@@ -104,11 +117,9 @@ export const EvaluationGraph = () => {
             <stop offset="0%" stopColor="#2d3436" stopOpacity="0.7" />
             <stop offset="100%" stopColor="#2d3436" stopOpacity="0.05" />
           </linearGradient>
-          {/* Clip superior (ventaja blancas) */}
           <clipPath id="clipAbove">
             <rect x="0" y="0" width={WIDTH} height={midY} />
           </clipPath>
-          {/* Clip inferior (ventaja negras) */}
           <clipPath id="clipBelow">
             <rect x="0" y={midY} width={WIDTH} height={HEIGHT - midY} />
           </clipPath>
@@ -119,7 +130,7 @@ export const EvaluationGraph = () => {
         {/* Área ventaja negras */}
         <path d={areaPath} fill="url(#evalGradientBlack)" clipPath="url(#clipBelow)" />
 
-        {/* Baseline (0.0) */}
+        {/* Baseline */}
         <line x1={PADDING} y1={midY} x2={WIDTH - PADDING} y2={midY} className="baseline" />
 
         {/* Línea de evaluación */}
@@ -127,7 +138,35 @@ export const EvaluationGraph = () => {
           <polyline points={linePoints.join(' ')} className="eval-line" />
         )}
 
-        {/* Marcador del movimiento actual */}
+        {/* ── Mistake markers ─────────────────────────────────────────── */}
+        {mistakeMarkers.map(({ idx, x, y, style, type }) => {
+          const isCurrent = idx === currentMoveIndex;
+          return (
+            <g
+              key={idx}
+              className="mistake-marker-group"
+              onClick={(e) => { e.stopPropagation(); goToMove(idx); }}
+            >
+              {/* Vertical tick at bottom */}
+              <line
+                x1={x} y1={HEIGHT - PADDING}
+                x2={x} y2={HEIGHT - PADDING - 5}
+                stroke={style.color}
+                strokeWidth={isCurrent ? 2 : 1.5}
+                opacity={isCurrent ? 1 : 0.7}
+              />
+              {/* Diamond marker on the eval line */}
+              <polygon
+                points={`${x},${y - 4} ${x + 3},${y} ${x},${y + 4} ${x - 3},${y}`}
+                fill={style.color}
+                opacity={isCurrent ? 1 : 0.75}
+                className="mistake-diamond"
+              />
+            </g>
+          );
+        })}
+
+        {/* Marcador movimiento actual */}
         {currentMoveIndex >= 0 && (
           <line
             x1={getX(currentMoveIndex, total)}

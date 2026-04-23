@@ -23,9 +23,9 @@
 }
 
 .analysis-modal-card {
-    background: #1a1d23;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius);
     padding: 36px 40px;
     min-width: 320px;
     max-width: 440px;
@@ -52,11 +52,11 @@
 }
 
 .analysis-modal-icon {
-    color: #00c1b1;
+    color: var(--accent-primary);
     margin-bottom: 4px;
 }
 
-.knight-spinner {
+.simple-spinner {
     width: 48px;
     height: 48px;
     animation: spin 1.4s linear infinite;
@@ -71,7 +71,7 @@
 .analysis-modal-title {
     font-size: 1.25rem;
     font-weight: 600;
-    color: #f0f0f0;
+    color: var(--text-primary);
     margin: 0;
 }
 
@@ -84,24 +84,25 @@
 }
 
 .eco-badge {
-    background: #917961;
-    color: #fff;
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
     font-size: 0.72rem;
     font-weight: 700;
     padding: 2px 7px;
     border-radius: 4px;
     letter-spacing: 0.05em;
+    border: 1px solid var(--border-color);
 }
 
 .opening-text {
     font-size: 0.9rem;
-    color: #b0b8c8;
+    color: var(--text-secondary);
     font-style: italic;
 }
 
 .analysis-modal-phase {
     font-size: 0.85rem;
-    color: #8892a0;
+    color: var(--text-muted);
     margin: 0;
     min-height: 1.2em;
 }
@@ -117,13 +118,14 @@
 
 .analysis-modal-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #00c1b1, #409cde);
+    background: linear-gradient(90deg, var(--accent-primary), #409cde);
     border-radius: 99px;
     transition: width 0.4s ease;
 }
 
 .analysis-modal-hint {
     font-size: 0.75rem;
-    color: #555e6e;
+    color: var(--text-muted);
+    opacity: 0.7;
     margin: 0;
 }

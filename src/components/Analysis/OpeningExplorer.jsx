@@ -23,6 +23,7 @@ export const OpeningExplorer = () => {
     lichessToken,
     openingName,
     ecoCode,
+    makeMove,
   } = useGameStore();
 
   const [data, setData] = React.useState(null);
@@ -119,6 +120,7 @@ export const OpeningExplorer = () => {
             className={`move-stat-row ${hoveredMove === move.san ? 'hovered' : ''}`}
             onMouseEnter={() => handleMoveHover(move.san)}
             onMouseLeave={handleMouseLeave}
+            onClick={() => makeMove(move.san)}
           >
             <div className="move-san">{move.san}</div>
             <div className="win-rate-bar">

@@ -44,7 +44,7 @@ export const AnalysisLoadingModal = () => {
             <div className="analysis-modal-card">
 
                 <div className="analysis-modal-icon">
-                    <ChessKnightSpinner />
+                    <SimpleSpinner />
                 </div>
 
                 <h2 className="analysis-modal-title">Analizando partida</h2>
@@ -73,28 +73,23 @@ export const AnalysisLoadingModal = () => {
     );
 };
 
-// Spinner SVG de pieza de ajedrez (caballo) — sin dependencias externas
-const ChessKnightSpinner = () => (
+// Spinner circular simple
+const SimpleSpinner = () => (
     <svg
-        className="knight-spinner"
+        className="simple-spinner"
         viewBox="0 0 24 24"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
     >
-        <path
-            d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"
+        <circle
+            cx="12"
+            cy="12"
+            r="10"
             stroke="currentColor"
-            strokeWidth="1.5"
-            strokeDasharray="40"
+            strokeWidth="3"
+            strokeDasharray="45"
             strokeDashoffset="0"
             strokeLinecap="round"
         />
-        {/* Caballo simplificado */}
-        <path
-            d="M9 17c0-2 1-3 2-4l1-3h2l-1 2h1c1 0 1 1 0 2l-1 1v2H9z"
-            fill="currentColor"
-            opacity="0.85"
-        />
-        <circle cx="11" cy="9" r="1" fill="currentColor" />
     </svg>
 );

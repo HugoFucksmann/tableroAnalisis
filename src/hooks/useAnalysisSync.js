@@ -1,6 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { analysisQueue } from '../services/analysisQueue';
+import { stockfishService } from '../services/stockfishService';
 
 export const useAnalysisSync = () => {
   const {
@@ -70,8 +71,16 @@ export const useAnalysisSync = () => {
         setGameScore(accuracy);
         setAnalysisReady(true);
         setAnalyzing(false);
+        // El worker se libera en el finally de analyzeGame (stockfishService.destroy()).
       },
     });
+
+
+    // Bug fix #2: cancelar análisis si el componente se desmonta
+    // o si cambia el gameId antes de que termine.
+    return () => {
+      analysisQueue.cancel();
+    };
   }, [gameId]);
 
   React.useEffect(() => {
@@ -81,7 +90,6 @@ export const useAnalysisSync = () => {
     if (hasEval || isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || sameFen) return;
 
     lastAnalyzedFen.current = fen;
-
     analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
       onStatus: (v) => setAnalyzing(v),
       onResult: (result) => {
@@ -91,6 +99,7 @@ export const useAnalysisSync = () => {
       },
     });
   }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]);
+
 
   React.useEffect(() => {
     if (history.length === 0) {

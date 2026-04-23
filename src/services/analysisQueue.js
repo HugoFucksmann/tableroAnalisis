@@ -170,7 +170,7 @@ class AnalysisQueue {
                 const isHighPriority = (posIndex === currentIndex || posIndex === currentIndex + 1);
 
                 const depth = isHighPriority ? engineConfig.depth : Math.max(10, engineConfig.depth - 3);
-                const mPv = isHighPriority ? engineConfig.multiPv : 1;
+                const mPv = engineConfig.multiPv || 1;
 
                 try {
                     const result = await stockfishService.analyzePosition(fen, depth, signal, null, mPv);
@@ -208,7 +208,11 @@ class AnalysisQueue {
         } finally {
             onStatus?.(false);
             this.isRunning = false;
+            // Garantizar que el worker siempre se libere, incluso si
+            // el análisis fue cancelado (abort) antes de que onComplete se llame.
+            stockfishService.destroy();
         }
+
     }
 
     async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
@@ -237,7 +241,8 @@ class AnalysisQueue {
                         score: MathUtils.cpToVisualScore(score, mate, isBlackTurn),
                         bestMove, moveIndex,
                     });
-                }
+                },
+                engineConfig.multiPv || 1
             );
 
             if (result && !signal.aborted) {
@@ -282,8 +287,8 @@ class AnalysisQueue {
             score: stateAfter.score,
             label,
             isBook,
-            bestMove: stateBefore.bestMove,
-            lines: ply === focusIdx ? stateBefore.lines : null,
+            bestMove: stateAfter.bestMove,
+            lines: stateAfter.lines,
         });
 
         let wpLoss = isWhiteMove ? (stateBefore.wp - stateAfter.wp) : (stateAfter.wp - stateBefore.wp);

@@ -142,3 +142,17 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
+
+/* ── Mistake markers in SVG ─────────────────────────────────────── */
+.mistake-marker-group {
+  cursor: pointer;
+}
+
+.mistake-diamond {
+  transition: opacity 0.15s ease;
+}
+
+.mistake-marker-group:hover .mistake-diamond {
+  opacity: 1 !important;
+  filter: brightness(1.3);
+}

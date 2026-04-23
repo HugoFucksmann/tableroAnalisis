@@ -42,6 +42,7 @@ export const Board = () => {
     currentMoveIndex,
     moveEvaluations,
     bestMoves,
+    alternativeLines,
     arrows,
     boardOrientation,
   } = useGameStore();
@@ -81,26 +82,55 @@ export const Board = () => {
     };
   }, [currentMoveIndex, history]);
 
-  // Merged arrows: engine best-move + store arrows (opening explorer, etc.)
+  // Merged arrows: engine alternative lines (max 5) + store arrows (opening explorer)
   const combinedArrows = React.useMemo(() => {
-    const engineArrow = uciToArrow(bestMoves[currentMoveIndex]);
     const storeArrows = arrows ?? [];
-    const seen = new Set();
-    const result = [];
+    const lines = alternativeLines[currentMoveIndex] ?? [];
+    const arrowMap = new Map();
 
-    if (engineArrow) {
-      seen.add(`${engineArrow.startSquare}-${engineArrow.endSquare}`);
-      result.push(engineArrow);
-    }
-    for (const arrow of storeArrows) {
-      const key = `${arrow.startSquare}-${arrow.endSquare}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        result.push(arrow);
+    // 1) Motor: Mostrar todas las líneas alternativas calculadas por el motor (según config MultiPV)
+    lines.forEach((line) => {
+      // Opacidad decreciente según el ranking: 90%, 70%, 50%, 30%, 15%
+      const opacities = { 1: '0.9', 2: '0.7', 3: '0.5', 4: '0.3', 5: '0.15' };
+      const opacity = opacities[line.multipv] || '0.1';
+      const color = `rgba(0, 193, 177, ${opacity})`;
+
+      const arrow = uciToArrow(line.move, color);
+      if (arrow) {
+        const key = `${arrow.startSquare}-${arrow.endSquare}`;
+        if (!arrowMap.has(key)) {
+          arrowMap.set(key, arrow);
+        }
+      }
+    });
+
+    // Fallback: si no hay líneas pero sí bestMove (por si acaso)
+    if (arrowMap.size === 0 && bestMoves[currentMoveIndex]) {
+      const arrow = uciToArrow(bestMoves[currentMoveIndex], 'rgba(0, 193, 177, 0.9)');
+      if (arrow) {
+        const key = `${arrow.startSquare}-${arrow.endSquare}`;
+        arrowMap.set(key, arrow);
       }
     }
-    return result;
-  }, [bestMoves, currentMoveIndex, arrows]);
+
+    // 2) Flechas del store (ej: Opening Explorer)
+    for (const arrow of storeArrows) {
+      const key = `${arrow.startSquare}-${arrow.endSquare}`;
+      
+      // Si es un "hover" activo del explorador (suele ser 1 sola flecha),
+      // sobreescribimos la flecha del motor para que destaque la azul fuerte.
+      // Si son las flechas default del libro (varias), priorizamos las del motor.
+      if (storeArrows.length === 1) {
+        arrowMap.set(key, arrow);
+      } else {
+        if (!arrowMap.has(key)) {
+          arrowMap.set(key, arrow);
+        }
+      }
+    }
+    
+    return Array.from(arrowMap.values());
+  }, [alternativeLines, bestMoves, currentMoveIndex, arrows]);
 
   // ── Event handlers ────────────────────────────────────────────────────────
   function onDrop({ sourceSquare, targetSquare }) {

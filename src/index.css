@@ -149,3 +149,34 @@ body {
 .premium-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--accent-primary);
 }
+
+/* Para navegadores basados en WebKit (Chrome, Edge, Safari) */
+::-webkit-scrollbar {
+  width: 10px;
+  /* Ancho de la barra */
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  /* Fondo oscuro de la pista */
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  /* Color oscuro del "pulgar" */
+  border-radius: 5px;
+  /* Redondeo */
+  border: 2px solid #1a1a1a;
+  /* Crea el efecto de espacio/subtileza */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+  /* Un toque más claro al pasar el mouse */
+}
+
+/* Para Firefox */
+html {
+  scrollbar-width: thin;
+  scrollbar-color: #333 #1a1a1a;
+}

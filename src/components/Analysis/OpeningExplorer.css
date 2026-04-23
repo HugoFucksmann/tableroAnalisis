@@ -84,7 +84,14 @@
   /* ~40px / barra / ~35px */
   align-items: center;
   gap: var(--space-3);
-  padding: var(--space-1) 0;
+  padding: var(--space-1) var(--space-2);
+  border-radius: calc(var(--border-radius) * 0.5);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.move-stat-row:hover, .move-stat-row.hovered {
+  background-color: rgba(78, 154, 241, 0.08);
 }
 
 .move-san {
