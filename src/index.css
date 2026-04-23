@@ -7,7 +7,7 @@
   /* Colors - Accents */
   --accent-primary: #4e9af1;
   --accent-secondary: #3a7bd5;
-  --accent-glow: rgba(78, 154, 241, 0.15);
+  --accent-glow: rgba(78, 154, 241, 0.2);
 
   /* Colors - Text */
   --text-primary: #f8f9fa;
@@ -18,28 +18,23 @@
   --eval-white: #e9ecef;
   --eval-black: #2b2d33;
 
-  /* Colors - Feedback */
-  --success: #00c853;
-  --success-glow: rgba(0, 200, 83, 0.1);
-  --danger: #ff5252;
-  --danger-glow: rgba(255, 82, 82, 0.1);
-  --warning: #ffd600;
-
   /* Typography */
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  --font-size-xs: 0.65rem;
-  --font-size-sm: 0.7rem;
-  --font-size-md: 0.8rem;
-  --font-size-lg: 0.95rem;
+  --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
+  --font-size-xs: 0.7rem;
+  --font-size-sm: 0.8rem;
+  --font-size-md: 0.9rem;
+  --font-size-lg: 1.1rem;
 
   /* Layout & Glass */
   --side-panel-width: 320px;
   --border-radius: 8px;
-  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.4);
-  --glass: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.5);
+  --glass: rgba(255, 255, 255, 0.02);
+  --glass-border: rgba(255, 255, 255, 0.05);
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
 
 * {
   margin: 0;
@@ -54,6 +49,12 @@ body {
   overflow: hidden;
   height: 100vh;
   width: 100vw;
+  animation: fadeIn 0.8s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 #root {
@@ -62,14 +63,20 @@ body {
 
 .glass-panel {
   background: var(--glass);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
+  transition: var(--transition);
+}
+
+.glass-panel:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .premium-scroll::-webkit-scrollbar {
-  width: 6px;
+  width: 5px;
 }
 
 .premium-scroll::-webkit-scrollbar-track {
@@ -77,10 +84,10 @@ body {
 }
 
 .premium-scroll::-webkit-scrollbar-thumb {
-  background: var(--bg-tertiary);
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 10px;
 }
 
 .premium-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background: var(--accent-primary);
 }

@@ -44,9 +44,9 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  max-height: 280px;
+  flex: 1;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 6px;
 }
 
 .moves-stats-list::-webkit-scrollbar {
@@ -59,7 +59,7 @@
 }
 
 .moves-stats-list::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--accent-primary);
 }
 
 .move-stat-row {

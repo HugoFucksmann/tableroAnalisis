@@ -44,6 +44,8 @@ const MathUtils = {
 
 const EvaluationEngine = {
     classifyMove(wpBefore, wpAfter, isWhiteMove, isEngineBestMove) {
+        // Se mantiene todo igual. Ahora que restauramos MathUtils, 
+        // las etiquetas volverán a ser idénticas a las de Chess.com.
         const rawWpLoss = isWhiteMove ? (wpBefore - wpAfter) : (wpAfter - wpBefore);
 
         if (isEngineBestMove && rawWpLoss <= -0.05) return 'Brillante';
@@ -61,25 +63,40 @@ const EvaluationEngine = {
 
     calculateAccuracy(moveData) {
         const calc = (moves) => {
-            let sumLoss = 0;
-            let count = 0;
+            const validMoves = moves.filter(m => m !== undefined);
+            if (validMoves.length === 0) return 100;
 
-            for (let i = 0; i < moves.length; i++) {
-                if (moves[i] !== undefined) {
-                    sumLoss += moves[i].wpLoss;
-                    count++;
-                }
+            let sumAccuracy = 0;
+            let harmonicSum = 0;
+
+            for (const move of validMoves) {
+                const lossPct = move.wpLoss * 100;
+
+                // EL SECRETO ESTÁ AQUÍ:
+                // Al usar -0.085 aplicamos el castigo estrictamente en el puntaje, 
+                // sin afectar el clasificador de texto de la jugada.
+                let moveAcc = lossPct <= 0 ? 100 : 100 * Math.exp(-0.085 * lossPct);
+
+                moveAcc = Math.max(0, Math.min(100, moveAcc));
+
+                sumAccuracy += moveAcc;
+                // Máximo Math.max(1, ...) para que los blunders limiten en 1% y destruyan la media armónica
+                harmonicSum += 1 / Math.max(1, moveAcc);
             }
-            if (count === 0) return 100;
 
-            const avgLoss = (sumLoss / count) * 100;
-            const acc = 103.1668 * Math.exp(-0.04354 * avgLoss) - 3.1669;
-            return Math.max(0, Math.min(100, Math.round(acc)));
+            const arithmeticMean = sumAccuracy / validMoves.length;
+            const harmonicMean = validMoves.length / harmonicSum;
+
+            // Promediamos 50/50 la media aritmética y la armónica.
+            // Esto arrastrará los ~75% originales directamente hacia el rango de los 54-61%
+            const finalAcc = (arithmeticMean + harmonicMean) / 2;
+
+            return Math.max(0, Math.min(100, Math.round(finalAcc)));
         };
 
         return {
-            white: calc(moveData.filter(d => d?.isWhiteMove && !d?.isBook)),
-            black: calc(moveData.filter(d => !d?.isWhiteMove && !d?.isBook)),
+            white: calc(moveData.filter(d => d && d.isWhiteMove && !d.isBook)),
+            black: calc(moveData.filter(d => d && !d.isWhiteMove && !d.isBook)),
         };
     }
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Board } from '../Board/Board';
 import { EvaluationBar } from '../Analysis/EvaluationBar';
 import { MoveList } from '../History/MoveList';
@@ -10,20 +10,20 @@ import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
 import './Dashboard.css';
 
 const isMobileViewport = () =>
-  typeof window !== 'undefined' && window.innerWidth <= 768;
+  typeof window !== 'undefined' && window.innerWidth <= 1100;
 
 export const Dashboard = () => {
-  // Both panels start collapsed on mobile to keep the board front-and-center
-  const [isImportCollapsed, setIsImportCollapsed] = React.useState(isMobileViewport);
-  const [isExplorerCollapsed, setIsExplorerCollapsed] = React.useState(isMobileViewport);
+  // Panel states
+  const [isImportCollapsed, setIsImportCollapsed] = useState(isMobileViewport());
+  const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(isMobileViewport());
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
 
   return (
     <div className="dashboard-container">
-      {/* Blocking analysis modal — hides itself when done */}
       <AnalysisLoadingModal />
 
       <main className="dashboard-content">
-        {/* ── Left: Board ───────────────────────────────────── */}
+        {/* ── Left: Board Section ───────────────────────────────────── */}
         <section className="board-section glass-panel">
           <div className="eval-bar-wrapper-dashboard">
             <EvaluationBar />
@@ -34,51 +34,47 @@ export const Dashboard = () => {
         </section>
 
         {/* ── Right: Side panels ────────────────────────────── */}
-        {/* On mobile these stack below the board (single-column grid).
-            CSS `order` puts controls first, then moves, explorer, import. */}
         <aside className="side-panels">
+          
+          {/* Controls + Graph — High Priority */}
+          <div className="panel-container glass-panel controls-panel">
+            <div className="panel-header">
+              <h3>Análisis</h3>
+            </div>
+            <div className="controls-content">
+              <EvaluationGraph />
+              <BoardControls />
+            </div>
+          </div>
 
-          {/* Explorer — collapsible, starts closed on mobile */}
+          {/* Move history */}
+          <div className={`panel-container glass-panel move-history-panel ${isHistoryCollapsed ? 'collapsed' : ''}`}>
+            <div className="panel-header" onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}>
+              <h3>Historial</h3>
+              <span className="collapse-toggle">{isHistoryCollapsed ? '+' : '−'}</span>
+            </div>
+            {!isHistoryCollapsed && <MoveList />}
+          </div>
+
+          {/* Explorer */}
           <div className={`panel-container glass-panel explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
-            <div
-              className="panel-header"
-              onClick={() => setIsExplorerCollapsed((v) => !v)}
-            >
-              <h3>Opening Explorer (Lichess DB)</h3>
+            <div className="panel-header" onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}>
+              <h3>Explorador</h3>
               <span className="collapse-toggle">{isExplorerCollapsed ? '+' : '−'}</span>
             </div>
             {!isExplorerCollapsed && <OpeningExplorer />}
           </div>
 
-          {/* Move history — always visible, height capped on mobile via CSS */}
-          <div className="panel-container glass-panel move-history-panel">
-            <div className="panel-header">
-              <h3>Historial de Partida</h3>
-            </div>
-            <MoveList />
-          </div>
-
-          {/* Eval graph + navigation controls
-              CSS order: 1 on mobile → directly under board */}
-          <div className="bottom-controls-section">
-            <EvaluationGraph />
-            <BoardControls />
-          </div>
-
-          {/* Import — collapsible, starts closed on mobile */}
+          {/* Import */}
           <div className={`panel-container glass-panel import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
-            <div
-              className="panel-header"
-              onClick={() => setIsImportCollapsed((v) => !v)}
-            >
-              <h3>Importar Partidas</h3>
+            <div className="panel-header" onClick={() => setIsImportCollapsed(!isImportCollapsed)}>
+              <h3>Importar</h3>
               <span className="collapse-toggle">{isImportCollapsed ? '+' : '−'}</span>
             </div>
             {!isImportCollapsed && (
               <GameImport onGameSelect={() => setIsImportCollapsed(true)} />
             )}
           </div>
-
         </aside>
       </main>
     </div>
