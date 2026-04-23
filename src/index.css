@@ -64,8 +64,12 @@
   /* ~20–28px */
 
   /* ── Layout ─────────────────────────────────────────────────── */
-  /* Side panel: fluye entre 280px (1280px screen) y 360px (1920px+) */
-  --side-panel-width: clamp(17.5rem, 20vw, 22.5rem);
+  /* Side panel: un poco más ancho como se pidió */
+  --side-panel-width: clamp(18.5rem, 24vw, 24rem);
+
+  @media (max-width: 1440px) {
+    --side-panel-width: clamp(16.5rem, 24vw, 22rem);
+  }
 
   --border-radius: 0.5rem;
   --border-radius-lg: 0.75rem;

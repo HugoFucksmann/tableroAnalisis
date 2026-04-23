@@ -313,8 +313,10 @@
   flex-direction: column;
   gap: var(--space-2);
   overflow-y: auto;
+  overflow-x: hidden;
   /* Altura máxima: 340px ÷ 16 = 21.25rem. Limita sin romper el layout */
   max-height: 21.25rem;
+  padding-right: var(--space-1);
 }
 
 /* ── Card de partida ────────────────────────────────────────────── */
@@ -363,8 +365,8 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 5.625rem;
-  /* ~90px */
+  max-width: 5rem;
+  /* ~80px */
 }
 
 .gi-player.white {

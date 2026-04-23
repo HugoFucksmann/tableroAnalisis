@@ -107,7 +107,7 @@
 }
 
 .panel-header h3 {
-  font-size: var(--text-xs);
+  font-size: var(--text-sm);
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -174,7 +174,8 @@
 .explorer-panel>div:not(.panel-header) {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Panel: Importar — solo su contenido, no crece ─────────────── */
@@ -183,13 +184,16 @@
 }
 
 .import-panel:not(.collapsed) {
-  overflow-y: auto;
+  /* Dejamos que el contenido maneje su propio scroll si es necesario, 
+     o que el flexbox lo contenga. */
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Responsive: 1280px–1440px ──────────────────────────────────── */
 @media (max-width: 1440px) {
   :root {
-    --side-panel-width: clamp(15rem, 22vw, 20rem);
+    --side-panel-width: clamp(16.5rem, 24vw, 22rem);
   }
 }
 
