@@ -28,7 +28,6 @@ async function fetchWithTimeout(url, options = {}, timeoutMs) {
 const MathUtils = {
     cpToWhiteWinProb(cp, mate, isBlackTurn) {
         if (mate !== null) return (mate > 0) === !isBlackTurn ? 1.0 : 0.0;
-        // Curva sigmoide exacta (estándar Lichess/Chess.com)
         const prob = 1 / (1 + Math.exp(-0.00368208 * cp));
         return isBlackTurn ? 1 - prob : prob;
     },
@@ -45,20 +44,18 @@ const MathUtils = {
 
 const EvaluationEngine = {
     classifyMove(wpBefore, wpAfter, isWhiteMove, isEngineBestMove) {
-        let rawWpLoss = isWhiteMove ? (wpBefore - wpAfter) : (wpAfter - wpBefore);
+        const rawWpLoss = isWhiteMove ? (wpBefore - wpAfter) : (wpAfter - wpBefore);
 
         if (isEngineBestMove && rawWpLoss <= -0.05) return 'Brillante';
         if (isEngineBestMove) return 'Mejor';
 
-        let wpLoss = Math.max(0, rawWpLoss);
+        const wpLoss = Math.max(0, rawWpLoss);
 
-        // Umbrales basados en pérdida de Probabilidad de Victoria (Win Probability)
         if (wpLoss <= 0.02) return 'Excelente';
         if (wpLoss <= 0.05) return 'Bueno';
         if (wpLoss <= 0.10) return 'Imprecisión';
         if (wpLoss <= 0.20) return 'Error';
 
-        // Cualquier pérdida dramática superior al 20% es un Error grave indiscutible
         return 'Error grave';
     },
 
