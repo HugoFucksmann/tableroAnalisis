@@ -1,51 +1,68 @@
+/* ═══════════════════════════════════════════════════════════════
+   MoveList — crece para llenar el panel Historial (flex:1)
+   ═══════════════════════════════════════════════════════════════ */
+
 .move-list-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /* flex:1 ocupa todo el espacio que le da .move-history-panel.
+     min-height:0 es obligatorio para que un flex-child pueda
+     contraerse por debajo de su contenido natural. */
+  flex: 1;
+  min-height: 0;
   background: var(--bg-secondary);
   border-radius: var(--border-radius);
   overflow: hidden;
 }
 
+/* ── Header fijo ────────────────────────────────────────────────── */
 .move-list-header {
   display: grid;
-  grid-template-columns: 35px 1fr 1fr;
-  padding: 6px 10px;
+  grid-template-columns: 2rem 1fr 1fr;
+  /* ~35px → 2rem */
+  padding: var(--space-2) var(--space-4);
   background: var(--bg-tertiary);
-  font-size: 0.65rem;
-  font-weight: bold;
+  font-size: var(--text-xs);
+  font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
 }
 
+/* ── Body con scroll ────────────────────────────────────────────── */
 .move-list-body {
   flex: 1;
+  min-height: 0;
+  /* crítico: sin esto flex no recorta y el body crece infinito */
   overflow-y: auto;
 }
 
+/* ── Fila de movimiento ─────────────────────────────────────────── */
 .move-row {
   display: grid;
-  grid-template-columns: 35px 1fr 1fr;
-  padding: 2px 8px;
+  grid-template-columns: 2rem 1fr 1fr;
+  padding: var(--space-1) var(--space-3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
   align-items: center;
 }
 
 .round-num {
   color: var(--text-muted);
-  font-size: 0.7rem;
+  font-size: var(--text-xs);
   font-family: monospace;
 }
 
+/* ── Item de movimiento ─────────────────────────────────────────── */
 .move-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 6px;
-  border-radius: 4px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: calc(var(--border-radius) * 0.5);
   cursor: pointer;
   transition: var(--transition);
-  font-size: 0.85rem;
+  font-size: var(--text-md);
   font-weight: 500;
 }
 
@@ -56,17 +73,19 @@
 .move-item.active {
   background: var(--accent-primary);
   color: white;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow);
 }
 
+/* ── SAN: pieza + texto ─────────────────────────────────────────── */
 .san {
   display: flex;
   align-items: center;
-  gap: 1px;
+  gap: 0.0625rem;
+  /* ~1px */
 }
 
 .piece-icon {
-  font-size: 1rem;
+  font-size: var(--text-lg);
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -79,7 +98,7 @@
 
 .piece-icon.black {
   color: #000;
-  text-shadow: 0 0 1px rgba(255,255,255,0.5);
+  text-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
 .move-item.active .piece-icon {
@@ -88,40 +107,42 @@
 
 .move-text {
   font-weight: 700;
-  letter-spacing: -0.2px;
+  letter-spacing: -0.01em;
 }
 
+/* ── Ícono de evaluación ────────────────────────────────────────── */
 .eval-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
-  margin-left: 6px;
+  margin-left: var(--space-3);
   flex-shrink: 0;
-  font-size: 0.65rem;
-  font-family: 'Inter', sans-serif;
+  font-size: var(--text-xs);
   font-weight: 800;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.2);
 }
 
+/* ── Estados vacío y exploración ────────────────────────────────── */
 .empty-history {
-  padding: 40px;
+  padding: var(--space-8);
   text-align: center;
   color: var(--text-muted);
   font-style: italic;
+  font-size: var(--text-sm);
 }
 
 .explore-mode-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: var(--space-3) var(--space-4);
   background: rgba(255, 171, 0, 0.15);
   border-bottom: 1px solid rgba(255, 171, 0, 0.3);
   color: #ffb142;
-  font-size: 0.8rem;
+  font-size: var(--text-sm);
   font-weight: 600;
 }
 
@@ -129,15 +150,15 @@
   background: #ffb142;
   color: #2d3436;
   border: none;
-  padding: 4px 10px;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-weight: bold;
+  padding: var(--space-1) var(--space-4);
+  border-radius: calc(var(--border-radius) * 0.5);
+  font-size: var(--text-xs);
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition);
 }
 
 .restore-main-btn:hover {
   background: #ffc048;
-  transform: translateY(-1px);
+  transform: translateY(-0.0625rem);
 }

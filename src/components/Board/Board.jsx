@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Chessboard } from 'react-chessboard';
+import { EvaluationBar } from '../Analysis/EvaluationBar';
 
 import { useGameStore } from '../../store/useGameStore';
 import { useAnalysisSync } from '../../hooks/useAnalysisSync';
@@ -44,6 +45,15 @@ export const Board = () => {
     arrows,
     boardOrientation,
   } = useGameStore();
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   // ── Sounds ──────────────────────────────────────────────────────────────
   const moveSound = React.useMemo(() => new Audio('https://www.chess.com/chess-themes/pieces/neo/sounds/move-self.mp3'), []);
@@ -116,26 +126,32 @@ export const Board = () => {
     <div className="board-container">
       <PlayerArea {...playerAreaProps(topSide, true)} />
 
-      <div className="board-frame">
-        <div className="board-main-area">
-          <Chessboard
-            options={{
-              position: fen,
-              onPieceDrop: onDrop,
-              boardOrientation: boardOrientation,
-              darkSquareStyle: { backgroundColor: '#2d3436' },
-              lightSquareStyle: { backgroundColor: '#636e72' },
-              arrows: combinedArrows,
-              squareStyles: squareStyles,
-              animationDurationInMs: 180,
-            }}
-          />
-          <EvalBadgeOverlay
-            currentMoveIndex={currentMoveIndex}
-            history={history}
-            moveEvaluations={moveEvaluations}
-            orientation={boardOrientation}
-          />
+      <div className="board-main-layout">
+        <div className="eval-bar-aside">
+          <EvaluationBar orientation={isMobile ? 'horizontal' : 'vertical'} />
+        </div>
+
+        <div className="board-frame">
+          <div className="board-main-area">
+            <Chessboard
+              options={{
+                position: fen,
+                onPieceDrop: onDrop,
+                boardOrientation: boardOrientation,
+                darkSquareStyle: { backgroundColor: '#2d3436' },
+                lightSquareStyle: { backgroundColor: '#636e72' },
+                arrows: combinedArrows,
+                squareStyles: squareStyles,
+                animationDurationInMs: 180,
+              }}
+            />
+            <EvalBadgeOverlay
+              currentMoveIndex={currentMoveIndex}
+              history={history}
+              moveEvaluations={moveEvaluations}
+              orientation={boardOrientation}
+            />
+          </div>
         </div>
       </div>
 

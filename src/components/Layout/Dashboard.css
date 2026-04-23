@@ -1,54 +1,56 @@
 /* ═══════════════════════════════════════════════════════════════
-   Dashboard — layout (Optimized for UX & Space)
+   Dashboard — layout
+   Todas las medidas son relativas (rem / % / vw / vh / clamp).
+   Excepción: borders de 1px (intencional, sub-pixel rendering).
    ═══════════════════════════════════════════════════════════════ */
 
 :root {
-  --side-panel-width: 320px;
-  --panel-padding: 6px 8px;
-  --inner-gap: 6px;
+  --panel-padding: var(--space-2) var(--space-3);
+  --dashboard-gap: var(--space-2);
+  --eval-bar-width: 0.875rem;
+  --eval-bar-offset: var(--space-4);
 }
 
+/* ── Contenedor raíz ────────────────────────────────────────────── */
 .dashboard-container {
   height: 100vh;
   width: 100vw;
-  padding: 6px;
+  padding: var(--space-2);
   background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
   overflow: hidden;
 }
 
+/* ── Grid principal ─────────────────────────────────────────────── */
+/*
+  align-items:stretch (default) hace que ambas columnas tengan
+  la misma altura. Eso le da a .side-panels una altura definida
+  desde la que sus hijos flex pueden operar.
+*/
 .dashboard-content {
   display: grid;
   grid-template-columns: 1fr var(--side-panel-width);
-  gap: 6px;
+  gap: var(--dashboard-gap);
   flex: 1;
   min-height: 0;
 }
 
-/* ── Board Section ───────────────────────────────────────────── */
-
+/* ── Board Section ───────────────────────────────────────────────── */
 .board-section {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  padding: 8px;
+  gap: var(--space-3);
+  padding: var(--space-3);
   align-items: center;
   justify-content: center;
   overflow: hidden;
   position: relative;
-  background: radial-gradient(circle at center, rgba(78, 154, 241, 0.02) 0%, transparent 70%);
+  background: radial-gradient(circle at center,
+      rgba(78, 154, 241, 0.02) 0%,
+      transparent 70%);
 }
 
-.eval-bar-wrapper-dashboard {
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 88%;
-  width: 8px;
-  z-index: 10;
-}
 
 .board-wrapper {
   flex: 1;
@@ -58,29 +60,39 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+  filter: drop-shadow(0 0.25rem 0.75rem rgba(0, 0, 0, 0.4));
 }
 
-/* ── Side panels (Right) ─────────────────────────────────────── */
-
+/* ── Side Panels ────────────────────────────────────────────────── */
+/*
+  height:100% ancla el sidebar a la altura del grid-row.
+  overflow:hidden garantiza que nada sobresalga — el scroll
+  ocurre solo dentro de .move-list-body y .moves-stats-list.
+*/
 .side-panels {
-  display: grid;
-  grid-template-rows: auto 1fr auto auto;
-  gap: 6px;
-  min-height: 0;
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--dashboard-gap);
+  height: 100%;
+  overflow: hidden;
 }
 
+/* ── Panel genérico ─────────────────────────────────────────────── */
+/*
+  flex-shrink:1 (default) — los paneles SÍ pueden ceder altura
+  cuando el total supera el espacio disponible.
+  overflow:hidden recorta el contenido al colapsar.
+*/
 .panel-container {
   display: flex;
   flex-direction: column;
   padding: var(--panel-padding);
-  gap: 4px;
+  gap: var(--space-1);
   overflow: hidden;
   border: 1px solid var(--glass-border);
   background: var(--glass);
-  border-radius: 8px;
-  transition: all 0.15s ease;
+  border-radius: var(--border-radius);
+  transition: var(--transition);
 }
 
 .panel-header {
@@ -89,107 +101,188 @@
   align-items: center;
   cursor: pointer;
   user-select: none;
-  padding-bottom: 2px;
+  flex-shrink: 0;
+  padding-bottom: var(--space-1);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .panel-header h3 {
-  font-size: 0.6rem;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.8px;
+  letter-spacing: 0.05em;
+  transition: color 0.15s ease;
 }
 
 .panel-header:hover h3 {
   color: var(--text-secondary);
 }
 
+.panel-header:hover .collapse-toggle {
+  opacity: 1;
+}
+
 .collapse-toggle {
   color: var(--accent-primary);
-  font-size: 0.9rem;
-  width: 18px;
-  height: 18px;
+  font-size: var(--text-md);
+  width: 1.125rem;
+  height: 1.125rem;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0.7;
+  transition: opacity 0.15s ease;
 }
 
-/* Panel specific heights & flexibility */
-.move-history-panel {
-  min-height: 120px;
-}
-
-.move-history-panel:not(.collapsed) {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* Ensure components inside fill height */
-.move-history-panel > div:not(.panel-header) {
-  flex: 1;
-  min-height: 0;
-}
-
-.explorer-panel:not(.collapsed),
-.import-panel:not(.collapsed) {
-  min-height: 180px;
+/* ── Panel: Análisis — tamaño fijo ──────────────────────────────── */
+.controls-panel {
+  flex-shrink: 0;
 }
 
 .controls-content {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-3);
 }
 
-/* ── Tablet & Mobile (Standard) ─────────────────────────────── */
+/* ── Panel: Historial — mayor prioridad de altura ───────────────── */
+/*
+  flex-grow:3 + min-height:0: recibe 3 partes del espacio libre
+  y puede contraerse todo lo necesario. El scroll ocurre en
+  .move-list-body (MoveList.css), no aquí.
+*/
+.move-history-panel:not(.collapsed) {
+  flex-grow: 3;
+  flex-shrink: 1;
+  min-height: 0;
+}
 
+.move-history-panel>div:not(.panel-header) {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* ── Panel: Explorador — segunda prioridad ──────────────────────── */
+.explorer-panel:not(.collapsed) {
+  flex-grow: 2;
+  flex-shrink: 1;
+  min-height: 0;
+}
+
+.explorer-panel>div:not(.panel-header) {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── Panel: Importar — solo su contenido, no crece ─────────────── */
+.import-panel {
+  flex-shrink: 0;
+}
+
+.import-panel:not(.collapsed) {
+  overflow-y: auto;
+}
+
+/* ── Responsive: 1280px–1440px ──────────────────────────────────── */
+@media (max-width: 1440px) {
+  :root {
+    --side-panel-width: clamp(15rem, 22vw, 20rem);
+  }
+}
+
+/* ── Responsive: Tablet ─────────────────────────────────────────── */
 @media (max-width: 1100px) {
   .dashboard-container {
     height: auto;
+    min-height: 100vh;
     overflow-y: auto;
   }
-  
+
   .dashboard-content {
     grid-template-columns: 1fr;
     height: auto;
-    gap: 10px;
+    gap: var(--space-5);
   }
 
   .board-section {
     min-height: 55vh;
-    padding: 12px 6px;
+    padding: var(--space-5) var(--space-3);
   }
 
   .side-panels {
-    grid-template-rows: auto auto auto auto;
-    overflow-y: visible;
-    padding-bottom: 20px;
+    height: auto;
+    overflow: visible;
+    padding-bottom: var(--space-8);
   }
 
-  .move-history-panel {
-    min-height: 280px;
+  .move-history-panel:not(.collapsed) {
+    flex-grow: 0;
+    min-height: 17.5rem;
   }
-  
-  .explorer-panel:not(.collapsed),
-  .import-panel:not(.collapsed) {
-    min-height: auto;
+
+  .explorer-panel:not(.collapsed) {
+    flex-grow: 0;
+    min-height: 14rem;
   }
 }
 
+/* ── Mobile (≤768px) ────────────────────────────────────────────── */
+/*
+  Estrategia:
+  1. El dashboard hace scroll vertical normal (no overflow:hidden).
+  2. El tablero se limita a 85vw para no ocupar toda la pantalla
+     y dejar espacio visible a los paneles.
+  3. Los paneles laterales (ahora debajo) tienen altura máxima con
+     scroll interno — nunca sobresalen de la pantalla.
+  4. La eval-bar se oculta: en mobile no hay espacio y el
+     EvaluationGraph en el panel lateral cumple la misma función.
+*/
 @media (max-width: 768px) {
   .dashboard-container {
-    padding: 4px;
-  }
-  
-  .board-wrapper {
-    max-width: 100%;
+    padding: var(--space-1);
+    height: 100vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .eval-bar-wrapper-dashboard {
-    left: 6px;
-    width: 6px;
+  .board-section {
+    min-height: auto;
+    padding: 0; /* Sin padding para evitar que se salga del viewport */
+    background: transparent; /* Quitar fondo en mobile para ganar espacio visual */
+    border: none;
+    overflow: visible;
+  }
+
+
+  .board-wrapper {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    filter: drop-shadow(0 0.25rem 0.75rem rgba(0, 0, 0, 0.4));
+  }
+
+
+
+  /* Paneles: fluyen naturalmente con el scroll del contenedor principal */
+  .side-panels {
+    height: auto;
+    max-height: none;
+    overflow: visible;
+    padding-bottom: var(--space-8);
+  }
+
+  /* En mobile los paneles con flex-grow no tienen referencia —
+     les damos min-height razonable para que sean usables */
+  .move-history-panel:not(.collapsed) {
+    flex-grow: 0;
+    min-height: 12rem;
+  }
+
+  .explorer-panel:not(.collapsed) {
+    flex-grow: 0;
+    min-height: 10rem;
   }
 }

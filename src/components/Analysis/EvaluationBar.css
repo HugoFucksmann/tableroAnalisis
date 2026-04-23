@@ -1,41 +1,106 @@
+/* ═══════════════════════════════════════════════════════════════
+   Evaluation Bar — Analysis Component
+   ═══════════════════════════════════════════════════════════════ */
+
 .eval-bar-wrapper {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
   height: 100%;
+  width: 100%;
+}
+
+.eval-bar-wrapper.vertical {
+  flex-direction: column;
+}
+
+.eval-bar-wrapper.horizontal {
+  flex-direction: row;
 }
 
 .eval-bar-container {
-  width: 10px;
-  background: var(--eval-white);
-  border-radius: 4px;
-  height: 100%;
+  background-color: var(--eval-black); /* Fondo negro por defecto */
+  border-radius: var(--border-radius-lg);
   position: relative;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow);
+}
+
+.vertical .eval-bar-container {
+  width: 100%;
+  flex: 1;
+  background-color: var(--eval-white); /* En vertical, el fondo es blanco */
+}
+
+.horizontal .eval-bar-container {
+  height: 1rem;
+  flex: 1;
 }
 
 .eval-bar-fill {
-  width: 100%;
-  background: var(--eval-black);
+  background-color: var(--eval-black);
   position: absolute;
-  top: 0;
+  transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.vertical .eval-bar-fill {
+  width: 100%;
+  top: 0;
+  left: 0;
+  /* En vertical el fill negro baja desde arriba */
+}
+
+.horizontal .eval-bar-fill {
+  height: 100%;
+  top: 0;
+  left: 0;
+  background-color: var(--eval-white); /* En horizontal el fill blanco crece a la derecha */
+}
+
+/* Indicador central (0.0) */
 .eval-marker.center {
   position: absolute;
-  top: 50%;
-  width: 100%;
-  height: 2px;
   background: rgba(255, 255, 255, 0.2);
+  z-index: 2;
+}
+
+.vertical .eval-marker.center {
+  top: 50%;
+  left: 0;
+  width: 100%;
+  height: 1px;
+}
+
+.horizontal .eval-marker.center {
+  left: 50%;
+  top: 0;
+  width: 1px;
+  height: 100%;
 }
 
 .eval-value-display {
-  font-family: 'Monaco', monospace;
-  font-weight: bold;
-  font-size: 0.7rem;
-  padding: 1px 4px;
-  background: var(--bg-tertiary);
-  border-radius: 3px;
+  font-family: var(--font-main);
+  font-weight: 700;
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--border-radius);
+  border: 1px solid var(--glass-border);
+  min-width: 2.8rem;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  user-select: none;
 }
+
+
+/* Efecto sutil de brillo en el borde */
+.eval-bar-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
+  pointer-events: none;
+}

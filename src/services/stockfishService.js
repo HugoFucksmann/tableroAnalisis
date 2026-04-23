@@ -9,7 +9,8 @@ export const MULTIPV_COUNT = 1;
 
 function getOptimalThreads() {
     const cores = navigator.hardwareConcurrency ?? 2;
-    return Math.max(1, cores - 1);
+    // Cappeamos a 4 hilos máximo. Depth 18 no necesita 15 hilos y ahorra muchísima RAM.
+    return Math.min(4, Math.max(1, cores - 1));
 }
 
 class StockfishService {
@@ -51,7 +52,8 @@ class StockfishService {
 
                 if (line === 'uciok') {
                     this.worker.postMessage(`setoption name Threads value ${this._threads}`);
-                    this.worker.postMessage('setoption name Hash value 64');
+                    // 32MB de Hash es suficiente para análisis en web y ahorra memoria.
+                    this.worker.postMessage('setoption name Hash value 32');
                     this.worker.postMessage(`setoption name MultiPV value ${MULTIPV_COUNT}`);
                     this.worker.postMessage('isready');
                 }
@@ -62,20 +64,15 @@ class StockfishService {
                 }
 
                 if (this.resolvers.length > 0) {
+                    // Llamamos a todos los resolvers pendientes hasta que uno procese la línea.
+                    // En la práctica, casi siempre será el primero.
                     this.resolvers[0](line);
                 }
             };
 
             this.worker.onerror = (e) => {
                 console.error('Stockfish worker error:', e);
-                this.ready = false;
-                this._initPromise = null;
-                this.resolvers = [];
-                if (this._resolveIdle) {
-                    this._resolveIdle();
-                    this._resolveIdle = null;
-                }
-                this.isSearching = false;
+                this.destroy(); // Limpieza total en caso de error crítico
                 reject(e);
             };
 
@@ -94,21 +91,25 @@ class StockfishService {
                 return;
             }
 
-            let isIdleResolved = false;
+            let isFinished = false;
 
-            const setIdle = () => {
-                if (!isIdleResolved) {
-                    isIdleResolved = true;
+            const cleanup = () => {
+                if (!isFinished) {
+                    isFinished = true;
                     this.isSearching = false;
+                    // Eliminar este handler específico de la lista de resolvers
+                    this.resolvers = this.resolvers.filter(r => r !== messageHandler);
+                    
                     if (this._resolveIdle) {
                         this._resolveIdle();
                         this._resolveIdle = null;
                     }
+                    signal?.removeEventListener('abort', onAbort);
                 }
             };
 
             if (signal?.aborted) {
-                setIdle();
+                cleanup();
                 reject(new DOMException('Aborted', 'AbortError'));
                 return;
             }
@@ -120,8 +121,8 @@ class StockfishService {
             let lastBestMove = '';
 
             const onAbort = () => {
-                this.worker.postMessage('stop');
-                signal?.removeEventListener('abort', onAbort);
+                this.worker?.postMessage('stop');
+                cleanup();
                 reject(new DOMException('Aborted', 'AbortError'));
             };
 
@@ -154,19 +155,17 @@ class StockfishService {
                     const bm = line.split(' ')[1];
                     if (bm && bm !== '(none)') lastBestMove = bm;
                     if (!lines[1]) lines[1] = { multipv: 1, score: 0, mate: null, pv: '', move: lastBestMove };
-                    if (!lines[1].move) lines[1].move = lastBestMove;
-
-                    this.resolvers.shift();
-                    signal?.removeEventListener('abort', onAbort);
-                    setIdle();
-
-                    resolve({
+                    
+                    const result = {
                         score: lines[1].score,
                         mate: lines[1].mate ?? null,
                         bestMove: lastBestMove || lines[1].move,
                         pv: lines[1].pv,
                         lines: Object.values(lines).sort((a, b) => a.multipv - b.multipv),
-                    });
+                    };
+
+                    cleanup();
+                    resolve(result);
                 }
             };
 
@@ -200,5 +199,6 @@ class StockfishService {
         this._idlePromise = Promise.resolve();
     }
 }
+
 
 export const stockfishService = new StockfishService();

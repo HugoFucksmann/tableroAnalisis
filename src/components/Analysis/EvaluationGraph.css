@@ -1,36 +1,42 @@
+/* ═══════════════════════════════════════════════════════════════
+   EvaluationGraph — altura fija, no crece
+   ═══════════════════════════════════════════════════════════════ */
+
 .evaluation-graph-container {
-  padding: 8px 10px 6px;
+  padding: var(--space-3) var(--space-4) var(--space-2);
   border-radius: var(--border-radius);
   background: var(--bg-secondary);
 }
 
+/* Estado vacío */
 .graph-placeholder {
-  height: 80px;
+  height: 5rem;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-style: italic;
 }
 
+/* ── Header ─────────────────────────────────────────────────────── */
 .graph-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  gap: var(--space-3);
+  margin-bottom: var(--space-1);
 }
 
 .graph-title {
-  font-size: 0.7rem;
-  font-weight: bold;
+  font-size: var(--text-xs);
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
   color: var(--text-muted);
 }
 
 .graph-current-eval {
-  font-size: 0.75rem;
+  font-size: var(--text-sm);
   font-weight: 700;
   font-family: monospace;
 }
@@ -43,10 +49,11 @@
   color: var(--text-muted);
 }
 
-/* Punto parpadeante que indica análisis en curso */
+/* Punto parpadeante de análisis en curso */
 .graph-analyzing-dot {
-  width: 7px;
-  height: 7px;
+  width: 0.4375rem;
+  /* ~7px */
+  height: 0.4375rem;
   border-radius: 50%;
   background: var(--accent-primary);
   margin-left: auto;
@@ -67,7 +74,9 @@
   }
 }
 
-/* SVG */
+/* ── SVG ────────────────────────────────────────────────────────── */
+/* El viewBox es 400×80 (unidades internas del SVG, no CSS).
+   width:100% hace que escale al ancho del contenedor.            */
 .graph-svg {
   cursor: crosshair;
   display: block;
@@ -100,36 +109,36 @@
   stroke-width: 1.5;
 }
 
-/* Fila de precisión */
+/* ── Fila de precisión ──────────────────────────────────────────── */
 .accuracy-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 6px;
-  padding-top: 6px;
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
   border-top: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .accuracy-chip {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 0.7rem;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
   font-weight: 700;
   color: var(--text-primary);
 }
 
 .chip-color-dot {
-  width: 8px;
-  height: 8px;
+  width: 0.5rem;
+  height: 0.5rem;
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
 
 .accuracy-label-center {
-  font-size: 0.65rem;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }

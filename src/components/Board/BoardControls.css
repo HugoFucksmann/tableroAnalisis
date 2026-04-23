@@ -1,36 +1,46 @@
+/* ═══════════════════════════════════════════════════════════════
+   BoardControls — barra de navegación y utilidades
+   ═══════════════════════════════════════════════════════════════ */
+
 .board-controls-container {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 6px 10px;
+  padding: var(--space-2) var(--space-4);
   background: var(--bg-tertiary);
-  border-radius: 6px;
-  margin-top: 8px;
+  border-radius: var(--border-radius);
 }
 
 .navigation-group,
 .utility-group {
   display: flex;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .control-btn {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-secondary);
-  padding: 6px;
-  border-radius: 4px;
+  /* Tamaño del botón: cuadrado relativo al font-size base */
+  padding: var(--space-2);
+  border-radius: calc(var(--border-radius) * 0.6);
   cursor: pointer;
   transition: var(--transition);
   display: flex;
   align-items: center;
   justify-content: center;
+  /* Los iconos de lucide usan size={18/20} en JSX — se escalan solos */
 }
 
 .control-btn:hover:not(:disabled) {
   background: var(--accent-primary);
   color: white;
-  transform: translateY(-1px);
+  transform: translateY(-0.0625rem);
+  /* ~1px */
+}
+
+.control-btn:active {
+  transform: translateY(0);
 }
 
 .control-btn:disabled {
@@ -38,14 +48,10 @@
   cursor: not-allowed;
 }
 
-.control-btn.secondary:hover {
+.control-btn.secondary:hover:not(:disabled) {
   background: var(--text-muted);
 }
 
-.control-btn.danger:hover {
-  background: var(--danger);
-}
-
-.control-btn:active {
-  transform: translateY(0);
-}
+.control-btn.danger:hover:not(:disabled) {
+  background: #e05555;
+}

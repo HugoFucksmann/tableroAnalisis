@@ -1,35 +1,67 @@
 /* ── Board layout ────────────────────────────────────────────────────────
-   Only board-level concerns live here.
-   Player-area styles → PlayerArea.css
-   Eval-badge styles  → EvalBadge.css
+   Solo concerns del tablero.
+   PlayerArea → PlayerArea.css  |  EvalBadge → EvalBadge.css
    ──────────────────────────────────────────────────────────────────────── */
 
 .board-container {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   align-items: center;
 }
 
-/* ── Outer frame gives the board a sunken, inlaid look ─────────────── */
-.board-frame {
+/* ── Marco y Layout ────────────────────────────────────────────────── */
+.board-main-layout {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: var(--space-4);
   width: 100%;
-  padding: 4px;
+}
+
+.eval-bar-aside {
+  width: var(--eval-bar-width, 0.875rem);
+  flex-shrink: 0;
+  display: flex;
+  padding: var(--space-1) 0;
+}
+
+@media (max-width: 768px) {
+  .board-main-layout {
+    flex-direction: column-reverse;
+    gap: var(--space-3);
+  }
+
+  .eval-bar-aside {
+    width: 100%;
+    height: auto;
+    /* Mismo padding horizontal que .board-frame para alineación perfecta */
+    padding: 0 var(--space-1);
+  }
+
+}
+
+
+.board-frame {
+  flex: 1;
+  padding: var(--space-1);
   background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.25));
-  border-radius: 6px;
+  border-radius: var(--border-radius);
   border: 1px solid rgba(255, 255, 255, 0.07);
   box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.5),
+    0 0.5rem 1.875rem rgba(0, 0, 0, 0.5),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
-/* ── Board surface ──────────────────────────────────────────────────── */
+
+/* ── Superficie del tablero ─────────────────────────────────────── */
 .board-main-area {
   width: 100%;
   aspect-ratio: 1 / 1;
   background: var(--bg-secondary);
-  border-radius: 3px;
+  border-radius: calc(var(--border-radius) * 0.375);
+  /* ~3px proporcional */
   overflow: hidden;
   position: relative;
 }

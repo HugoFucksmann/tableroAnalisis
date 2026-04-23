@@ -1,46 +1,95 @@
+/* ═══════════════════════════════════════════════════════════════
+   Design System — index.css
+   Base: 1rem = 16px (browser default)
+   Excepción aceptada: borders de 1px (sub-pixel rendering)
+   ═══════════════════════════════════════════════════════════════ */
+
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
+
 :root {
-  /* Colors - Base */
+  /* ── Colors: Base ───────────────────────────────────────────── */
   --bg-primary: #0a0b10;
   --bg-secondary: #161821;
   --bg-tertiary: #1f222d;
 
-  /* Colors - Accents */
+  /* ── Colors: Accents ────────────────────────────────────────── */
   --accent-primary: #4e9af1;
   --accent-secondary: #3a7bd5;
   --accent-glow: rgba(78, 154, 241, 0.2);
 
-  /* Colors - Text */
+  /* ── Colors: Text ───────────────────────────────────────────── */
   --text-primary: #f8f9fa;
   --text-secondary: #a0a0a0;
   --text-muted: #6c757d;
 
-  /* Colors - Chess Specific */
+  /* ── Colors: Chess Specific ─────────────────────────────────── */
   --eval-white: #e9ecef;
   --eval-black: #2b2d33;
 
-  /* Typography */
-  --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
-  --font-size-xs: 0.7rem;
-  --font-size-sm: 0.8rem;
-  --font-size-md: 0.9rem;
-  --font-size-lg: 1.1rem;
-
-  /* Layout & Glass */
-  --side-panel-width: 320px;
-  --border-radius: 8px;
-  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.5);
+  /* ── Colors: Glass / Surface ────────────────────────────────── */
   --glass: rgba(255, 255, 255, 0.02);
   --glass-border: rgba(255, 255, 255, 0.05);
+
+  /* ── Typography ─────────────────────────────────────────────── */
+  --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
+
+  /* Escala tipográfica con clamp(mínimo, fluido, máximo)
+     Mínimo: 1280px desktop, Máximo: 1920px+               */
+  --text-xs: clamp(0.625rem, 0.55vw, 0.75rem);
+  /* ~10–12px */
+  --text-sm: clamp(0.75rem, 0.65vw, 0.875rem);
+  /* ~12–14px */
+  --text-md: clamp(0.875rem, 0.75vw, 1rem);
+  /* ~14–16px */
+  --text-lg: clamp(1rem, 0.9vw, 1.25rem);
+  /* ~16–20px */
+  --text-xl: clamp(1.125rem, 1.1vw, 1.5rem);
+  /* ~18–24px */
+
+  /* ── Spacing ────────────────────────────────────────────────── */
+  /* Escala de 4pt base, relativa al viewport para fluir entre resoluciones */
+  --space-1: clamp(0.25rem, 0.3vw, 0.375rem);
+  /* ~4–6px   */
+  --space-2: clamp(0.375rem, 0.4vw, 0.5rem);
+  /* ~6–8px   */
+  --space-3: clamp(0.5rem, 0.5vw, 0.625rem);
+  /* ~8–10px  */
+  --space-4: clamp(0.625rem, 0.6vw, 0.75rem);
+  /* ~10–12px */
+  --space-5: clamp(0.75rem, 0.7vw, 1rem);
+  /* ~12–16px */
+  --space-6: clamp(1rem, 0.9vw, 1.25rem);
+  /* ~16–20px */
+  --space-8: clamp(1.25rem, 1.2vw, 1.75rem);
+  /* ~20–28px */
+
+  /* ── Layout ─────────────────────────────────────────────────── */
+  /* Side panel: fluye entre 280px (1280px screen) y 360px (1920px+) */
+  --side-panel-width: clamp(17.5rem, 20vw, 22.5rem);
+
+  --border-radius: 0.5rem;
+  --border-radius-lg: 0.75rem;
+
+  /* ── Effects ────────────────────────────────────────────────── */
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --shadow: 0 0.25rem 1.25rem -0.3rem rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 0.5rem 2rem -0.25rem rgba(0, 0, 0, 0.6);
 }
 
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap');
-
-* {
+/* ── Reset ──────────────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
   font-family: var(--font-main);
+}
+
+/* ── Body ───────────────────────────────────────────────────────── */
+html {
+  /* Permite que 1rem = 16px siempre, sin override del user-agent */
+  font-size: 100%;
 }
 
 body {
@@ -53,17 +102,25 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 #root {
   height: 100%;
 }
 
+/* ── Utility: Glass Panel ───────────────────────────────────────── */
 .glass-panel {
   background: var(--glass);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(0.75rem);
   border: 1px solid var(--glass-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
@@ -75,8 +132,9 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* ── Utility: Premium Scrollbar ─────────────────────────────────── */
 .premium-scroll::-webkit-scrollbar {
-  width: 5px;
+  width: 0.3rem;
 }
 
 .premium-scroll::-webkit-scrollbar-track {
@@ -85,7 +143,7 @@ body {
 
 .premium-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  border-radius: 0.625rem;
 }
 
 .premium-scroll::-webkit-scrollbar-thumb:hover {

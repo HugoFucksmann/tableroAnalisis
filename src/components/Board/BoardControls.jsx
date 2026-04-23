@@ -6,20 +6,17 @@ import {
   ChevronsRight,
   RefreshCcw,
   RotateCcw,
-  Lightbulb,
 } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
-import { analysisQueue } from '../../services/analysisQueue';
 import './BoardControls.css';
 
 export const BoardControls = () => {
   const {
     resetGame, goToMove,
-    currentMoveIndex, history, fen,
-    isAnalyzing,
-    setBestMoveForIndex, setAnalyzing, setEvaluation,
+    currentMoveIndex, history,
     boardOrientation, setBoardOrientation,
   } = useGameStore();
+
 
   const handleToggleOrientation = () => {
     setBoardOrientation(boardOrientation === 'white' ? 'black' : 'white');
@@ -28,21 +25,6 @@ export const BoardControls = () => {
   const isAtStart = currentMoveIndex === -1;
   const isAtEnd = currentMoveIndex === history.length - 1;
 
-  /**
-   * Análisis rápido on-demand de la posición actual.
-   * Útil cuando la posición no ha sido analizada aún
-   * (p. ej. movimiento manual del usuario).
-   */
-  const handleHint = async () => {
-    if (isAnalyzing) return;
-    await analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
-      onStatus: setAnalyzing,
-      onResult: (result) => {
-        if (result.score !== undefined) setEvaluation(result.score, result.moveIndex);
-        if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
-      }
-    });
-  };
 
   return (
     <div className="board-controls-container glass-panel">
@@ -82,14 +64,6 @@ export const BoardControls = () => {
       </div>
 
       <div className="utility-group">
-        <button
-          className={`control-btn accent ${isAnalyzing ? 'loading' : ''}`}
-          title="Mejor Jugada"
-          onClick={handleHint}
-          disabled={isAnalyzing}
-        >
-          <Lightbulb size={18} />
-        </button>
         <button className="control-btn secondary" title="Girar Tablero" onClick={handleToggleOrientation}>
           <RefreshCcw size={18} />
         </button>

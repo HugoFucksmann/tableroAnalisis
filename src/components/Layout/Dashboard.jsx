@@ -7,6 +7,7 @@ import { OpeningExplorer } from '../Analysis/OpeningExplorer';
 import { BoardControls } from '../Board/BoardControls';
 import { EvaluationGraph } from '../Analysis/EvaluationGraph';
 import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
+import { stockfishService } from '../../services/stockfishService';
 import './Dashboard.css';
 
 const isMobileViewport = () =>
@@ -18,6 +19,13 @@ export const Dashboard = () => {
   const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(isMobileViewport());
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
 
+  useEffect(() => {
+    // Limpieza al desmontar el Dashboard para liberar memoria
+    return () => {
+      stockfishService.destroy();
+    };
+  }, []);
+
   return (
     <div className="dashboard-container">
       <AnalysisLoadingModal />
@@ -25,13 +33,11 @@ export const Dashboard = () => {
       <main className="dashboard-content">
         {/* ── Left: Board Section ───────────────────────────────────── */}
         <section className="board-section glass-panel">
-          <div className="eval-bar-wrapper-dashboard">
-            <EvaluationBar />
-          </div>
           <div className="board-wrapper">
             <Board />
           </div>
         </section>
+
 
         {/* ── Right: Side panels ────────────────────────────── */}
         <aside className="side-panels">
