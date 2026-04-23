@@ -1,17 +1,11 @@
-const ENGINES = {
-    lite: '/stockfish/stockfish-18-lite.js',
-    full: '/stockfish/stockfish-18.js'
+const ENGINE_PATH = '/stockfish/stockfish-18-lite.js';
+
+export const DEFAULT_ENGINE_CONFIG = {
+    depth: 18,
+    multiPv: 1,
+    threads: 2,
+    hash: 32,
 };
-
-export const DEPTH_CURRENT = 18;
-export const DEPTH_BACKGROUND = 15;
-export const MULTIPV_COUNT = 1;
-
-function getOptimalThreads() {
-    const cores = navigator.hardwareConcurrency ?? 2;
-    // Cappeamos a 4 hilos máximo. Depth 18 no necesita 15 hilos y ahorra muchísima RAM.
-    return Math.min(4, Math.max(1, cores - 1));
-}
 
 class StockfishService {
     constructor() {
@@ -19,28 +13,20 @@ class StockfishService {
         this.resolvers = [];
         this._initPromise = null;
         this._resolveIdle = null;
-        this.engineType = 'lite';
-        this._threads = 1;
         this._idlePromise = Promise.resolve();
         this.ready = false;
         this.isSearching = false;
+        this._config = { ...DEFAULT_ENGINE_CONFIG };
     }
 
-    setEngineType(type) {
-        if (this.engineType === type) return;
-        this.engineType = type;
-        this.destroy();
-    }
-
-    init() {
+    init(config = {}) {
         if (this._initPromise) return this._initPromise;
 
-        const path = ENGINES[this.engineType] || ENGINES.lite;
-        this._threads = getOptimalThreads();
+        this._config = { ...DEFAULT_ENGINE_CONFIG, ...config };
 
         this._initPromise = new Promise((resolve, reject) => {
             try {
-                this.worker = new Worker(path, { type: 'classic' });
+                this.worker = new Worker(ENGINE_PATH, { type: 'classic' });
             } catch (e) {
                 this._initPromise = null;
                 reject(new Error(`No se pudo cargar Stockfish: ${e.message}`));
@@ -51,10 +37,9 @@ class StockfishService {
                 const line = e.data;
 
                 if (line === 'uciok') {
-                    this.worker.postMessage(`setoption name Threads value ${this._threads}`);
-                    // 32MB de Hash es suficiente para análisis en web y ahorra memoria.
-                    this.worker.postMessage('setoption name Hash value 32');
-                    this.worker.postMessage(`setoption name MultiPV value ${MULTIPV_COUNT}`);
+                    this.worker.postMessage(`setoption name Threads value ${this._config.threads}`);
+                    this.worker.postMessage(`setoption name Hash value ${this._config.hash}`);
+                    this.worker.postMessage(`setoption name MultiPV value ${this._config.multiPv}`);
                     this.worker.postMessage('isready');
                 }
 
@@ -64,15 +49,13 @@ class StockfishService {
                 }
 
                 if (this.resolvers.length > 0) {
-                    // Llamamos a todos los resolvers pendientes hasta que uno procese la línea.
-                    // En la práctica, casi siempre será el primero.
                     this.resolvers[0](line);
                 }
             };
 
             this.worker.onerror = (e) => {
                 console.error('Stockfish worker error:', e);
-                this.destroy(); // Limpieza total en caso de error crítico
+                this.destroy();
                 reject(e);
             };
 
@@ -82,12 +65,14 @@ class StockfishService {
         return this._initPromise;
     }
 
-    async analyzePosition(fen, depth, signal, onProgress, multiPv = MULTIPV_COUNT) {
+    async analyzePosition(fen, depth, signal, onProgress, multiPv) {
         await this._idlePromise;
+
+        const effectiveMultiPv = multiPv ?? this._config.multiPv;
 
         return new Promise((resolve, reject) => {
             if (!this.ready) {
-                reject(new Error('Stockfish no está listo'));
+                reject(new Error('Stockfish no esta listo'));
                 return;
             }
 
@@ -97,9 +82,8 @@ class StockfishService {
                 if (!isFinished) {
                     isFinished = true;
                     this.isSearching = false;
-                    // Eliminar este handler específico de la lista de resolvers
                     this.resolvers = this.resolvers.filter(r => r !== messageHandler);
-                    
+
                     if (this._resolveIdle) {
                         this._resolveIdle();
                         this._resolveIdle = null;
@@ -155,7 +139,7 @@ class StockfishService {
                     const bm = line.split(' ')[1];
                     if (bm && bm !== '(none)') lastBestMove = bm;
                     if (!lines[1]) lines[1] = { multipv: 1, score: 0, mate: null, pv: '', move: lastBestMove };
-                    
+
                     const result = {
                         score: lines[1].score,
                         mate: lines[1].mate ?? null,
@@ -170,7 +154,7 @@ class StockfishService {
             };
 
             this.resolvers.push(messageHandler);
-            this.worker.postMessage(`setoption name MultiPV value ${multiPv}`);
+            this.worker.postMessage(`setoption name MultiPV value ${effectiveMultiPv}`);
             this.worker.postMessage('ucinewgame');
             this.worker.postMessage('isready');
             this.worker.postMessage(`position fen ${fen}`);
@@ -202,3 +186,8 @@ class StockfishService {
 
 
 export const stockfishService = new StockfishService();
+
+
+
+
+

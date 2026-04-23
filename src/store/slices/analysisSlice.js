@@ -1,16 +1,12 @@
 /**
- * analysisSlice.js  v3
+ * analysisSlice.js  v4
  *
  * Cambios:
  *  - analysisReady: boolean — true cuando el análisis completo terminó.
- *    Dashboard lo usa para mostrar/ocultar el loading modal.
  *  - alternativeLines: { [moveIndex]: lines[] } — líneas MultiPV por posición
  *  - ecoCode, openingPly, openingDetected — metadatos de apertura estructurados
- *  - 'Libro' renombrado a 'Book' internamente para unificar con EVAL_CONFIG
- *    (EVAL_CONFIG ya tiene 'Libro' como key — mantenemos ese nombre)
- *  - engineType: 'lite' | 'full'
+ *  - engineConfig: { depth, multiPv, threads, hash } — configuración unificada del motor
  */
-import { stockfishService } from '../../services/stockfishService';
 
 export const createAnalysisSlice = (set, get) => ({
   // ── Evaluación ──────────────────────────────────────────────────────────────
@@ -31,7 +27,12 @@ export const createAnalysisSlice = (set, get) => ({
   openingPly: -1,     // último ply considerado book (-1 = sin datos)
   openingDetected: false,
 
-  engineType: 'lite', // 'lite' o 'full'
+  engineConfig: {
+    depth: 18,
+    multiPv: 1,
+    threads: 2,
+    hash: 32,
+  },
 
   // ── Setters de evaluación ───────────────────────────────────────────────────
   setEvaluation: (score, moveIndex) => {
@@ -91,8 +92,5 @@ export const createAnalysisSlice = (set, get) => ({
   setBestMoves: (v) => set({ bestMoves: v }),
   setAlternativeLines: (v) => set({ alternativeLines: v }),
 
-  setEngineType: (type) => {
-    set({ engineType: type });
-    stockfishService.setEngineType(type);
-  },
+  setEngineConfig: (config) => set({ engineConfig: config }),
 });

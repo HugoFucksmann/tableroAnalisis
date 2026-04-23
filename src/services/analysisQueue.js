@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
-import { stockfishService, DEPTH_CURRENT, DEPTH_BACKGROUND, MULTIPV_COUNT } from './stockfishService';
+import { stockfishService } from './stockfishService';
+import { useGameStore } from '../store/useGameStore';
 
 const MAX_BOOK_PLY = 20;
 const MIN_THEORY_GAMES = 20;
@@ -120,6 +121,8 @@ class AnalysisQueue {
         this.cancel();
         if (!history || history.length === 0) return;
 
+        const engineConfig = useGameStore.getState().engineConfig ?? {};
+
         stockfishService.destroy();
 
         this.#abortController = new AbortController();
@@ -130,7 +133,7 @@ class AnalysisQueue {
         onProgress?.(0, 'Iniciando motores...');
 
         try {
-            await stockfishService.init();
+            await stockfishService.init(engineConfig);
             if (signal.aborted) return;
 
             const positions = this.#buildPositions(history);
@@ -166,8 +169,8 @@ class AnalysisQueue {
                 const isBlackTurn = fen.includes(' b ');
                 const isHighPriority = (posIndex === currentIndex || posIndex === currentIndex + 1);
 
-                const depth = isHighPriority ? DEPTH_CURRENT : DEPTH_BACKGROUND;
-                const mPv = isHighPriority ? MULTIPV_COUNT : 1;
+                const depth = isHighPriority ? engineConfig.depth : Math.max(10, engineConfig.depth - 3);
+                const mPv = isHighPriority ? engineConfig.multiPv : 1;
 
                 try {
                     const result = await stockfishService.analyzePosition(fen, depth, signal, null, mPv);
@@ -217,15 +220,18 @@ class AnalysisQueue {
         const { signal } = this.#abortController;
         this.isRunning = true;
 
+        const engineConfig = useGameStore.getState().engineConfig ?? {};
+
         try {
-            await stockfishService.init();
+            await stockfishService.init(engineConfig);
             if (signal.aborted) return;
             onStatus?.(true);
 
             const isBlackTurn = fen.includes(' b ');
+            const depth = engineConfig.depth ?? 18;
 
             const result = await stockfishService.analyzePosition(
-                fen, DEPTH_CURRENT, signal,
+                fen, depth, signal,
                 ({ score, mate, bestMove }) => {
                     onResult?.({
                         score: MathUtils.cpToVisualScore(score, mate, isBlackTurn),
@@ -249,6 +255,7 @@ class AnalysisQueue {
             }
         }
     }
+
 
     #tryResolveMove(ply, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedSet, onMoveResult, focusIdx) {
         if (ply < 0 || ply >= history.length || completedSet.has(ply)) return;

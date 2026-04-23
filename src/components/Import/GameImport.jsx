@@ -1,7 +1,8 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, Key, Cpu, Zap } from 'lucide-react';
+import { Search, ExternalLink, Loader, AlertCircle, Key, Settings } from 'lucide-react';
+import { EngineConfigModal } from './EngineConfigModal';
 import './GameImport.css';
 
 export const GameImport = ({ onGameSelect }) => {
@@ -17,14 +18,14 @@ export const GameImport = ({ onGameSelect }) => {
     setImportedGames: setGames,
     lichessToken,
     setLichessToken,
-    engineType,
-    setEngineType,
+    engineConfig,
   } = useGameStore();
 
   const [loadingId, setLoadingId] = React.useState(null);
   const [isFetching, setIsFetching] = React.useState(false);
   const [error, setError] = React.useState('');
   const [showTokenInput, setShowTokenInput] = React.useState(false);
+  const [showEngineConfig, setShowEngineConfig] = React.useState(false);
 
   const handlePlatformSwitch = (p) => {
     setPlatform(p);
@@ -67,36 +68,42 @@ export const GameImport = ({ onGameSelect }) => {
     setLoadingId(gameId);
     const ok = loadPgn(pgn);
     if (!ok) { setLoadingId(null); return; }
-
     if (onGameSelect) onGameSelect();
     setLoadingId(null);
   };
 
   const listTitle = username ? `Partidas de ${username}` : 'Búsqueda de partidas';
 
+  // Quick summary shown in the engine row badge
+  const depth = engineConfig?.depth ?? 18;
+  const multiPv = engineConfig?.multiPv ?? 1;
+  const configSummary = `D${depth} · ${multiPv}PV`;
+
   return (
     <div className="gi-root">
 
+      {/* ── Engine settings row ─────────────────────────────────── */}
       <div className="gi-engine-selector">
-        <span className="gi-engine-label">Motor:</span>
-        <div className="gi-engine-options">
-          <button
-            className={`gi-engine-btn ${engineType === 'lite' ? 'active' : ''}`}
-            onClick={() => setEngineType('lite')}
-            title="Ligero: Bajo consumo de memoria, ideal para esta PC."
-          >
-            <Zap size={14} /> Lite
-          </button>
-          <button
-            className={`gi-engine-btn ${engineType === 'full' ? 'active' : ''}`}
-            onClick={() => setEngineType('full')}
-            title="Potente: Red neuronal completa, requiere mucha RAM."
-          >
-            <Cpu size={14} /> Potente
-          </button>
+        <div className="gi-engine-info">
+          <span className="gi-engine-label">Motor:</span>
+          <span className="gi-engine-name">Stockfish 18 Lite</span>
+          <span className="gi-engine-config-badge">{configSummary}</span>
         </div>
+        <button
+          className="gi-engine-gear-btn"
+          onClick={() => setShowEngineConfig(true)}
+          title="Configurar motor de análisis"
+          aria-label="Configurar motor de análisis"
+        >
+          <Settings size={14} />
+        </button>
       </div>
 
+      {showEngineConfig && (
+        <EngineConfigModal onClose={() => setShowEngineConfig(false)} />
+      )}
+
+      {/* ── Platform toggle ─────────────────────────────────────── */}
       <div className="gi-platform-toggle">
         <button
           className={`gi-toggle-btn ${platform === 'lichess' ? 'active' : ''}`}
@@ -124,6 +131,7 @@ export const GameImport = ({ onGameSelect }) => {
         </button>
       </div>
 
+      {/* ── Search ──────────────────────────────────────────────── */}
       <div className="gi-search-wrap">
         <input
           className="gi-search-input"
@@ -169,6 +177,7 @@ export const GameImport = ({ onGameSelect }) => {
         </div>
       )}
 
+      {/* ── Analysis progress ───────────────────────────────────── */}
       {isAnalyzing && (
         <div className="gi-analysis-bar">
           <div className="gi-analysis-header">
@@ -189,6 +198,7 @@ export const GameImport = ({ onGameSelect }) => {
         </div>
       )}
 
+      {/* ── Game list ───────────────────────────────────────────── */}
       <div className="gi-list-section">
         <p className="gi-list-label">{listTitle}</p>
 
@@ -222,8 +232,7 @@ export const GameImport = ({ onGameSelect }) => {
               ))
             ) : (
               !isFetching && !error && (
-                <div className="gi-empty-state">
-                </div>
+                <div className="gi-empty-state" />
               )
             )}
           </div>
