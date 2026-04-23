@@ -7,9 +7,9 @@
 }
 
 .eval-bar-container {
-  width: 12px;
+  width: 10px;
   background: var(--eval-white);
-  border-radius: 6px;
+  border-radius: 4px;
   height: 100%;
   position: relative;
   overflow: hidden;
@@ -34,8 +34,8 @@
 .eval-value-display {
   font-family: 'Monaco', monospace;
   font-weight: bold;
-  font-size: 0.8rem;
-  padding: 2px 6px;
+  font-size: 0.7rem;
+  padding: 1px 4px;
   background: var(--bg-tertiary);
-  border-radius: 4px;
+  border-radius: 3px;
 }

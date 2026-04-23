@@ -1,8 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
-import { analysisQueue } from '../../services/analysisQueue';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, Key } from 'lucide-react';
+import { Search, ExternalLink, Loader, AlertCircle, Key, Cpu, Zap } from 'lucide-react';
 import './GameImport.css';
 
 export const GameImport = ({ onGameSelect }) => {
@@ -10,12 +9,6 @@ export const GameImport = ({ onGameSelect }) => {
     loadPgn,
     isAnalyzing,
     analysisProgress,
-    setMoveEvaluation,
-    setEvaluation,
-    setAnalyzing,
-    setGameScore,
-    setAnalysisProgress,
-    setBestMoveForIndex,
     searchUsername: username,
     searchPlatform: platform,
     importedGames: games,
@@ -24,6 +17,8 @@ export const GameImport = ({ onGameSelect }) => {
     setImportedGames: setGames,
     lichessToken,
     setLichessToken,
+    engineType,
+    setEngineType,
   } = useGameStore();
 
   const [loadingId, setLoadingId] = React.useState(null);
@@ -75,21 +70,6 @@ export const GameImport = ({ onGameSelect }) => {
 
     if (onGameSelect) onGameSelect();
     setLoadingId(null);
-
-    const { history: newHistory, currentMoveIndex: newIndex } = useGameStore.getState();
-
-    await analysisQueue.analyzeGame(newHistory, newIndex, {
-      onStatus: setAnalyzing,
-      onProgress: setAnalysisProgress,
-      onMoveResult: ({ index, score, label, bestMove }) => {
-        if (score !== undefined) setEvaluation(score, index);
-        if (label) setMoveEvaluation(index, label);
-        if (bestMove) setBestMoveForIndex(index, bestMove);
-      },
-      onComplete: (accuracy) => {
-        setGameScore(accuracy);
-      }
-    });
   };
 
   const listTitle = username ? `Partidas de ${username}` : 'Búsqueda de partidas';
@@ -97,14 +77,33 @@ export const GameImport = ({ onGameSelect }) => {
   return (
     <div className="gi-root">
 
-      {/* ── Platform toggle ── */}
+      <div className="gi-engine-selector">
+        <span className="gi-engine-label">Motor:</span>
+        <div className="gi-engine-options">
+          <button
+            className={`gi-engine-btn ${engineType === 'lite' ? 'active' : ''}`}
+            onClick={() => setEngineType('lite')}
+            title="Ligero: Bajo consumo de memoria, ideal para esta PC."
+          >
+            <Zap size={14} /> Lite
+          </button>
+          <button
+            className={`gi-engine-btn ${engineType === 'full' ? 'active' : ''}`}
+            onClick={() => setEngineType('full')}
+            title="Potente: Red neuronal completa, requiere mucha RAM."
+          >
+            <Cpu size={14} /> Potente
+          </button>
+        </div>
+      </div>
+
       <div className="gi-platform-toggle">
         <button
           className={`gi-toggle-btn ${platform === 'lichess' ? 'active' : ''}`}
           onClick={() => handlePlatformSwitch('lichess')}
         >
           <img
-            src="https://lichess1.org/assets/logo/lichess-favicon-32-invert.png"
+            src="/lichess-favicon.png"
             alt="Lichess"
             className="gi-platform-icon"
             onError={(e) => { e.target.style.display = 'none'; }}
@@ -116,7 +115,7 @@ export const GameImport = ({ onGameSelect }) => {
           onClick={() => handlePlatformSwitch('chesscom')}
         >
           <img
-            src="https://www.chess.com/favicon.ico"
+            src="/chesscom-favicon.ico"
             alt="Chess.com"
             className="gi-platform-icon"
             onError={(e) => { e.target.style.display = 'none'; }}
@@ -125,7 +124,6 @@ export const GameImport = ({ onGameSelect }) => {
         </button>
       </div>
 
-      {/* ── Search bar ── */}
       <div className="gi-search-wrap">
         <input
           className="gi-search-input"
@@ -156,7 +154,6 @@ export const GameImport = ({ onGameSelect }) => {
         )}
       </div>
 
-      {/* ── Token input ── */}
       {showTokenInput && platform === 'lichess' && (
         <div className="gi-token-input-wrap">
           <input
@@ -172,7 +169,6 @@ export const GameImport = ({ onGameSelect }) => {
         </div>
       )}
 
-      {/* ── Analysis progress ── */}
       {isAnalyzing && (
         <div className="gi-analysis-bar">
           <div className="gi-analysis-header">
@@ -186,7 +182,6 @@ export const GameImport = ({ onGameSelect }) => {
         </div>
       )}
 
-      {/* ── Error ── */}
       {error && (
         <div className="gi-error">
           <AlertCircle size={13} />
@@ -194,7 +189,6 @@ export const GameImport = ({ onGameSelect }) => {
         </div>
       )}
 
-      {/* ── Game list ── */}
       <div className="gi-list-section">
         <p className="gi-list-label">{listTitle}</p>
 
@@ -229,7 +223,6 @@ export const GameImport = ({ onGameSelect }) => {
             ) : (
               !isFetching && !error && (
                 <div className="gi-empty-state">
-                  {/* Espacio reservado para cuando no hay partidas cargadas */}
                 </div>
               )
             )}

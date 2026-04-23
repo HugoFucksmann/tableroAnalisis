@@ -1,10 +1,3 @@
-/**
- * gameSlice.js  v3
- *
- * Cambios:
- *  - loadPgn / resetGame limpian analysisReady y los nuevos campos de apertura
- *  - analysisQueue.clearOpeningCache(gameId) al cargar nueva partida
- */
 import { Chess } from 'chess.js';
 import { analysisQueue } from '../../services/analysisQueue';
 
@@ -17,7 +10,6 @@ function replayTo(history, index) {
   return g;
 }
 
-// Campos de análisis que se resetean al cargar una nueva partida
 const ANALYSIS_RESET = {
   evaluation: 0,
   evaluationHistory: [],
@@ -59,11 +51,9 @@ export const createGameSlice = (set, get) => ({
       const gameCopy = replayTo(state.history, state.currentMoveIndex);
       const result = gameCopy.move(move);
       if (!result) return null;
-      
+
       const nextMove = state.history[state.currentMoveIndex + 1];
       if (nextMove && nextMove.san === result.san) {
-        // The user manually played the EXACT same move that is next in the history.
-        // Instead of branching and deleting the rest of the game, just step forward!
         const safeIndex = state.currentMoveIndex + 1;
         const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
         const currentEval = evalObj ? evalObj.score : 0;
@@ -76,9 +66,7 @@ export const createGameSlice = (set, get) => ({
         });
         return result;
       }
-      
-      // If it's a DIFFERENT move, we branch off
-      // Save the main line data if we are not already exploring
+
       const isEnteringExploreMode = !state.isExploreMode;
       const mainLineData = isEnteringExploreMode ? {
         history: [...state.history],
@@ -93,11 +81,9 @@ export const createGameSlice = (set, get) => ({
         ...state.history.slice(0, state.currentMoveIndex + 1),
         result,
       ];
-      
-      // Stop ongoing background analysis as user branches off
+
       analysisQueue.cancel();
 
-      // Clean up analysis data for future moves that are now overwritten
       const newBestMoves = { ...state.bestMoves };
       const newMoveEvaluations = { ...state.moveEvaluations };
       const newAlternativeLines = { ...state.alternativeLines };
@@ -123,9 +109,9 @@ export const createGameSlice = (set, get) => ({
         moveEvaluations: newMoveEvaluations,
         alternativeLines: newAlternativeLines,
         evaluationHistory: newEvaluationHistory,
-        isAnalyzing: false, // Ensure analysis UI resets for the new move
-        analysisReady: true, // Hide the modal since we aborted full game analysis
-        arrows: [], // Clear any stale arrows from the previous position
+        isAnalyzing: false,
+        analysisReady: true,
+        arrows: [],
         isExploreMode: true,
         mainLineData,
       });
@@ -149,12 +135,12 @@ export const createGameSlice = (set, get) => ({
       history: state.mainLineData.history,
       currentMoveIndex: targetIndex,
       evaluation: evalObj ? evalObj.score : 0,
-      
+
       evaluationHistory: state.mainLineData.evaluationHistory,
       bestMoves: state.mainLineData.bestMoves,
       moveEvaluations: state.mainLineData.moveEvaluations,
       alternativeLines: state.mainLineData.alternativeLines,
-      
+
       isExploreMode: false,
       mainLineData: null,
       arrows: [],
@@ -186,15 +172,12 @@ export const createGameSlice = (set, get) => ({
       const newGame = new Chess();
       newGame.loadPgn(pgn);
 
-      // Limpiar cache de la partida anterior
       if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
 
-      // Nombres de jugadores
       const headers = newGame.header();
       state.setPlayers(headers.White ?? 'Blancas', headers.Black ?? 'Negras');
-      state.setClocks(null, null); // Reset por defecto
+      state.setClocks(null, null);
 
-      // Orientación automática
       const blackPlayer = (headers.Black ?? '').toLowerCase();
       const currentUser = state.searchUsername?.toLowerCase() ?? '';
       if (blackPlayer === currentUser && currentUser !== '') {
@@ -203,7 +186,6 @@ export const createGameSlice = (set, get) => ({
         state.setBoardOrientation('white');
       }
 
-      // Nuevo gameId → dispara el useEffect de análisis
       state.setGameId(Date.now());
 
       const verboseHistory = newGame.history({ verbose: true });

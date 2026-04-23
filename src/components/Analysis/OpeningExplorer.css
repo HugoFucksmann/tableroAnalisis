@@ -32,12 +32,12 @@
 }
 
 .opening-name {
-  font-size: 0.8rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: var(--accent-primary);
   background: rgba(78, 154, 241, 0.05);
-  padding: 6px 10px;
-  border-radius: 6px;
+  padding: 4px 7px;
+  border-radius: 4px;
 }
 
 .moves-stats-list {
@@ -64,22 +64,22 @@
 
 .move-stat-row {
   display: grid;
-  grid-template-columns: 45px 1fr 40px;
+  grid-template-columns: 40px 1fr 35px;
   align-items: center;
-  gap: 10px;
-  padding: 4px 0;
+  gap: 8px;
+  padding: 3px 0;
 }
 
 .move-san {
   font-weight: bold;
   font-family: monospace;
-  font-size: 0.9rem;
+  font-size: 0.75rem;
 }
 
 .win-rate-bar {
   display: flex;
-  height: 18px;
-  border-radius: 4px;
+  height: 12px;
+  border-radius: 2px;
   overflow: hidden;
   background: var(--bg-tertiary);
 }
@@ -90,7 +90,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: bold;
   overflow: hidden;
   white-space: nowrap;

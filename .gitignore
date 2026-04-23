@@ -22,4 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-public/stockfish/stockfish.wasm
+public/stockfish/stockfish-18.wasm
+.env
+scratch/

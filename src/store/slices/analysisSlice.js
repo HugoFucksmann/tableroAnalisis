@@ -8,7 +8,10 @@
  *  - ecoCode, openingPly, openingDetected — metadatos de apertura estructurados
  *  - 'Libro' renombrado a 'Book' internamente para unificar con EVAL_CONFIG
  *    (EVAL_CONFIG ya tiene 'Libro' como key — mantenemos ese nombre)
+ *  - engineType: 'lite' | 'full'
  */
+import { stockfishService } from '../../services/stockfishService';
+
 export const createAnalysisSlice = (set, get) => ({
   // ── Evaluación ──────────────────────────────────────────────────────────────
   evaluation: 0,
@@ -27,6 +30,8 @@ export const createAnalysisSlice = (set, get) => ({
   ecoCode: '',     // 'B20'
   openingPly: -1,     // último ply considerado book (-1 = sin datos)
   openingDetected: false,
+
+  engineType: 'lite', // 'lite' o 'full'
 
   // ── Setters de evaluación ───────────────────────────────────────────────────
   setEvaluation: (score, moveIndex) => {
@@ -85,4 +90,9 @@ export const createAnalysisSlice = (set, get) => ({
   setMoveEvaluations: (v) => set({ moveEvaluations: v }),
   setBestMoves: (v) => set({ bestMoves: v }),
   setAlternativeLines: (v) => set({ alternativeLines: v }),
+
+  setEngineType: (type) => {
+    set({ engineType: type });
+    stockfishService.setEngineType(type);
+  },
 });

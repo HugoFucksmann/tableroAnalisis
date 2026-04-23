@@ -2,7 +2,7 @@ import React from 'react';
 import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
 import './EvalBadge.css';
 
-const BADGE_SIZE = 34;
+const BADGE_SIZE = 26;
 
 /**
  * EvalBadgeOverlay — renders the move-quality badge on top of the board.

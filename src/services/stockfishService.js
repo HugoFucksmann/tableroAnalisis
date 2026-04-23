@@ -1,18 +1,11 @@
-/**
- * stockfishService.js  v3
- *
- * Fixes:
- *  - destroy() limpia _initPromise → sin worker muerto al cargar segunda partida
- *  - MultiPV=3 líneas alternativas por posición
- *  - Threads automáticos (hardwareConcurrency - 1, mínimo 1)
- *  - analyzePosition devuelve { score, mate, bestMove, pv, lines[] }
- */
-
-const STOCKFISH_PATH = '/stockfish/stockfish.js';
+const ENGINES = {
+    lite: '/stockfish/stockfish-18-lite.js',
+    full: '/stockfish/stockfish-18.js'
+};
 
 export const DEPTH_CURRENT = 18;
 export const DEPTH_BACKGROUND = 15;
-export const MULTIPV_COUNT = 3;
+export const MULTIPV_COUNT = 1;
 
 function getOptimalThreads() {
     const cores = navigator.hardwareConcurrency ?? 2;
@@ -24,20 +17,29 @@ class StockfishService {
         this.worker = null;
         this.resolvers = [];
         this._initPromise = null;
-        this._threads = getOptimalThreads();
-        
-        // Concurrency queue
-        this.isSearching = false;
-        this._idlePromise = Promise.resolve();
         this._resolveIdle = null;
+        this.engineType = 'lite';
+        this._threads = 1;
+        this._idlePromise = Promise.resolve();
+        this.ready = false;
+        this.isSearching = false;
+    }
+
+    setEngineType(type) {
+        if (this.engineType === type) return;
+        this.engineType = type;
+        this.destroy();
     }
 
     init() {
         if (this._initPromise) return this._initPromise;
 
+        const path = ENGINES[this.engineType] || ENGINES.lite;
+        this._threads = getOptimalThreads();
+
         this._initPromise = new Promise((resolve, reject) => {
             try {
-                this.worker = new Worker(STOCKFISH_PATH);
+                this.worker = new Worker(path, { type: 'classic' });
             } catch (e) {
                 this._initPromise = null;
                 reject(new Error(`No se pudo cargar Stockfish: ${e.message}`));
@@ -83,19 +85,7 @@ class StockfishService {
         return this._initPromise;
     }
 
-    /**
-     * Analiza una posición FEN.
-     *
-     * @returns {Promise<{
-     *   score:    number,       centipawns desde perspectiva del que mueve
-     *   mate:     number|null,
-     *   bestMove: string,
-     *   pv:       string,
-     *   lines:    Array<{ multipv, score, mate, pv, move }>
-     * }>}
-     */
     async analyzePosition(fen, depth, signal, onProgress, multiPv = MULTIPV_COUNT) {
-        // Guarantee we don't interleave commands before the engine is fully idle
         await this._idlePromise;
 
         return new Promise((resolve, reject) => {
@@ -103,9 +93,9 @@ class StockfishService {
                 reject(new Error('Stockfish no está listo'));
                 return;
             }
-            
+
             let isIdleResolved = false;
-            
+
             const setIdle = () => {
                 if (!isIdleResolved) {
                     isIdleResolved = true;
@@ -131,12 +121,10 @@ class StockfishService {
 
             const onAbort = () => {
                 this.worker.postMessage('stop');
-                // We DO NOT call setIdle() or remove the messageHandler here.
-                // We MUST wait for the engine to output 'bestmove' so it truly stops.
                 signal?.removeEventListener('abort', onAbort);
                 reject(new DOMException('Aborted', 'AbortError'));
             };
-            
+
             signal?.addEventListener('abort', onAbort);
 
             const messageHandler = (line) => {
@@ -168,7 +156,6 @@ class StockfishService {
                     if (!lines[1]) lines[1] = { multipv: 1, score: 0, mate: null, pv: '', move: lastBestMove };
                     if (!lines[1].move) lines[1].move = lastBestMove;
 
-                    // Analysis is officially complete, remove handler and free queue
                     this.resolvers.shift();
                     signal?.removeEventListener('abort', onAbort);
                     setIdle();
@@ -196,10 +183,6 @@ class StockfishService {
         if (this.worker) this.worker.postMessage('stop');
     }
 
-    /**
-     * Destruye el worker y resetea todo el estado.
-     * CRÍTICO: limpia _initPromise para que init() funcione de nuevo.
-     */
     destroy() {
         if (this.worker) {
             try { this.worker.postMessage('quit'); } catch { }

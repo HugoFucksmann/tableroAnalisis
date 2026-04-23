@@ -1,13 +1,3 @@
-/**
- * OpeningExplorer.jsx  v3
- *
- * Cambios:
- *  - Ya NO escribe moveEvaluations. Solo muestra datos del Explorer.
- *    Toda la lógica de Book Move vive en analysisQueue.js.
- *  - Lee openingName y ecoCode del store (seteados por analysisQueue)
- *    en lugar de llamar setOpeningName aquí.
- *  - Se mantiene la lógica de flechas (solo visual, no afecta evaluaciones).
- */
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { fetchOpeningExplorer } from '../../services/gameApi';
@@ -31,7 +21,6 @@ export const OpeningExplorer = () => {
     game,
     fen,
     lichessToken,
-    // Leer nombre del store (seteado por analysisQueue, no por este componente)
     openingName,
     ecoCode,
   } = useGameStore();
@@ -51,7 +40,6 @@ export const OpeningExplorer = () => {
         if (!active) return;
         setData(explorerData);
 
-        // Flechas de las 2 jugadas principales (visual únicamente)
         const bookArrows = (explorerData.moves ?? [])
           .slice(0, 2)
           .map(m => sanToArrow(m.san, game, 'rgba(100, 149, 237, 0.45)'))
@@ -65,7 +53,7 @@ export const OpeningExplorer = () => {
       .finally(() => { if (active) setLoading(false); });
 
     return () => { active = false; };
-  }, [fen, lichessToken]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fen, lichessToken]);
 
   const handleMoveHover = React.useCallback((san) => {
     setHovered(san);
@@ -115,7 +103,6 @@ export const OpeningExplorer = () => {
     );
   }
 
-  // Usar el nombre del store si está disponible (más específico), o el de la API
   const displayName = openingName || data.opening;
 
   return (

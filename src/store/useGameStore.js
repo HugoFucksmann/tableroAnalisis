@@ -18,6 +18,7 @@ export const useGameStore = create(
         searchPlatform: state.searchPlatform,
         lichessToken: state.lichessToken,
         boardOrientation: state.boardOrientation,
+        engineType: state.engineType,
       }),
     }
   )

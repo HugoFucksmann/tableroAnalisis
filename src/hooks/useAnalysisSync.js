@@ -1,13 +1,3 @@
-/**
- * useAnalysisSync.js  v3
- *
- * Cambios:
- *  - Un único efecto dispara analyzeGame() al cambiar gameId
- *  - Recibe onOpeningDetected y lo mapea al store
- *  - analysisReady se pone true en onComplete → Dashboard muestra el tablero
- *  - El efecto de análisis individual (posición sin evaluación) se mantiene
- *    para cuando el usuario mueve manualmente fuera del análisis guardado
- */
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { analysisQueue } from '../services/analysisQueue';
@@ -32,7 +22,6 @@ export const useAnalysisSync = () => {
     setAlternativeLinesForIndex,
     setGameScore,
 
-    // Apertura
     setEcoCode,
     setOpeningPly,
     setOpeningDetected,
@@ -45,7 +34,6 @@ export const useAnalysisSync = () => {
   const lastGameId = React.useRef(null);
   const lastAnalyzedFen = React.useRef(null);
 
-  // ── Efecto principal: análisis completo al cargar partida ────────────────────
   React.useEffect(() => {
     if (!gameId || gameId === lastGameId.current) return;
     if (history.length === 0) return;
@@ -64,10 +52,9 @@ export const useAnalysisSync = () => {
       onProgress: (pct, _msg) => setAnalysisProgress(pct),
 
       onOpeningDetected: ({ openingName, ecoCode, openingPly, bookPlies }) => {
-        // Marcar todos los plies book ANTES de que Stockfish empiece
         bookPlies.forEach(ply => setMoveEvaluation(ply, 'Libro'));
-        setOpeningName(openingName);
-        setEcoCode(ecoCode);
+        if (openingName) setOpeningName(openingName);
+        if (ecoCode) setEcoCode(ecoCode);
         setOpeningPly(openingPly);
         setOpeningDetected(true);
       },
@@ -81,20 +68,17 @@ export const useAnalysisSync = () => {
 
       onComplete: (accuracy) => {
         setGameScore(accuracy);
-        setAnalysisReady(true);   // ← desbloquea la UI
+        setAnalysisReady(true);
         setAnalyzing(false);
       },
     });
-  }, [gameId]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [gameId]);
 
-  // ── Efecto secundario: posición sin evaluación al navegar ────────────────────
-  // Útil cuando el usuario navega a un ply que aún no fue analizado
-  // (raro si analyzeGame terminó, pero cubre el caso de movimientos manuales)
   React.useEffect(() => {
     const hasEval = evaluationHistory?.some(e => e.moveIndex === currentMoveIndex);
     const sameFen = lastAnalyzedFen.current === fen;
 
-    if (hasEval || isAnalyzing || currentMoveIndex < -1 || sameFen) return;
+    if (hasEval || isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || sameFen) return;
 
     lastAnalyzedFen.current = fen;
 
@@ -106,19 +90,17 @@ export const useAnalysisSync = () => {
         if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
       },
     });
-  }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]);
 
-  // ── Efecto terciario: Sincronizar reloj desde comentarios PGN ────────────────
   React.useEffect(() => {
     if (history.length === 0) {
       setClocks(null, null);
       return;
     }
- 
+
     let whiteTime = null;
     let blackTime = null;
- 
-    // Escaneamos hasta el movimiento actual para encontrar los últimos tiempos registrados
+
     for (let i = 0; i <= currentMoveIndex; i++) {
       const move = history[i];
       if (!move) continue;
@@ -131,7 +113,7 @@ export const useAnalysisSync = () => {
         }
       }
     }
- 
+
     setClocks(whiteTime, blackTime);
   }, [currentMoveIndex, history, setClocks]);
 };
