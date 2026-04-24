@@ -31,11 +31,13 @@ export const EVAL_CONFIG = {
  */
 export const MOVE_LABELS = [
   'Error grave',
+  'Omisión',
   'Error',
   'Imprecisión',
   'Bueno',
   'Excelente',
   'Mejor',
+  'Genial',
   'Brillante',
   'Libro',
 ];

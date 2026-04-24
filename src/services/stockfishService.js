@@ -70,6 +70,21 @@ class StockfishService {
 
         const effectiveMultiPv = multiPv ?? this._config.multiPv;
 
+        // ---------------------------------------------------------------
+        // NORMALIZACIÓN DE MARCO (crítico)
+        //
+        // Stockfish UCI emite "score cp X" RELATIVO al jugador que mueve:
+        //   X > 0 → bueno para quien mueve   (no necesariamente Blancas)
+        //   X < 0 → malo para quien mueve
+        //
+        // Todo el código downstream (ChessMath, EvaluationEngine, AnalysisQueue)
+        // asume el marco ABSOLUTO de Blancas (positivo = Blancas mejor).
+        //
+        // Solución: determinar el turno una vez desde el FEN y aplicar
+        // isBlackTurn ? -raw : raw a cada score/mate antes de almacenarlos.
+        // ---------------------------------------------------------------
+        const isBlackTurn = fen.includes(' b ');
+
         return new Promise((resolve, reject) => {
             if (!this.ready) {
                 reject(new Error('Stockfish no esta listo'));
@@ -122,8 +137,18 @@ class StockfishService {
 
                     if (!lines[mvIdx]) lines[mvIdx] = { multipv: mvIdx, score: 0, mate: null, pv: '', move: '' };
 
-                    if (cpMatch) lines[mvIdx].score = parseInt(cpMatch[1]);
-                    if (mateMatch) { lines[mvIdx].mate = parseInt(mateMatch[1]); lines[mvIdx].score = 0; }
+                    // Normalizar al marco absoluto de Blancas antes de guardar.
+                    // Todos los consumidores downstream asumen que cp > 0 = Blancas mejor.
+                    if (cpMatch) {
+                        const relCp = parseInt(cpMatch[1]);
+                        lines[mvIdx].score = isBlackTurn ? -relCp : relCp;  // ← esto corrige el 0%
+                    }
+                    if (mateMatch) {
+                        const relMate = parseInt(mateMatch[1]);
+                        lines[mvIdx].mate = isBlackTurn ? -relMate : relMate;
+                        lines[mvIdx].score = 0;
+                    }
+
                     if (pvMatch) {
                         const pv = pvMatch[1].trim();
                         lines[mvIdx].pv = pv;
@@ -184,10 +209,4 @@ class StockfishService {
     }
 }
 
-
 export const stockfishService = new StockfishService();
-
-
-
-
-
