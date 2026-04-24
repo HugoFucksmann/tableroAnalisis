@@ -46,9 +46,9 @@ export class EvaluationEngine {
 
         // -------------------------------------------------------
         // GRAN JUGADA (!): engine's best move AND the only good one
-        // (2nd-best option was dramatically worse, gap > 0.30 WP)
+        // (2nd-best option was dramatically worse, gap > 0.18 WP)
         // -------------------------------------------------------
-        const ONLY_MOVE_THRESHOLD = 0.30;
+        const ONLY_MOVE_THRESHOLD = 0.18;
         if (isEngineBestMove && secondBestWpLoss > ONLY_MOVE_THRESHOLD) {
             return 'Genial';
         }
@@ -92,18 +92,15 @@ export class EvaluationEngine {
     /**
      * Calculate accuracy for White and Black independently.
      *
-     * Uses a blended arithmetic + harmonic mean with an ELO-scaled
-     * exponential decay factor per player — each colour is evaluated
-     * against their own skill level, not the opponent's.
+     * Uses a blended arithmetic + harmonic mean with a static exponential
+     * decay factor to ensure objective, standard evaluation.
      *
      * @param {Array<{isWhiteMove: boolean, wpLoss: number, isBook: boolean}>} moveData
-     * @param {number} eloWhite  – ELO of the White player (default 1500)
-     * @param {number} eloBlack  – ELO of the Black player (default 1500)
      * @returns {{ white: number, black: number }}
      */
-    static calculateAccuracy(moveData, eloWhite = 1500, eloBlack = 1500) {
-        const calc = (moves, elo) => {
-            const decayFactor = EvaluationEngine.#eloDecayFactor(elo);
+    static calculateAccuracy(moveData) {
+        const calc = (moves) => {
+            const decayFactor = -0.07; // Estático para reflejar calidad objetiva
             const validMoves = moves.filter(m => m !== undefined);
             if (validMoves.length === 0) return 100;
 
@@ -132,8 +129,8 @@ export class EvaluationEngine {
         };
 
         return {
-            white: calc(moveData.filter(d => d && d.isWhiteMove && !d.isBook), eloWhite),
-            black: calc(moveData.filter(d => d && !d.isWhiteMove && !d.isBook), eloBlack),
+            white: calc(moveData.filter(d => d && d.isWhiteMove && !d.isBook)),
+            black: calc(moveData.filter(d => d && !d.isWhiteMove && !d.isBook)),
         };
     }
 
@@ -141,28 +138,5 @@ export class EvaluationEngine {
     // Private helpers
     // ----------------------------------------------------------------
 
-    /**
-     * Map player ELO to an exponential decay factor (negative value).
-     *
-     * Logic:
-     *   ELO < 1000  → gentler penalty  (–0.04)  — beginners make big mistakes; don't crush them
-     *   ELO 1000-2000 → linear interpolation between –0.04 and –0.12
-     *   ELO > 2000  → strict penalty   (–0.12)  — masters should find near-perfect moves
-     *
-     * @param {number} elo
-     * @returns {number} negative decay constant
-     */
-    static #eloDecayFactor(elo) {
-        const MIN_ELO = 1000;
-        const MAX_ELO = 2000;
-        const MIN_DECAY = -0.04;   // lenient
-        const MAX_DECAY = -0.12;   // strict
-
-        if (elo <= MIN_ELO) return MIN_DECAY;
-        if (elo >= MAX_ELO) return MAX_DECAY;
-
-        // Linear interpolation
-        const t = (elo - MIN_ELO) / (MAX_ELO - MIN_ELO);
-        return MIN_DECAY + t * (MAX_DECAY - MIN_DECAY);
-    }
+    // ----------------------------------------------------------------
 }

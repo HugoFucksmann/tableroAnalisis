@@ -59,8 +59,7 @@ class AnalysisQueue {
         const state = useGameStore.getState();
         const engineConfig = state.engineConfig ?? {};
 
-        // Resolve each player's ELO independently — accuracy is graded per colour
-        const { eloWhite, eloBlack } = this.#resolvePlayerElos(state, pgnHeaders);
+        // Resolving player ELOs removed: Accuracy is now calculated objectively without relative scaling.
 
         stockfishService.destroy();
 
@@ -156,8 +155,7 @@ class AnalysisQueue {
             }
 
             if (!signal.aborted) {
-                // Each player is scored against their own ELO, not the opponent's
-                onComplete?.(EvaluationEngine.calculateAccuracy(finalMoveData, eloWhite, eloBlack));
+                onComplete?.(EvaluationEngine.calculateAccuracy(finalMoveData));
                 onProgress?.(100, 'Análisis completado');
             }
 
@@ -329,34 +327,61 @@ class AnalysisQueue {
      * @returns {boolean}
      */
     /**
-     * Detecta un sacrificio real midiendo la Ventaja Neta de material (Tú - Rival).
-     * Ignora los peones para detectar fácilmente sacrificios posicionales (Ej: Caballo por 2 peones).
+     * Detecta un sacrificio midiendo si se perdió material real (oferta aceptada)
+     * o si se dejó una pieza de alto valor "en prise" (oferta declinada).
      */
     #detectSacrifice(positions, ply, isWhiteMove) {
-        if (ply + 2 >= positions.length) return false;
-
-        const getNetAdvantage = (fen) => {
-            // Valores positivos para Blancas, negativos para Negras
-            const PIECE_MAP = {
-                N: 305, B: 333, R: 563, Q: 950,
-                n: -305, b: -333, r: -563, q: -950
+        let acceptedSacrifice = false;
+        
+        // 1. Detección de sacrificio aceptado (ply+2)
+        if (ply + 2 < positions.length) {
+            const getNetAdvantage = (fen) => {
+                const PIECE_MAP = {
+                    N: 305, B: 333, R: 563, Q: 950,
+                    n: -305, b: -333, r: -563, q: -950
+                };
+                let advantage = 0;
+                for (const ch of fen.split(' ')[0]) {
+                    if (PIECE_MAP[ch]) advantage += PIECE_MAP[ch];
+                }
+                return isWhiteMove ? advantage : -advantage;
             };
 
-            let advantage = 0;
-            for (const ch of fen.split(' ')[0]) {
-                if (PIECE_MAP[ch]) advantage += PIECE_MAP[ch];
+            const advBefore = getNetAdvantage(positions[ply]);
+            const advAfter = getNetAdvantage(positions[ply + 2]);
+            acceptedSacrifice = (advBefore - advAfter) >= 200;
+        }
+
+        // 2. Detección de sacrificio declinado / expuesto (ply+1)
+        let offeredSacrifice = false;
+        if (ply + 1 < positions.length) {
+            const tempChess = new Chess(positions[ply + 1]);
+            const legalMoves = tempChess.moves({ verbose: true });
+            
+            const PIECE_VALUES = { p: 100, n: 305, b: 333, r: 563, q: 950, k: 0 };
+            
+            for (const m of legalMoves) {
+                if (m.captured && PIECE_VALUES[m.captured] >= 300) {
+                    const valCaptured = PIECE_VALUES[m.captured];
+                    const valAttacker = PIECE_VALUES[m.piece] || 0;
+                    
+                    // Verificamos si la pieza está defendida haciendo la captura
+                    tempChess.move(m);
+                    const ourReplies = tempChess.moves({ verbose: true });
+                    const isDefended = ourReplies.some(reply => reply.to === m.to);
+                    tempChess.undo();
+                    
+                    // Es un sacrificio si la dejamos indefensa, O si el rival gana >= 200 puntos
+                    // de material al capturarla (ej. Peón captura Caballo defendido = +205 para el rival).
+                    if (!isDefended || (valCaptured - valAttacker >= 200)) {
+                        offeredSacrifice = true;
+                        break;
+                    }
+                }
             }
+        }
 
-            // Si mueven blancas, la ventaja es directa. Si mueven negras, la invertimos.
-            return isWhiteMove ? advantage : -advantage;
-        };
-
-        const advBefore = getNetAdvantage(positions[ply]);
-        const advAfter = getNetAdvantage(positions[ply + 2]);
-
-        // Si la ventaja neta cae en más de 200 puntos (equivalente a entregar una calidad o pieza)
-        // y la jugada sigue siendo la mejor opción del motor, es un verdadero Sacrificio (!!).
-        return (advBefore - advAfter) >= 200;
+        return acceptedSacrifice || offeredSacrifice;
     }
 
     /**
@@ -481,38 +506,6 @@ class AnalysisQueue {
             if (val !== undefined) total += val;
         }
         return total;
-    }
-
-    // ----------------------------------------------------------------
-    // Private: ELO resolution
-    // ----------------------------------------------------------------
-
-    /**
-     * Extract White's and Black's ELO independently from the store or PGN headers.
-     * Each colour is evaluated against its OWN rating — mixing them causes the
-     * weaker player to be unfairly penalised with a master-level decay factor.
-     *
-     * Priority:
-     *   1. state.eloWhite / state.eloBlack  (store direct fields)
-     *   2. state.pgnHeaders.WhiteElo / BlackElo  (PGN metadata)
-     *   3. 1500 default for each side independently
-     *
-     * @param {Object} state – Zustand store state snapshot
-     * @returns {{ eloWhite: number, eloBlack: number }}
-     */
-    #resolvePlayerElos(state, pgnHeaders) {
-        const headers = pgnHeaders ?? state.pgnHeaders ?? {};
-
-        const parseElo = (storeVal, headerVal) => {
-            if (typeof storeVal === 'number' && storeVal > 0) return storeVal;
-            const parsed = parseInt(headerVal, 10);
-            return !isNaN(parsed) && parsed > 0 ? parsed : 1500;
-        };
-
-        return {
-            eloWhite: parseElo(state.eloWhite, headers.WhiteElo),
-            eloBlack: parseElo(state.eloBlack, headers.BlackElo),
-        };
     }
 
     // ----------------------------------------------------------------
