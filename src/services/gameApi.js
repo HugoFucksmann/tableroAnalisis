@@ -1,15 +1,18 @@
-export async function fetchLichessGames(username, max = 10, token = '') {
+export async function fetchLichessGames(username, max = 15, until = null, token = '') {
   try {
     const headers = { 'Accept': 'application/x-ndjson' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(`https://lichess.org/api/games/user/${username}?max=${max}&pgnInJson=true`, {
-      headers
-    });
+    let url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${max}&pgnInJson=true`;
+    if (until) url += `&until=${until}`;
+
+    const res = await fetch(url, { headers });
     if (!res.ok) throw new Error('Usuario no encontrado o error en Lichess');
+    
     const text = await res.text();
     const lines = text.split('\n').filter(line => line.trim().length > 0);
-    return lines.map(line => {
+    
+    const games = lines.map(line => {
       const game = JSON.parse(line);
       return {
         id: game.id,
@@ -18,30 +21,67 @@ export async function fetchLichessGames(username, max = 10, token = '') {
         result: game.winner === 'white' ? '1-0' : game.winner === 'black' ? '0-1' : '1/2-1/2',
         date: new Date(game.createdAt).toLocaleDateString(),
         pgn: game.pgn,
+        createdAt: game.createdAt,
       };
     });
+
+    return {
+      games,
+      lastTimestamp: games.length > 0 ? games[games.length - 1].createdAt : null,
+      hasMore: games.length === max
+    };
   } catch (err) {
     console.error(err);
     throw err;
   }
 }
 
-export async function fetchChesscomGames(username, max = 10) {
+/**
+ * Para Chess.com, la paginación es manual por archivos mensuales.
+ * @param {string} username 
+ * @param {object} pagination { archives, currentArchiveIdx, offset }
+ */
+export async function fetchChesscomGames(username, max = 15, pagination = null) {
   try {
-    const archiveRes = await fetch(`https://api.chess.com/pub/player/${username}/games/archives`);
-    if (!archiveRes.ok) throw new Error('Usuario no encontrado en Chess.com');
-    const archiveData = await archiveRes.json();
-    if (!archiveData.archives || archiveData.archives.length === 0) return [];
+    let archives = pagination?.archives;
+    let currentIdx = pagination?.currentArchiveIdx ?? 0;
+    let offset = pagination?.offset ?? 0;
+
+    if (!archives) {
+      const archiveRes = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/archives`);
+      if (!archiveRes.ok) throw new Error('Usuario no encontrado en Chess.com');
+      const archiveData = await archiveRes.json();
+      if (!archiveData.archives || archiveData.archives.length === 0) return { games: [], pagination: null };
+      archives = [...archiveData.archives].reverse();
+    }
+
+    let collectedGames = [];
     
-    // Tomamos el último archivo (mes más reciente)
-    const lastArchiveUrl = archiveData.archives[archiveData.archives.length - 1];
-    const gamesRes = await fetch(lastArchiveUrl);
-    if (!gamesRes.ok) throw new Error('Error obteniendo partidas de Chess.com');
-    const gamesData = await gamesRes.json();
-    
-    // Obtenemos las últimas `max` partidas
-    const games = gamesData.games.slice(-max).reverse();
-    return games.map(game => {
+    while (currentIdx < archives.length && collectedGames.length < max) {
+      const res = await fetch(archives[currentIdx]);
+      if (!res.ok) {
+        currentIdx++;
+        offset = 0;
+        continue;
+      }
+      
+      const data = await res.json();
+      const allMonthlyGames = [...data.games].reverse();
+      const available = allMonthlyGames.slice(offset);
+      
+      const needed = max - collectedGames.length;
+      const toAdd = available.slice(0, needed);
+      
+      collectedGames = [...collectedGames, ...toAdd];
+      offset += toAdd.length;
+      
+      if (offset >= allMonthlyGames.length) {
+        currentIdx++;
+        offset = 0;
+      }
+    }
+
+    const formattedGames = collectedGames.map(game => {
       let result = '1/2-1/2';
       if (game.white.result === 'win') result = '1-0';
       else if (game.black.result === 'win') result = '0-1';
@@ -55,6 +95,16 @@ export async function fetchChesscomGames(username, max = 10) {
         pgn: game.pgn,
       };
     });
+
+    return {
+      games: formattedGames,
+      pagination: {
+        archives,
+        currentArchiveIdx: currentIdx,
+        offset
+      },
+      hasMore: currentIdx < archives.length || (currentIdx === archives.length - 1 && offset > 0)
+    };
   } catch (err) {
     console.error(err);
     throw err;
