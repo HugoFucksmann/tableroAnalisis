@@ -1,3 +1,14 @@
+/**
+ * AnalysisQueue — Orchestrates per-move Stockfish analysis for a full game.
+ *
+ * Key upgrades vs. original:
+ *  - Material is counted before/after each move to detect sacrifices (isSacrifice)
+ *  - secondBestWpLoss is derived from multiPV Stockfish lines and passed to classifyMove
+ *  - Player ELO is extracted from the game store / PGN headers and forwarded to
+ *    EvaluationEngine.calculateAccuracy for ELO-scaled accuracy scoring
+ *  - cpToWhiteWinProb is called with the board's material count for phase-aware WP
+ */
+
 import { Chess } from 'chess.js';
 import { stockfishService } from './stockfishService';
 import { useGameStore } from '../store/useGameStore';
@@ -10,6 +21,10 @@ class AnalysisQueue {
     #abortController = null;
     isRunning = false;
 
+    // ----------------------------------------------------------------
+    // Public API
+    // ----------------------------------------------------------------
+
     cancel() {
         if (this.#abortController) {
             this.#abortController.abort();
@@ -19,13 +34,33 @@ class AnalysisQueue {
         this.isRunning = false;
     }
 
+    /**
+     * Full-game analysis.
+     *
+     * @param {Array}  history       – chess.js move objects
+     * @param {number} currentIndex  – currently viewed ply (for priority ordering)
+     * @param {Object} callbacks
+     */
     async analyzeGame(history, currentIndex, callbacks = {}) {
-        const { onMoveResult, onProgress, onStatus, onComplete, onOpeningDetected, gameId = Date.now(), lichessToken } = callbacks;
+        const {
+            onMoveResult,
+            onProgress,
+            onStatus,
+            onComplete,
+            onOpeningDetected,
+            gameId = Date.now(),
+            lichessToken,
+            pgnHeaders = {}, // EXTRACT PGN HEADERS HERE
+        } = callbacks;
 
         this.cancel();
         if (!history || history.length === 0) return;
 
-        const engineConfig = useGameStore.getState().engineConfig ?? {};
+        const state = useGameStore.getState();
+        const engineConfig = state.engineConfig ?? {};
+
+        // Resolve each player's ELO independently — accuracy is graded per colour
+        const { eloWhite, eloBlack } = this.#resolvePlayerElos(state, pgnHeaders);
 
         stockfishService.destroy();
 
@@ -41,6 +76,7 @@ class AnalysisQueue {
             if (signal.aborted) return;
 
             const positions = this.#buildPositions(history);
+            const materialCounts = this.#buildMaterialCounts(positions); // NEW
             const totalMoves = history.length;
 
             const evalResults = new Array(positions.length).fill(null);
@@ -54,13 +90,21 @@ class AnalysisQueue {
                 positions, history, gameId, token: lichessToken, signal,
                 onPlyResolved: (ply, isBook) => {
                     bookStatus[ply] = isBook;
-                    this.#tryResolveMove(ply, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryResolveMove(
+                        ply, history, positions, materialCounts,
+                        evalResults, bookStatus, openingDone,
+                        finalMoveData, completedMoves, onMoveResult, currentIndex
+                    );
                 },
-                onOpeningDetected
+                onOpeningDetected,
             }).finally(() => {
                 openingDone = true;
                 for (let i = 0; i < totalMoves; i++) {
-                    this.#tryResolveMove(i, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryResolveMove(
+                        i, history, positions, materialCounts,
+                        evalResults, bookStatus, openingDone,
+                        finalMoveData, completedMoves, onMoveResult, currentIndex
+                    );
                 }
             });
 
@@ -71,26 +115,33 @@ class AnalysisQueue {
 
                 const fen = positions[posIndex];
                 const isBlackTurn = fen.includes(' b ');
-                const isHighPriority = (posIndex === currentIndex || posIndex === currentIndex + 1);
+                const material = materialCounts[posIndex];
+                const isHighPriority = posIndex === currentIndex || posIndex === currentIndex + 1;
 
-                const depth = isHighPriority ? engineConfig.depth : Math.max(10, engineConfig.depth - 3);
-                const mPv = engineConfig.multiPv || 1;
+                const depth = isHighPriority
+                    ? engineConfig.depth
+                    : Math.max(10, engineConfig.depth - 3);
+
+                // Always request at least 2 PV lines so we can compute secondBestWpLoss
+                const mPv = Math.max(2, engineConfig.multiPv || 2);
 
                 try {
                     const result = await stockfishService.analyzePosition(fen, depth, signal, null, mPv);
                     if (signal.aborted) break;
 
                     evalResults[posIndex] = {
-                        wp: ChessMath.cpToWhiteWinProb(result.score, result.mate, isBlackTurn),
+                        wp: ChessMath.cpToWhiteWinProb(result.score, result.mate, isBlackTurn, material),
                         score: ChessMath.cpToVisualScore(result.score, result.mate, isBlackTurn),
                         bestMove: result.bestMove,
-                        lines: result.lines
+                        lines: result.lines,
                     };
 
-                    if (posIndex === 0) onMoveResult?.({ index: -1, bestMove: result.bestMove, lines: result.lines });
+                    if (posIndex === 0) {
+                        onMoveResult?.({ index: -1, bestMove: result.bestMove, lines: result.lines });
+                    }
 
-                    this.#tryResolveMove(posIndex - 1, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
-                    this.#tryResolveMove(posIndex, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryResolveMove(posIndex - 1, history, positions, materialCounts, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryResolveMove(posIndex, history, positions, materialCounts, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
 
                     const currentPct = Math.round((completedMoves.size / totalMoves) * 100);
                     onProgress?.(Math.min(99, currentPct), `Analizando (${currentPct}%)`);
@@ -99,13 +150,14 @@ class AnalysisQueue {
                     if (e.name === 'AbortError') break;
 
                     evalResults[posIndex] = { wp: 0.5, score: 0.0, bestMove: null, lines: null };
-                    this.#tryResolveMove(posIndex - 1, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
-                    this.#tryResolveMove(posIndex, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryResolveMove(posIndex - 1, history, positions, materialCounts, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryResolveMove(posIndex, history, positions, materialCounts, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
                 }
             }
 
             if (!signal.aborted) {
-                onComplete?.(EvaluationEngine.calculateAccuracy(finalMoveData));
+                // Each player is scored against their own ELO, not the opponent's
+                onComplete?.(EvaluationEngine.calculateAccuracy(finalMoveData, eloWhite, eloBlack));
                 onProgress?.(100, 'Análisis completado');
             }
 
@@ -116,6 +168,9 @@ class AnalysisQueue {
         }
     }
 
+    /**
+     * Single-position live analysis (used while stepping through moves).
+     */
     async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
         const { onResult, onStatus } = callbacks;
 
@@ -135,6 +190,9 @@ class AnalysisQueue {
             const isBlackTurn = fen.includes(' b ');
             const depth = engineConfig.depth ?? 18;
 
+            // Compute material from the given FEN for phase-aware WP (fast FEN scan)
+            const material = this.#totalMaterialFromFen(fen);
+
             const result = await stockfishService.analyzePosition(
                 fen, depth, signal,
                 ({ score, mate, bestMove }) => {
@@ -149,7 +207,11 @@ class AnalysisQueue {
             if (result && !signal.aborted) {
                 onResult?.({
                     score: ChessMath.cpToVisualScore(result.score, result.mate, isBlackTurn),
-                    bestMove: result.bestMove, moveIndex, lines: result.lines,
+                    bestMove: result.bestMove,
+                    moveIndex,
+                    lines: result.lines,
+                    // Expose WP for callers who want it
+                    wp: ChessMath.cpToWhiteWinProb(result.score, result.mate, isBlackTurn, material),
                 });
             }
         } catch (e) {
@@ -162,12 +224,31 @@ class AnalysisQueue {
         }
     }
 
-    #tryResolveMove(ply, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedSet, onMoveResult, focusIdx) {
+    clearOpeningCache(gameId) {
+        OpeningService.clearCache(gameId);
+    }
+
+    // ----------------------------------------------------------------
+    // Private: move resolution
+    // ----------------------------------------------------------------
+
+    /**
+     * Attempt to finalise and emit a single ply once all data is ready.
+     *
+     * NEW vs. original:
+     *  - Derives `secondBestWpLoss` from multiPV lines
+     *  - Detects `isSacrifice` by comparing material before/after the move
+     *  - Both values are forwarded to EvaluationEngine.classifyMove
+     */
+    #tryResolveMove(
+        ply, history, positions, materialCounts,
+        evalResults, bookStatus, openingDone,
+        finalMoveData, completedSet, onMoveResult, focusIdx
+    ) {
         if (ply < 0 || ply >= history.length || completedSet.has(ply)) return;
 
         const stateBefore = evalResults[ply];
         const stateAfter = evalResults[ply + 1];
-
         if (!stateBefore || !stateAfter) return;
 
         const isOpeningResolved = bookStatus[ply] !== null || openingDone || ply >= MAX_BOOK_PLY;
@@ -178,9 +259,33 @@ class AnalysisQueue {
         const isEngineBestMove = stateBefore.bestMove === movePlayed.lan;
         const isBook = bookStatus[ply] === true;
 
-        const label = isBook ? 'Libro' : EvaluationEngine.classifyMove(
-            stateBefore.wp, stateAfter.wp, isWhiteMove, isEngineBestMove
+        // ----------------------------------------------------------
+        // NEW: secondBestWpLoss
+        // Compare best-line WP to 2nd-best-line WP to detect only-moves.
+        // ----------------------------------------------------------
+        const secondBestWpLoss = this.#calcSecondBestWpLoss(
+            stateBefore.lines, isWhiteMove, materialCounts[ply]
         );
+
+        // ----------------------------------------------------------
+        // NEW: isSacrifice
+        // The moving side voluntarily reduced its own material total
+        // (excluding pawns keeps this from firing on simple exchanges).
+        // ----------------------------------------------------------
+        const isSacrifice = isEngineBestMove
+            ? this.#detectSacrifice(positions, ply, isWhiteMove)
+            : false;
+
+        const label = isBook
+            ? 'Libro'
+            : EvaluationEngine.classifyMove(
+                stateBefore.wp,
+                stateAfter.wp,
+                isWhiteMove,
+                isEngineBestMove,
+                secondBestWpLoss,
+                isSacrifice
+            );
 
         onMoveResult?.({
             index: ply,
@@ -191,39 +296,247 @@ class AnalysisQueue {
             lines: stateAfter.lines,
         });
 
-        let wpLoss = isWhiteMove ? (stateBefore.wp - stateAfter.wp) : (stateAfter.wp - stateBefore.wp);
+        let wpLoss = isWhiteMove
+            ? (stateBefore.wp - stateAfter.wp)
+            : (stateAfter.wp - stateBefore.wp);
         if (isEngineBestMove || wpLoss < 0) wpLoss = 0;
 
         finalMoveData[ply] = { isWhiteMove, wpLoss, isBook };
         completedSet.add(ply);
     }
 
+    // ----------------------------------------------------------------
+    // Private: sacrifice detection
+    // ----------------------------------------------------------------
+
+    /**
+     * Returns true when the moving side OFFERED a sacrifice — meaning it left
+     * a piece en prise and the opponent captured it on the very next move.
+     *
+     * WHY positions[ply + 2] and NOT positions[ply + 1]:
+     *   At positions[ply]   the moving side still has its piece.
+     *   At positions[ply+1] the moving side just moved — a player CANNOT lose
+     *                       their own pieces on their own turn; non-pawn material
+     *                       is always unchanged vs. the position before.
+     *   At positions[ply+2] the OPPONENT has replied; if they captured, the
+     *                       moving side's material count will have dropped here.
+     *
+     * Comparing ply → ply+1 (the original bug) can never detect a sacrifice.
+     *
+     * @param {string[]} positions  – full FEN array for the game
+     * @param {number}   ply        – index of the move being classified
+     * @param {boolean}  isWhiteMove
+     * @returns {boolean}
+     */
+    /**
+     * Detecta un sacrificio real midiendo la Ventaja Neta de material (Tú - Rival).
+     * Ignora los peones para detectar fácilmente sacrificios posicionales (Ej: Caballo por 2 peones).
+     */
+    #detectSacrifice(positions, ply, isWhiteMove) {
+        if (ply + 2 >= positions.length) return false;
+
+        const getNetAdvantage = (fen) => {
+            // Valores positivos para Blancas, negativos para Negras
+            const PIECE_MAP = {
+                N: 305, B: 333, R: 563, Q: 950,
+                n: -305, b: -333, r: -563, q: -950
+            };
+
+            let advantage = 0;
+            for (const ch of fen.split(' ')[0]) {
+                if (PIECE_MAP[ch]) advantage += PIECE_MAP[ch];
+            }
+
+            // Si mueven blancas, la ventaja es directa. Si mueven negras, la invertimos.
+            return isWhiteMove ? advantage : -advantage;
+        };
+
+        const advBefore = getNetAdvantage(positions[ply]);
+        const advAfter = getNetAdvantage(positions[ply + 2]);
+
+        // Si la ventaja neta cae en más de 200 puntos (equivalente a entregar una calidad o pieza)
+        // y la jugada sigue siendo la mejor opción del motor, es un verdadero Sacrificio (!!).
+        return (advBefore - advAfter) >= 200;
+    }
+
+    /**
+     * Count non-pawn, non-king piece value for one colour by scanning the FEN
+     * piece-placement string directly — zero Chess() instantiations, ~100× faster
+     * than using chess.board() in a loop over every ply of the game.
+     *
+     * FEN piece chars: uppercase = White, lowercase = Black.
+     * We only need N/n B/b R/r Q/q (skipping P/p and K/k).
+     *
+     * @param {string}   fen
+     * @param {'w'|'b'}  color
+     * @returns {number}
+     */
+    #sideNonPawnMaterialFromFen(fen, color) {
+        const placement = fen.split(' ')[0]; // only the board-layout field
+
+        // White = uppercase letters, Black = lowercase letters
+        const PIECE_MAP = color === 'w'
+            ? { N: 305, B: 333, R: 563, Q: 950 }
+            : { n: 305, b: 333, r: 563, q: 950 };
+
+        let total = 0;
+        for (const ch of placement) {
+            if (PIECE_MAP[ch] !== undefined) total += PIECE_MAP[ch];
+        }
+        return total;
+    }
+
+    // ----------------------------------------------------------------
+    // Private: only-move (secondBestWpLoss) computation
+    // ----------------------------------------------------------------
+
+    /**
+     * Given Stockfish's multiPV lines for a position, compute how much worse
+     * the 2nd-best line is compared to the best line (in WP units).
+     *
+     * A large gap means the played move (if it was the engine's best) was the
+     * "only" move that kept the position tenable → "Gran Jugada".
+     *
+     * @param {Array|null} lines        – multiPV lines from Stockfish result
+     * @param {boolean}    isWhiteMove  – used to orient WP
+     * @param {number}     material     – board material for phase-aware WP
+     * @returns {number} WP gap in [0, 1]; 0 if < 2 lines available
+     */
+    #calcSecondBestWpLoss(lines, isWhiteMove, material) {
+        if (!lines || lines.length < 2) return 0;
+
+        const toWp = (line) => {
+            // Stockfish line objects are expected to have { score, mate }
+            const isBlackTurn = !isWhiteMove;
+            return ChessMath.cpToWhiteWinProb(
+                line.score ?? 0,
+                line.mate ?? null,
+                isBlackTurn,
+                material
+            );
+        };
+
+        const wp1 = toWp(lines[0]);
+        const wp2 = toWp(lines[1]);
+
+        // From the moving player's perspective
+        const best = isWhiteMove ? wp1 : (1 - wp1);
+        const secondBest = isWhiteMove ? wp2 : (1 - wp2);
+
+        return Math.max(0, best - secondBest);
+    }
+
+    // ----------------------------------------------------------------
+    // Private: position & material array builders
+    // ----------------------------------------------------------------
+
+    /**
+     * Build the FEN string for every position in the game.
+     * @param {Array} history
+     * @returns {string[]}
+     */
+    #buildPositions(history) {
+        const positions = [];
+        const game = new Chess();
+        positions.push(game.fen());
+        for (const m of history) {
+            game.move(m);
+            positions.push(game.fen());
+        }
+        return positions;
+    }
+
+    /**
+     * Pre-compute total material count for every position (used for phase-aware WP).
+     *
+     * Uses fast FEN string scanning instead of new Chess() instantiation —
+     * avoids hundreds of heavy object constructions for a full game.
+     *
+     * @param {string[]} positions
+     * @returns {number[]}
+     */
+    #buildMaterialCounts(positions) {
+        return positions.map((fen) => this.#totalMaterialFromFen(fen));
+    }
+
+    /**
+     * Compute total board material from a FEN by reading the piece-placement
+     * field character by character — no Chess() instantiation needed.
+     *
+     * All pieces of BOTH colours are counted (kings excluded).
+     *
+     * @param {string} fen
+     * @returns {number}
+     */
+    #totalMaterialFromFen(fen) {
+        const placement = fen.split(' ')[0];
+
+        // Case-insensitive piece values (kings excluded)
+        const PIECE_MAP = { n: 305, b: 333, r: 563, q: 950, p: 100 };
+
+        let total = 0;
+        for (const ch of placement) {
+            const val = PIECE_MAP[ch.toLowerCase()];
+            // Skip digits (empty squares), '/', and 'k'/'K'
+            if (val !== undefined) total += val;
+        }
+        return total;
+    }
+
+    // ----------------------------------------------------------------
+    // Private: ELO resolution
+    // ----------------------------------------------------------------
+
+    /**
+     * Extract White's and Black's ELO independently from the store or PGN headers.
+     * Each colour is evaluated against its OWN rating — mixing them causes the
+     * weaker player to be unfairly penalised with a master-level decay factor.
+     *
+     * Priority:
+     *   1. state.eloWhite / state.eloBlack  (store direct fields)
+     *   2. state.pgnHeaders.WhiteElo / BlackElo  (PGN metadata)
+     *   3. 1500 default for each side independently
+     *
+     * @param {Object} state – Zustand store state snapshot
+     * @returns {{ eloWhite: number, eloBlack: number }}
+     */
+    #resolvePlayerElos(state, pgnHeaders) {
+        const headers = pgnHeaders ?? state.pgnHeaders ?? {};
+
+        const parseElo = (storeVal, headerVal) => {
+            if (typeof storeVal === 'number' && storeVal > 0) return storeVal;
+            const parsed = parseInt(headerVal, 10);
+            return !isNaN(parsed) && parsed > 0 ? parsed : 1500;
+        };
+
+        return {
+            eloWhite: parseElo(state.eloWhite, headers.WhiteElo),
+            eloBlack: parseElo(state.eloBlack, headers.BlackElo),
+        };
+    }
+
+    // ----------------------------------------------------------------
+    // Private: smart analysis ordering (unchanged from original)
+    // ----------------------------------------------------------------
+
     #buildSmartAnalysisOrder(totalPositions, currentIndex) {
         const order = [];
         const seen = new Set();
         const add = (idx) => {
-            if (idx >= 0 && idx < totalPositions && !seen.has(idx)) { order.push(idx); seen.add(idx); }
+            if (idx >= 0 && idx < totalPositions && !seen.has(idx)) {
+                order.push(idx);
+                seen.add(idx);
+            }
         };
 
         if (currentIndex >= 0 && currentIndex < totalPositions - 1) {
-            add(currentIndex); add(currentIndex + 1);
+            add(currentIndex);
+            add(currentIndex + 1);
         }
         if (currentIndex > 0) add(currentIndex - 1);
 
         for (let i = 0; i < totalPositions; i++) add(i);
         return order;
-    }
-
-    #buildPositions(history) {
-        const positions = [];
-        const game = new Chess();
-        positions.push(game.fen());
-        for (const m of history) { game.move(m); positions.push(game.fen()); }
-        return positions;
-    }
-
-    clearOpeningCache(gameId) {
-        OpeningService.clearCache(gameId);
     }
 }
 
