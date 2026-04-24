@@ -101,10 +101,14 @@ export const useAnalysisSync = () => {
       },
 
       onComplete: (accuracy) => {
-        setGameScore(accuracy);
+        // Primero quitamos el modal de carga
         setAnalysisReady(true);
         setAnalyzing(false);
-        // El worker se libera en el finally de analyzeGame (stockfishService.destroy()).
+        
+        // Luego calculamos/mostramos la precisión (se sentirá asíncrono)
+        setTimeout(() => {
+          setGameScore(accuracy);
+        }, 300);
       },
     });
 

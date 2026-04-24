@@ -225,18 +225,24 @@ export const EvaluationGraph = () => {
       </svg>
 
       {/* Precisión final */}
-      {gameScore && (
-        <div className="accuracy-row">
-          <div className="accuracy-chip white">
-            <span className="chip-color-dot" style={{ background: '#f1f1f1' }} />
-            <span>{gameScore.white}%</span>
+      {analysisReady && (
+        gameScore ? (
+          <div className="accuracy-row">
+            <div className="accuracy-chip white">
+              <span className="chip-color-dot" style={{ background: '#f1f1f1' }} />
+              <span>{gameScore.white}%</span>
+            </div>
+            <span className="accuracy-label-center">precisión</span>
+            <div className="accuracy-chip black">
+              <span>{gameScore.black}%</span>
+              <span className="chip-color-dot" style={{ background: '#333' }} />
+            </div>
           </div>
-          <span className="accuracy-label-center">precisión</span>
-          <div className="accuracy-chip black">
-            <span>{gameScore.black}%</span>
-            <span className="chip-color-dot" style={{ background: '#333' }} />
+        ) : (
+          <div className="accuracy-row accuracy-loading">
+            <span className="accuracy-loading-text">Calculando precisión...</span>
           </div>
-        </div>
+        )
       )}
     </div>
   );
