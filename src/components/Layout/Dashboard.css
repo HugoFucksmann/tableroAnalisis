@@ -113,14 +113,62 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   transition: color 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.panel-header:hover h3 {
+.panel-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  flex: 1;
+}
+
+.panel-eco-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+  background: rgba(78, 154, 241, 0.1);
+  padding: 0.05rem 0.25rem;
+  border-radius: 0.125rem;
+  flex-shrink: 0;
+}
+
+.panel-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.panel-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border: none;
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.panel-action-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
 }
 
-.panel-header:hover .collapse-toggle {
-  opacity: 1;
+.panel-action-btn.has-token {
+  color: var(--accent-primary);
+}
+
+.panel-action-btn.active {
+  background: rgba(78, 154, 241, 0.15);
+  color: var(--accent-primary);
 }
 
 .collapse-toggle {

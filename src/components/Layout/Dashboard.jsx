@@ -8,6 +8,9 @@ import { BoardControls } from '../Board/BoardControls';
 import { EvaluationGraph } from '../Analysis/EvaluationGraph';
 import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
 import { stockfishService } from '../../services/stockfishService';
+import { Key } from 'lucide-react';
+import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import './Dashboard.css';
 
 const isMobileViewport = () =>
@@ -19,12 +22,28 @@ export const Dashboard = () => {
   const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(isMobileViewport());
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
 
+  const { 
+    openingName, 
+    ecoCode, 
+    showTokenInput, 
+    setShowTokenInput,
+    lichessToken 
+  } = useGameStore(useShallow(state => ({
+    openingName: state.openingName,
+    ecoCode: state.ecoCode,
+    showTokenInput: state.showTokenInput,
+    setShowTokenInput: state.setShowTokenInput,
+    lichessToken: state.lichessToken,
+  })));
+
   useEffect(() => {
     // Limpieza al desmontar el Dashboard para liberar memoria
     return () => {
       stockfishService.destroy();
     };
   }, []);
+
+  const explorerTitle = (openingName && openingName !== 'Initial Position') ? openingName : 'Explorador';
 
   return (
     <div className="dashboard-container">
@@ -65,8 +84,22 @@ export const Dashboard = () => {
           {/* Explorer */}
           <div className={`panel-container glass-panel explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
             <div className="panel-header" onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}>
-              <h3>Explorador</h3>
-              <span className="collapse-toggle">{isExplorerCollapsed ? '+' : '−'}</span>
+              <div className="panel-title-group">
+                {ecoCode && !isExplorerCollapsed && <span className="panel-eco-badge">{ecoCode}</span>}
+                <h3>{explorerTitle}</h3>
+              </div>
+              <div className="panel-actions">
+                {!isExplorerCollapsed && (
+                  <button 
+                    className={`panel-action-btn ${lichessToken ? 'has-token' : ''} ${showTokenInput ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); setShowTokenInput(!showTokenInput); }}
+                    title="Configurar Token Lichess"
+                  >
+                    <Key size={14} />
+                  </button>
+                )}
+                <span className="collapse-toggle">{isExplorerCollapsed ? '+' : '−'}</span>
+              </div>
             </div>
             {!isExplorerCollapsed && <OpeningExplorer />}
           </div>
@@ -85,4 +118,4 @@ export const Dashboard = () => {
       </main>
     </div>
   );
-};
+};

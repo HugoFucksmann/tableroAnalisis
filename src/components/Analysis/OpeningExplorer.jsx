@@ -22,6 +22,7 @@ export const OpeningExplorer = () => {
     game,
     fen,
     lichessToken,
+    showTokenInput,
     openingName,
     ecoCode,
     makeMove,
@@ -30,6 +31,8 @@ export const OpeningExplorer = () => {
     game: state.game,
     fen: state.fen,
     lichessToken: state.lichessToken,
+    showTokenInput: state.showTokenInput,
+    setLichessToken: state.setLichessToken,
     openingName: state.openingName,
     ecoCode: state.ecoCode,
     makeMove: state.makeMove,
@@ -113,14 +116,22 @@ export const OpeningExplorer = () => {
     );
   }
 
-  const displayName = openingName || data.opening;
-
   return (
     <div className="explorer-container" onMouseLeave={handleContainerLeave}>
-      <div className="opening-name">
-        {ecoCode && <span style={{ opacity: 0.6, marginRight: 6, fontSize: '0.8em' }}>{ecoCode}</span>}
-        {displayName}
-      </div>
+      {showTokenInput && (
+        <div className="explorer-token-input-wrap">
+          <input
+            className="explorer-token-input"
+            type="password"
+            placeholder="Lichess Personal Token..."
+            value={lichessToken}
+            onChange={(e) => setLichessToken(e.target.value)}
+          />
+          <p className="explorer-token-hint">
+            Mejora el límite de peticiones al Explorer.
+          </p>
+        </div>
+      )}
 
       <div className="moves-stats-list">
         {data.moves.slice(0, 10).map((move) => (

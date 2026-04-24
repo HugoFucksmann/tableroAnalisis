@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, Key, Settings, FileText } from 'lucide-react';
+import { Search, ExternalLink, Loader, AlertCircle, Settings, FileText } from 'lucide-react';
 import { EngineConfigModal } from './EngineConfigModal';
 import './GameImport.css';
 
@@ -261,45 +261,8 @@ export const GameImport = ({ onGameSelect }) => {
             ? <Loader size={15} className="gi-spin" />
             : <Search size={15} />}
         </button>
-        {platform === 'lichess' && (
-          <button
-            className={`gi-token-toggle-btn ${lichessToken ? 'has-token' : ''}`}
-            onClick={() => setShowTokenInput(!showTokenInput)}
-            title="Configurar Token de Lichess"
-          >
-            <Key size={15} />
-          </button>
-        )}
       </div>
 
-      {showTokenInput && platform === 'lichess' && (
-        <div className="gi-token-input-wrap">
-          <input
-            className="gi-token-input"
-            type="password"
-            placeholder="Lichess Personal Token..."
-            value={lichessToken}
-            onChange={(e) => setLichessToken(e.target.value)}
-          />
-          <p className="gi-token-hint">
-            Requerido para evitar errores 401 en el Opening Explorer.
-          </p>
-        </div>
-      )}
-
-      {/* ── Analysis progress ───────────────────────────────────── */}
-      {isAnalyzing && (
-        <div className="gi-analysis-bar">
-          <div className="gi-analysis-header">
-            <Loader size={12} className="gi-spin" />
-            <span>Analizando con Stockfish</span>
-            <span className="gi-analysis-pct">{analysisProgress}%</span>
-          </div>
-          <div className="gi-track">
-            <div className="gi-fill" style={{ width: `${analysisProgress}%` }} />
-          </div>
-        </div>
-      )}
 
       {error && (
         <div className="gi-error">

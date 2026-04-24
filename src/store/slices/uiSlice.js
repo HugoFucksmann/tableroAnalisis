@@ -8,9 +8,11 @@ export const createUISlice = (set, get) => ({
   searchUsername: 'elcolof',
   searchPlatform: 'lichess',
   lichessToken: import.meta.env.VITE_TOKEN_LICHESS || '',
+  showTokenInput: false,
   boardOrientation: 'white',
   gameId: 0,
 
+  setShowTokenInput: (v) => set({ showTokenInput: v }),
   setGameId: (id) => set({ gameId: id }),
   setBoardOrientation: (orientation) => set({ boardOrientation: orientation }),
   // setArrows / setHighlights: los datos iniciales viven en gameSlice (ANALYSIS_RESET),
