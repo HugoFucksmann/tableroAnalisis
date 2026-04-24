@@ -2,7 +2,6 @@ import React from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { analysisQueue } from '../services/analysisQueue';
-import { stockfishService } from '../services/stockfishService';
 
 export const useAnalysisSync = () => {
   const {
@@ -131,29 +130,26 @@ export const useAnalysisSync = () => {
   }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]);
 
 
-  React.useEffect(() => {
-    if (history.length === 0) {
-      setClocks(null, null);
-      return;
-    }
+  // Calcular relojes de forma eficiente: solo leer el último valor por color
+  // usando useMemo en vez de un useEffect+setState para evitar un render extra.
+  const clocks = React.useMemo(() => {
+    if (history.length === 0 || !pgnCommentsByIndex) return { white: null, black: null };
 
-    let whiteTime = null;
-    let blackTime = null;
-
+    let white = null;
+    let black = null;
     for (let i = 0; i <= currentMoveIndex; i++) {
-      const move = history[i];
-      if (!move) continue;
-      
-      const comment = pgnCommentsByIndex?.[i];
-      if (comment) {
-        const match = comment.match(/\[%clk\s+([^\]]+)\]/);
-        if (match) {
-          if (move.color === 'w') whiteTime = match[1];
-          else blackTime = match[1];
-        }
+      const comment = pgnCommentsByIndex[i];
+      if (!comment) continue;
+      const match = comment.match(/\[%clk\s+([^\]]+)\]/);
+      if (match) {
+        if (history[i]?.color === 'w') white = match[1];
+        else black = match[1];
       }
     }
+    return { white, black };
+  }, [currentMoveIndex, history, pgnCommentsByIndex]);
 
-    setClocks(whiteTime, blackTime);
-  }, [currentMoveIndex, history, pgnCommentsByIndex, setClocks]);
+  React.useEffect(() => {
+    setClocks(clocks.white, clocks.black);
+  }, [clocks, setClocks]);
 };

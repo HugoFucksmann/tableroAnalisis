@@ -48,7 +48,7 @@ export const GameImport = ({ onGameSelect }) => {
     setError('');
   };
 
-  const performSearch = async (targetUsername, targetPlatform) => {
+  const performSearch = React.useCallback(async (targetUsername, targetPlatform) => {
     if (!targetUsername.trim()) return;
     setIsFetching(true);
     setError('');
@@ -65,13 +65,16 @@ export const GameImport = ({ onGameSelect }) => {
     } finally {
       setIsFetching(false);
     }
-  };
+  }, [lichessToken, setGames]);
 
+  // Carga inicial: buscar partidas del usuario por defecto al montar
+  const hasSearchedRef = React.useRef(false);
   React.useEffect(() => {
-    if (username && games.length === 0 && !isFetching) {
+    if (username && games.length === 0 && !hasSearchedRef.current) {
+      hasSearchedRef.current = true;
       performSearch(username, platform);
     }
-  }, []);
+  }, [username, games.length, platform, performSearch]);
 
   const handleSearch = async (e) => {
     if (e.key === 'Enter' || e.type === 'click') {

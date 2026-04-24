@@ -2,8 +2,6 @@ export const createUISlice = (set, get) => ({
   clocks: { white: null, black: null },
   players: { white: 'Blancas', black: 'Negras' },
   playerElos: { white: null, black: null },
-  arrows: [],
-  highlights: {},
   gamePhase: 'Opening',
   openingName: 'Initial Position',
   importedGames: [],
@@ -15,6 +13,8 @@ export const createUISlice = (set, get) => ({
 
   setGameId: (id) => set({ gameId: id }),
   setBoardOrientation: (orientation) => set({ boardOrientation: orientation }),
+  // setArrows / setHighlights: los datos iniciales viven en gameSlice (ANALYSIS_RESET),
+  // pero estos setters los necesitan componentes externos como OpeningExplorer.
   setArrows: (arrows) => set({ arrows }),
   setHighlights: (highlights) => set({ highlights }),
   setGamePhase: (phase) => set({ gamePhase: phase }),

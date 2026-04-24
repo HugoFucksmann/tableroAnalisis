@@ -24,7 +24,6 @@ const MISTAKE_LEVELS = [
 
 export const BoardControls = () => {
   const {
-    game,
     resetGame, goToMove,
     currentMoveIndex, history,
     boardOrientation, setBoardOrientation,
@@ -35,7 +34,6 @@ export const BoardControls = () => {
     startFullAnalysis,
     pgnCommentsByIndex,
   } = useGameStore(useShallow(state => ({
-    game: state.game,
     resetGame: state.resetGame,
     goToMove: state.goToMove,
     currentMoveIndex: state.currentMoveIndex,
