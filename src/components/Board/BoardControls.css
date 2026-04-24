@@ -42,6 +42,12 @@
   transform: translateY(0);
 }
 
+.control-btn.active {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
 .control-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;

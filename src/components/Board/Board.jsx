@@ -4,7 +4,7 @@ import { EvaluationBar } from '../Analysis/EvaluationBar';
 
 import { useGameStore } from '../../store/useGameStore';
 import { useAnalysisSync } from '../../hooks/useAnalysisSync';
-import { calculateMaterial } from '../../utils/chessUtils';
+import { calculateMaterial, replayTo } from '../../utils/chessUtils';
 
 import { PlayerArea } from './PlayerArea';
 import { EvalBadgeOverlay } from './EvalBadge';
@@ -56,17 +56,7 @@ export const Board = () => {
   }, []);
 
 
-  // ── Sounds ──────────────────────────────────────────────────────────────
-  const moveSound = React.useMemo(() => new Audio('https://www.chess.com/chess-themes/pieces/neo/sounds/move-self.mp3'), []);
-  const captureSound = React.useMemo(() => new Audio('https://www.chess.com/chess-themes/pieces/neo/sounds/capture.mp3'), []);
 
-  React.useEffect(() => {
-    if (currentMoveIndex < 0) return;
-    const move = history[currentMoveIndex];
-    if (!move) return;
-    const isCapture = move.captured || move.san?.includes('x');
-    (isCapture ? captureSound : moveSound).play().catch(() => { });
-  }, [currentMoveIndex, history, moveSound, captureSound]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const material = React.useMemo(() => calculateMaterial(fen), [fen]);
@@ -74,12 +64,16 @@ export const Board = () => {
 
   // Last-move highlight squares
   const squareStyles = React.useMemo(() => {
+    const highlights = {};
+    
+    // 1. Last move highlights
     const move = currentMoveIndex >= 0 ? history[currentMoveIndex] : null;
-    if (!move) return {};
-    return {
-      [move.from]: { backgroundColor: 'rgba(255, 255, 100, 0.22)' },
-      [move.to]: { backgroundColor: 'rgba(255, 255, 100, 0.32)' },
-    };
+    if (move) {
+      highlights[move.from] = { backgroundColor: 'rgba(255, 255, 100, 0.22)' };
+      highlights[move.to] = { backgroundColor: 'rgba(255, 255, 100, 0.32)' };
+    }
+
+    return highlights;
   }, [currentMoveIndex, history]);
 
   // Merged arrows: engine alternative lines (max 5) + store arrows (opening explorer)

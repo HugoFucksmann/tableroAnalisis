@@ -2,105 +2,9 @@ import { Chess } from 'chess.js';
 import { stockfishService } from './stockfishService';
 import { useGameStore } from '../store/useGameStore';
 
-const MAX_BOOK_PLY = 20;
-const MIN_THEORY_GAMES = 20;
-const LICHESS_DELAY_MS = 350;
-const LICHESS_TIMEOUT_MS = 5000;
-const MAX_CACHE_SIZE = 50;
-
-const openingCache = new Map();
-
-async function fetchWithTimeout(url, options = {}, timeoutMs) {
-    const controller = new AbortController();
-    const id = setTimeout(() => controller.abort(), timeoutMs);
-    const onParentAbort = () => controller.abort();
-
-    if (options.signal) options.signal.addEventListener('abort', onParentAbort);
-
-    try {
-        const res = await fetch(url, { ...options, signal: controller.signal });
-        return res;
-    } finally {
-        clearTimeout(id);
-        if (options.signal) options.signal.removeEventListener('abort', onParentAbort);
-    }
-}
-
-const MathUtils = {
-    cpToWhiteWinProb(cp, mate, isBlackTurn) {
-        if (mate !== null) return (mate > 0) === !isBlackTurn ? 1.0 : 0.0;
-        const prob = 1 / (1 + Math.exp(-0.00368208 * cp));
-        return isBlackTurn ? 1 - prob : prob;
-    },
-
-    cpToVisualScore(cp, mate, isBlackTurn) {
-        if (mate !== null) {
-            const sign = mate > 0 ? 1 : -1;
-            return isBlackTurn ? -sign * 10 : sign * 10;
-        }
-        const normalized = Math.max(-10, Math.min(10, cp / 100));
-        return isBlackTurn ? -normalized : normalized;
-    }
-};
-
-const EvaluationEngine = {
-    classifyMove(wpBefore, wpAfter, isWhiteMove, isEngineBestMove) {
-        // Se mantiene todo igual. Ahora que restauramos MathUtils, 
-        // las etiquetas volverán a ser idénticas a las de Chess.com.
-        const rawWpLoss = isWhiteMove ? (wpBefore - wpAfter) : (wpAfter - wpBefore);
-
-        if (isEngineBestMove && rawWpLoss <= -0.05) return 'Brillante';
-        if (isEngineBestMove) return 'Mejor';
-
-        const wpLoss = Math.max(0, rawWpLoss);
-
-        if (wpLoss <= 0.02) return 'Excelente';
-        if (wpLoss <= 0.05) return 'Bueno';
-        if (wpLoss <= 0.10) return 'Imprecisión';
-        if (wpLoss <= 0.20) return 'Error';
-
-        return 'Error grave';
-    },
-
-    calculateAccuracy(moveData) {
-        const calc = (moves) => {
-            const validMoves = moves.filter(m => m !== undefined);
-            if (validMoves.length === 0) return 100;
-
-            let sumAccuracy = 0;
-            let harmonicSum = 0;
-
-            for (const move of validMoves) {
-                const lossPct = move.wpLoss * 100;
-
-                // EL SECRETO ESTÁ AQUÍ:
-                // Al usar -0.085 aplicamos el castigo estrictamente en el puntaje, 
-                // sin afectar el clasificador de texto de la jugada.
-                let moveAcc = lossPct <= 0 ? 100 : 100 * Math.exp(-0.085 * lossPct);
-
-                moveAcc = Math.max(0, Math.min(100, moveAcc));
-
-                sumAccuracy += moveAcc;
-                // Máximo Math.max(1, ...) para que los blunders limiten en 1% y destruyan la media armónica
-                harmonicSum += 1 / Math.max(1, moveAcc);
-            }
-
-            const arithmeticMean = sumAccuracy / validMoves.length;
-            const harmonicMean = validMoves.length / harmonicSum;
-
-            // Promediamos 50/50 la media aritmética y la armónica.
-            // Esto arrastrará los ~75% originales directamente hacia el rango de los 54-61%
-            const finalAcc = (arithmeticMean + harmonicMean) / 2;
-
-            return Math.max(0, Math.min(100, Math.round(finalAcc)));
-        };
-
-        return {
-            white: calc(moveData.filter(d => d && d.isWhiteMove && !d.isBook)),
-            black: calc(moveData.filter(d => d && !d.isWhiteMove && !d.isBook)),
-        };
-    }
-};
+import { ChessMath } from '../utils/chessMath';
+import { EvaluationEngine } from '../analysis/evaluationRules';
+import { OpeningService, MAX_BOOK_PLY } from '../analysis/openingService';
 
 class AnalysisQueue {
     #abortController = null;
@@ -116,7 +20,7 @@ class AnalysisQueue {
     }
 
     async analyzeGame(history, currentIndex, callbacks = {}) {
-        const { onMoveResult, onProgress, onStatus, onComplete, onOpeningDetected, gameId = Date.now(), pgnHeaders, lichessToken } = callbacks;
+        const { onMoveResult, onProgress, onStatus, onComplete, onOpeningDetected, gameId = Date.now(), lichessToken } = callbacks;
 
         this.cancel();
         if (!history || history.length === 0) return;
@@ -146,14 +50,14 @@ class AnalysisQueue {
 
             let openingDone = false;
 
-            this.#detectOpeningsParallel(
-                positions, history, gameId, pgnHeaders, lichessToken, signal,
-                (ply, isBook) => {
+            OpeningService.detectOpenings({
+                positions, history, gameId, token: lichessToken, signal,
+                onPlyResolved: (ply, isBook) => {
                     bookStatus[ply] = isBook;
                     this.#tryResolveMove(ply, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
                 },
                 onOpeningDetected
-            ).finally(() => {
+            }).finally(() => {
                 openingDone = true;
                 for (let i = 0; i < totalMoves; i++) {
                     this.#tryResolveMove(i, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedMoves, onMoveResult, currentIndex);
@@ -177,8 +81,8 @@ class AnalysisQueue {
                     if (signal.aborted) break;
 
                     evalResults[posIndex] = {
-                        wp: MathUtils.cpToWhiteWinProb(result.score, result.mate, isBlackTurn),
-                        score: MathUtils.cpToVisualScore(result.score, result.mate, isBlackTurn),
+                        wp: ChessMath.cpToWhiteWinProb(result.score, result.mate, isBlackTurn),
+                        score: ChessMath.cpToVisualScore(result.score, result.mate, isBlackTurn),
                         bestMove: result.bestMove,
                         lines: result.lines
                     };
@@ -208,11 +112,8 @@ class AnalysisQueue {
         } finally {
             onStatus?.(false);
             this.isRunning = false;
-            // Garantizar que el worker siempre se libere, incluso si
-            // el análisis fue cancelado (abort) antes de que onComplete se llame.
             stockfishService.destroy();
         }
-
     }
 
     async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
@@ -238,7 +139,7 @@ class AnalysisQueue {
                 fen, depth, signal,
                 ({ score, mate, bestMove }) => {
                     onResult?.({
-                        score: MathUtils.cpToVisualScore(score, mate, isBlackTurn),
+                        score: ChessMath.cpToVisualScore(score, mate, isBlackTurn),
                         bestMove, moveIndex,
                     });
                 },
@@ -247,7 +148,7 @@ class AnalysisQueue {
 
             if (result && !signal.aborted) {
                 onResult?.({
-                    score: MathUtils.cpToVisualScore(result.score, result.mate, isBlackTurn),
+                    score: ChessMath.cpToVisualScore(result.score, result.mate, isBlackTurn),
                     bestMove: result.bestMove, moveIndex, lines: result.lines,
                 });
             }
@@ -260,7 +161,6 @@ class AnalysisQueue {
             }
         }
     }
-
 
     #tryResolveMove(ply, history, positions, evalResults, bookStatus, openingDone, finalMoveData, completedSet, onMoveResult, focusIdx) {
         if (ply < 0 || ply >= history.length || completedSet.has(ply)) return;
@@ -322,120 +222,8 @@ class AnalysisQueue {
         return positions;
     }
 
-    async #detectOpeningsParallel(positions, history, gameId, headers, token, signal, onPlyResolved, onOpeningDetected) {
-        if (openingCache.has(gameId)) {
-            const cache = openingCache.get(gameId);
-            for (let i = 0; i < history.length; i++) onPlyResolved(i, cache.bookPlies.has(i));
-            onOpeningDetected?.({
-                openingName: cache.openingName,
-                ecoCode: cache.ecoCode,
-                openingPly: cache.openingPly,
-                bookPlies: cache.bookPlies
-            });
-            return;
-        }
-
-        const maxPly = Math.min(history.length, MAX_BOOK_PLY);
-        const bookPlies = new Set();
-        let inTheory = true;
-        let finalOpeningName = '';
-        let finalEcoCode = '';
-        let lastTheoryPly = -1;
-
-        for (let ply = 0; ply < maxPly; ply++) {
-            if (signal?.aborted) break;
-
-            if (!inTheory) {
-                for (let i = ply; i < maxPly; i++) onPlyResolved(i, false);
-                break;
-            }
-
-            let plyRetries = 1;
-            let success = false;
-
-            while (plyRetries >= 0 && !success && !signal?.aborted) {
-                try {
-                    const fen = positions[ply].split(' ').slice(0, 4).join(' ');
-                    const url = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(fen)}&ratings=2200,2500`;
-                    const headersOpt = token ? { Authorization: `Bearer ${token}` } : {};
-
-                    const res = await fetchWithTimeout(url, { headers: headersOpt, signal }, LICHESS_TIMEOUT_MS);
-
-                    if (res.status === 429) {
-                        if (plyRetries > 0) {
-                            plyRetries--;
-                            await new Promise(r => setTimeout(r, 2000));
-                            continue;
-                        } else {
-                            throw new Error('Rate limit exceeded');
-                        }
-                    }
-
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-                    const data = await res.json();
-
-                    if (data.opening) {
-                        finalOpeningName = data.opening.name;
-                        finalEcoCode = data.opening.eco;
-                    }
-
-                    const explorerIdx = data.moves.findIndex(m => m.uci === history[ply].lan);
-
-                    if (explorerIdx > -1 && explorerIdx <= 3) {
-                        const m = data.moves[explorerIdx];
-                        const games = (m.white || 0) + (m.draws || 0) + (m.black || 0);
-
-                        if (games >= MIN_THEORY_GAMES) {
-                            bookPlies.add(ply);
-                            lastTheoryPly = ply;
-                            onPlyResolved(ply, true);
-                        } else {
-                            inTheory = false;
-                            onPlyResolved(ply, false);
-                        }
-                    } else {
-                        inTheory = false;
-                        onPlyResolved(ply, false);
-                    }
-
-                    success = true;
-
-                    if (inTheory && ply < maxPly - 1) {
-                        await new Promise(r => setTimeout(r, LICHESS_DELAY_MS));
-                    }
-
-                } catch (err) {
-                    if (err.name === 'AbortError') break;
-                    inTheory = false;
-                    for (let i = ply; i < maxPly; i++) onPlyResolved(i, false);
-                    break;
-                }
-            }
-        }
-
-        if (!signal?.aborted) {
-            if (openingCache.size >= MAX_CACHE_SIZE) {
-                openingCache.delete(openingCache.keys().next().value);
-            }
-            openingCache.set(gameId, {
-                bookPlies,
-                openingName: finalOpeningName,
-                ecoCode: finalEcoCode,
-                openingPly: lastTheoryPly
-            });
-
-            onOpeningDetected?.({
-                openingName: finalOpeningName,
-                ecoCode: finalEcoCode,
-                openingPly: lastTheoryPly,
-                bookPlies
-            });
-        }
-    }
-
     clearOpeningCache(gameId) {
-        if (gameId) openingCache.delete(gameId);
+        OpeningService.clearCache(gameId);
     }
 }
 

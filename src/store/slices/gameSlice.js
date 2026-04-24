@@ -1,5 +1,6 @@
 import { Chess } from 'chess.js';
 import { analysisQueue } from '../../services/analysisQueue';
+import { playChessSound } from '../../utils/soundUtils';
 
 function replayTo(history, index) {
   const g = new Chess();
@@ -64,6 +65,7 @@ export const createGameSlice = (set, get) => ({
           evaluation: currentEval,
           arrows: []
         });
+        playChessSound(result.captured || result.san?.includes('x') ? 'capture' : 'move');
         return result;
       }
 
@@ -115,6 +117,7 @@ export const createGameSlice = (set, get) => ({
         isExploreMode: true,
         mainLineData,
       });
+      playChessSound(result.captured || result.san?.includes('x') ? 'capture' : 'move');
       return result;
     } catch {
       return null;
@@ -145,6 +148,7 @@ export const createGameSlice = (set, get) => ({
       mainLineData: null,
       arrows: [],
     });
+    playChessSound('move');
   },
 
   goToMove: (index) => {
@@ -155,6 +159,7 @@ export const createGameSlice = (set, get) => ({
       const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
       const currentEval = evalObj ? evalObj.score : 0;
       set({ game: gameCopy, fen: gameCopy.fen(), currentMoveIndex: safeIndex, evaluation: currentEval, arrows: [] });
+      playChessSound('move');
     } catch (e) {
       console.error('goToMove error:', e);
     }
@@ -164,6 +169,7 @@ export const createGameSlice = (set, get) => ({
     const state = get();
     if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
     set({ game: new Chess(), fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', history: [], currentMoveIndex: -1, ...ANALYSIS_RESET });
+    playChessSound('notify');
   },
 
   loadPgn: (pgn) => {
@@ -197,6 +203,7 @@ export const createGameSlice = (set, get) => ({
         ...ANALYSIS_RESET,
       });
 
+      playChessSound('notify');
       return true;
     } catch (e) {
       console.error('loadPgn error:', e);
