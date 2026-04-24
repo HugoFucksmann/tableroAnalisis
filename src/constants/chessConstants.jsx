@@ -23,6 +23,23 @@ export const EVAL_CONFIG = {
   'Error grave': { icon: '??', color: '#fff', bg: '#b33430', label: 'Error grave' },
 };
 
+/**
+ * Fuente de verdad única de labels de evaluación.
+ * Deben coincidir exactamente con los que produce evaluationRules.js.
+ * Ordenados de mayor a menor severidad para que el parser
+ * encuentre primero el más específico (ej: 'Error grave' antes de 'Error').
+ */
+export const MOVE_LABELS = [
+  'Error grave',
+  'Error',
+  'Imprecisión',
+  'Bueno',
+  'Excelente',
+  'Mejor',
+  'Brillante',
+  'Libro',
+];
+
 export const PIECE_ICONS = {
   P: { white: '♙', black: '♟' },
   N: { white: '♘', black: '♞' },

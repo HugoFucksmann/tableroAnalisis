@@ -1,6 +1,7 @@
 import { Chess } from 'chess.js';
 import { analysisQueue } from '../../services/analysisQueue';
 import { playChessSound } from '../../utils/soundUtils';
+import { MOVE_LABELS } from '../../constants/chessConstants';
 
 function replayTo(history, index) {
   const g = new Chess();
@@ -28,6 +29,8 @@ const ANALYSIS_RESET = {
   openingDetected: false,
   isExploreMode: false,
   mainLineData: null,
+  isAnalyzeFromPgn: false,
+  wantsFullAnalysis: false,
 };
 
 export const createGameSlice = (set, get) => ({
@@ -35,6 +38,8 @@ export const createGameSlice = (set, get) => ({
   fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
   history: [],
   currentMoveIndex: -1,
+  gameHeaders: {},
+  pgnCommentsByIndex: {}, // { moveIndex: commentString } extraído al cargar el PGN
 
   setGame: (newGame) => {
     const verboseHistory = newGame.history({ verbose: true });
@@ -181,8 +186,7 @@ export const createGameSlice = (set, get) => ({
       if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
 
       const headers = newGame.header();
-      state.setPlayers(headers.White ?? 'Blancas', headers.Black ?? 'Negras');
-      state.setClocks(null, null);
+      state.setPlayers(headers.White ?? 'Blancas', headers.Black ?? 'Negras', headers.WhiteElo ?? null, headers.BlackElo ?? null);
 
       const blackPlayer = (headers.Black ?? '').toLowerCase();
       const currentUser = state.searchUsername?.toLowerCase() ?? '';
@@ -195,13 +199,72 @@ export const createGameSlice = (set, get) => ({
       state.setGameId(Date.now());
 
       const verboseHistory = newGame.history({ verbose: true });
+      
+      const newEvaluationHistory = [];
+      const newMoveEvaluations = {};
+      let hasEvaluations = false;
+
+      const comments = newGame.getComments();
+      const pgnCommentsByIndex = {};
+
+      for (let i = 0; i < verboseHistory.length; i++) {
+        const move = verboseHistory[i];
+        const matchComment = comments.find(c => c.fen === move.after);
+        
+        if (matchComment && matchComment.comment) {
+          pgnCommentsByIndex[i] = matchComment.comment;
+          const commentStr = matchComment.comment;
+          
+          const evalMatch = commentStr.match(/\[%eval\s+([-\d.]+)\]/);
+          if (evalMatch) {
+            newEvaluationHistory.push({ moveIndex: i, score: parseFloat(evalMatch[1]) });
+            hasEvaluations = true;
+          }
+
+          // Usar la fuente de verdad centralizada de labels
+          for (const label of MOVE_LABELS) {
+            if (commentStr.includes(label)) {
+              newMoveEvaluations[i] = label;
+              break;
+            }
+          }
+        }
+      }
+
+      // Calcular el reloj inicial (posición final de la partida cargada)
+      let initialWhiteClock = null;
+      let initialBlackClock = null;
+      const lastIdx = verboseHistory.length - 1;
+      for (let i = 0; i <= lastIdx; i++) {
+        const comment = pgnCommentsByIndex[i];
+        if (comment) {
+          const match = comment.match(/\[%clk\s+([^\]]+)\]/);
+          if (match) {
+            if (verboseHistory[i].color === 'w') initialWhiteClock = match[1];
+            else initialBlackClock = match[1];
+          }
+        }
+      }
+
       set({
         game: newGame,
         fen: newGame.fen(),
         history: verboseHistory,
-        currentMoveIndex: verboseHistory.length - 1,
+        currentMoveIndex: lastIdx,
         ...ANALYSIS_RESET,
+        evaluationHistory: newEvaluationHistory,
+        moveEvaluations: newMoveEvaluations,
+        analysisReady: hasEvaluations,
+        isAnalyzeFromPgn: hasEvaluations,
+        wantsFullAnalysis: false,
+        gameHeaders: headers,
+        pgnCommentsByIndex,
+        evaluation: hasEvaluations ? (newEvaluationHistory.find(e => e.moveIndex === lastIdx)?.score || 0) : 0
       });
+
+      // Setear relojes después del set principal para que el efecto del hook no los pise
+      state.setClocks(initialWhiteClock, initialBlackClock);
+
 
       playChessSound('notify');
       return true;
@@ -212,4 +275,22 @@ export const createGameSlice = (set, get) => ({
   },
 
   setCurrentMoveIndex: (index) => set({ currentMoveIndex: index, arrows: [] }),
+  
+  startFullAnalysis: () => {
+    const state = get();
+    if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+    set({
+      isAnalyzeFromPgn: false,
+      wantsFullAnalysis: true,
+      gameId: Date.now(),
+      evaluationHistory: [],
+      moveEvaluations: {},
+      bestMoves: {},
+      alternativeLines: {},
+      analysisReady: false,
+      isAnalyzing: false,
+      analysisProgress: 0,
+      gameScore: null,
+    });
+  },
 });

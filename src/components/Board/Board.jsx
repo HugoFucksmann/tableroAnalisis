@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { EvaluationBar } from '../Analysis/EvaluationBar';
-
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useAnalysisSync } from '../../hooks/useAnalysisSync';
 import { calculateMaterial, replayTo } from '../../utils/chessUtils';
 
@@ -38,6 +38,7 @@ export const Board = () => {
     makeMove,
     clocks,
     players,
+    playerElos,
     history,
     currentMoveIndex,
     moveEvaluations,
@@ -45,7 +46,22 @@ export const Board = () => {
     alternativeLines,
     arrows,
     boardOrientation,
-  } = useGameStore();
+    goToMove,
+  } = useGameStore(useShallow(state => ({
+    fen: state.fen,
+    makeMove: state.makeMove,
+    clocks: state.clocks,
+    players: state.players,
+    playerElos: state.playerElos,
+    history: state.history,
+    currentMoveIndex: state.currentMoveIndex,
+    moveEvaluations: state.moveEvaluations,
+    bestMoves: state.bestMoves,
+    alternativeLines: state.alternativeLines,
+    arrows: state.arrows,
+    boardOrientation: state.boardOrientation,
+    goToMove: state.goToMove,
+  })));
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -55,8 +71,48 @@ export const Board = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // ── Wheel navigation ──────────────────────────────────────────────────────
+  const boardRef = React.useRef(null);
+  const scrollState = React.useRef({ currentMoveIndex, maxIndex: history.length - 1 });
 
+  useEffect(() => {
+    scrollState.current = { currentMoveIndex, maxIndex: history.length - 1 };
+  }, [currentMoveIndex, history.length]);
 
+  useEffect(() => {
+    const el = boardRef.current;
+    if (!el) return;
+
+    let lastScrollTime = 0;
+
+    const handleWheel = (e) => {
+      e.preventDefault();
+      
+      const now = performance.now();
+      // Throttle de 60ms para evitar saltos locos con trackpads o scroll muy rápido
+      if (now - lastScrollTime < 60) return;
+
+      const { currentMoveIndex: currentIdx, maxIndex } = scrollState.current;
+
+      // Scroll hacia abajo (deltaY > 0) -> Siguiente jugada
+      if (e.deltaY > 0) {
+        if (currentIdx < maxIndex) {
+          goToMove(currentIdx + 1);
+          lastScrollTime = now;
+        }
+      } 
+      // Scroll hacia arriba (deltaY < 0) -> Jugada anterior
+      else if (e.deltaY < 0) {
+        if (currentIdx > -1) {
+          goToMove(currentIdx - 1);
+          lastScrollTime = now;
+        }
+      }
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, [goToMove]);
 
   // ── Derived state ────────────────────────────────────────────────────────
   const material = React.useMemo(() => calculateMaterial(fen), [fen]);
@@ -139,6 +195,7 @@ export const Board = () => {
   const playerAreaProps = (side, isTop) => ({
     side,
     name: players[side],
+    elo: playerElos?.[side] ?? null,
     clock: clocks[side] ?? null,
     material: material[side],
     isActive: activeColor === side,
@@ -156,7 +213,7 @@ export const Board = () => {
         </div>
 
         <div className="board-frame">
-          <div className="board-main-area">
+          <div className="board-main-area" ref={boardRef}>
             <Chessboard
               options={{
                 position: fen,

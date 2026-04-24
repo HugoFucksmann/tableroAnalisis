@@ -4,7 +4,7 @@ import { useGameStore } from '../../store/useGameStore';
 import './EvaluationBar.css';
 
 export const EvaluationBar = ({ orientation = 'vertical' }) => {
-  const { evaluation } = useGameStore();
+  const evaluation = useGameStore(state => state.evaluation);
   const evaluationValue = evaluation ?? 0;
   
   // Normalizar la evaluación para el porcentaje (limitando a +/- 5)

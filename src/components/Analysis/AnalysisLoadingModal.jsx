@@ -16,6 +16,8 @@
  */
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
+import { analysisQueue } from '../../services/analysisQueue';
 import './AnalysisLoadingModal.css';
 
 export const AnalysisLoadingModal = () => {
@@ -27,10 +29,30 @@ export const AnalysisLoadingModal = () => {
         ecoCode,
         openingDetected,
         gameId,
-    } = useGameStore();
+        wantsFullAnalysis,
+        setAnalysisReady,
+        setAnalyzing,
+    } = useGameStore(useShallow(state => ({
+        history: state.history,
+        analysisReady: state.analysisReady,
+        analysisProgress: state.analysisProgress,
+        openingName: state.openingName,
+        ecoCode: state.ecoCode,
+        openingDetected: state.openingDetected,
+        gameId: state.gameId,
+        wantsFullAnalysis: state.wantsFullAnalysis,
+        setAnalysisReady: state.setAnalysisReady,
+        setAnalyzing: state.setAnalyzing,
+    })));
 
     // No mostrar si no hay partida, si ya terminó el análisis completo, o si es juego libre (sin gameId)
-    if (history.length === 0 || analysisReady || !gameId) return null;
+    if (history.length === 0 || analysisReady || !gameId || !wantsFullAnalysis) return null;
+
+    const handleCancel = () => {
+        analysisQueue.cancel();
+        setAnalysisReady(true);
+        setAnalyzing(false);
+    };
 
     // Fase actual basada en el progreso
     const phase = !openingDetected
@@ -68,6 +90,10 @@ export const AnalysisLoadingModal = () => {
                 <p className="analysis-modal-hint">
                     El análisis corre una sola vez por partida
                 </p>
+
+                <button className="analysis-modal-cancel-btn" onClick={handleCancel}>
+                    Interrumpir Análisis
+                </button>
             </div>
         </div>
     );

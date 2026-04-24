@@ -1,6 +1,7 @@
 export const createUISlice = (set, get) => ({
   clocks: { white: null, black: null },
   players: { white: 'Blancas', black: 'Negras' },
+  playerElos: { white: null, black: null },
   arrows: [],
   highlights: {},
   gamePhase: 'Opening',
@@ -19,7 +20,10 @@ export const createUISlice = (set, get) => ({
   setGamePhase: (phase) => set({ gamePhase: phase }),
   setOpeningName: (name) => set({ openingName: name }),
   setClocks: (white, black) => set({ clocks: { white, black } }),
-  setPlayers: (white, black) => set({ players: { white, black } }),
+  setPlayers: (white, black, whiteElo = null, blackElo = null) => set({ 
+    players: { white, black }, 
+    playerElos: { white: whiteElo, black: blackElo } 
+  }),
   setImportedGames: (games) => set({ importedGames: games }),
   setSearchUsername: (username) => set({ searchUsername: username }),
   setSearchPlatform: (platform) => set({ searchPlatform: platform }),

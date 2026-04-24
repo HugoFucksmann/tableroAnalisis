@@ -55,12 +55,13 @@ const CapturedPieces = ({ pieces }) => {
  * @param {{
  *   side:     'white' | 'black',
  *   name:     string,
+ *   elo:      string | null,
  *   clock:    string | null,
  *   material: { captured: string[], score: number },
  *   isActive: boolean
  * }} props
  */
-export const PlayerArea = ({ side, name, clock, material, isActive }) => {
+export const PlayerArea = ({ side, name, elo, clock, material, isActive }) => {
     const initial = name?.[0]?.toUpperCase() ?? '?';
 
     return (
@@ -72,7 +73,10 @@ export const PlayerArea = ({ side, name, clock, material, isActive }) => {
             {/* Left: identity */}
             <div className="player-identity">
                 <div className="player-avatar" aria-hidden="true">{initial}</div>
-                <span className="player-name">{name}</span>
+                <div className="player-name-wrap">
+                    <span className="player-name">{name}</span>
+                    {elo && <span className="player-elo">({elo})</span>}
+                </div>
             </div>
 
             {/* Right: material + clock */}

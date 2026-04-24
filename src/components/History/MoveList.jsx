@@ -1,11 +1,19 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
 import { getPieceIcon } from '../../utils/chessUtils';
 import './MoveList.css';
 
 export const MoveList = () => {
-  const { history, moveEvaluations, currentMoveIndex, goToMove, isExploreMode, restoreMainLine } = useGameStore();
+  const { history, moveEvaluations, currentMoveIndex, goToMove, isExploreMode, restoreMainLine } = useGameStore(useShallow(state => ({
+    history: state.history,
+    moveEvaluations: state.moveEvaluations,
+    currentMoveIndex: state.currentMoveIndex,
+    goToMove: state.goToMove,
+    isExploreMode: state.isExploreMode,
+    restoreMainLine: state.restoreMainLine,
+  })));
   const scrollRef = React.useRef(null);
 
   // Auto-scroll al movimiento activo

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Cpu, Layers, Hash, Gauge } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import './EngineConfigModal.css';
 
 const DEFAULT_CONFIG = {
@@ -11,7 +12,10 @@ const DEFAULT_CONFIG = {
 };
 
 export const EngineConfigModal = ({ onClose }) => {
-  const { engineConfig, setEngineConfig } = useGameStore();
+  const { engineConfig, setEngineConfig } = useGameStore(useShallow(state => ({
+    engineConfig: state.engineConfig,
+    setEngineConfig: state.setEngineConfig,
+  })));
 
   // Merge with defaults to handle missing keys from old persisted state
   const config = { ...DEFAULT_CONFIG, ...engineConfig };

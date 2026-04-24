@@ -7,8 +7,12 @@ import {
   RefreshCcw,
   RotateCcw,
   AlertTriangle,
+  Download,
+  Cpu,
 } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
+import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
 import './BoardControls.css';
 
 // ── Mistake filter config ─────────────────────────────────────────────────────
@@ -20,11 +24,39 @@ const MISTAKE_LEVELS = [
 
 export const BoardControls = () => {
   const {
+    game,
     resetGame, goToMove,
     currentMoveIndex, history,
     boardOrientation, setBoardOrientation,
-    moveEvaluations, analysisReady,
-  } = useGameStore();
+    moveEvaluations, evaluationHistory, analysisReady,
+    engineConfig,
+    gameHeaders,
+    isAnalyzeFromPgn,
+    startFullAnalysis,
+    pgnCommentsByIndex,
+  } = useGameStore(useShallow(state => ({
+    game: state.game,
+    resetGame: state.resetGame,
+    goToMove: state.goToMove,
+    currentMoveIndex: state.currentMoveIndex,
+    history: state.history,
+    boardOrientation: state.boardOrientation,
+    setBoardOrientation: state.setBoardOrientation,
+    moveEvaluations: state.moveEvaluations,
+    evaluationHistory: state.evaluationHistory,
+    analysisReady: state.analysisReady,
+    engineConfig: state.engineConfig,
+    gameHeaders: state.gameHeaders,
+    isAnalyzeFromPgn: state.isAnalyzeFromPgn,
+    startFullAnalysis: state.startFullAnalysis,
+    wantsFullAnalysis: state.wantsFullAnalysis,
+    pgnCommentsByIndex: state.pgnCommentsByIndex,
+  })));
+
+  const handleDownloadPgn = () => {
+    const pgn = generateAnnotatedPgn(history, moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex);
+    downloadPgn(pgn, 'analisis_partida.pgn');
+  };
 
   // Default filter: blunders + mistakes
   const [activeFilter, setActiveFilter] = useState('mistake');
@@ -71,6 +103,14 @@ export const BoardControls = () => {
       </div>
 
       <div className="utility-group">
+        {(!analysisReady || isAnalyzeFromPgn) && (
+          <button className="control-btn secondary" title="Analizar Partida con Stockfish" onClick={startFullAnalysis}>
+            <Cpu size={18} />
+          </button>
+        )}
+        <button className="control-btn secondary" title="Descargar PGN" onClick={handleDownloadPgn}>
+          <Download size={18} />
+        </button>
         <button className="control-btn secondary" title="Girar Tablero" onClick={handleToggleOrientation}>
           <RefreshCcw size={18} />
         </button>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { analysisQueue } from '../services/analysisQueue';
 import { stockfishService } from '../services/stockfishService';
 
@@ -28,9 +29,36 @@ export const useAnalysisSync = () => {
     setOpeningDetected,
     setOpeningName,
     setClocks,
-
     lichessToken,
-  } = useGameStore();
+    isAnalyzeFromPgn,
+    wantsFullAnalysis,
+    pgnCommentsByIndex,
+  } = useGameStore(useShallow(state => ({
+    fen: state.fen,
+    game: state.game,
+    history: state.history,
+    currentMoveIndex: state.currentMoveIndex,
+    gameId: state.gameId,
+    evaluationHistory: state.evaluationHistory,
+    isAnalyzing: state.isAnalyzing,
+    setAnalyzing: state.setAnalyzing,
+    setAnalysisProgress: state.setAnalysisProgress,
+    setAnalysisReady: state.setAnalysisReady,
+    setEvaluation: state.setEvaluation,
+    setMoveEvaluation: state.setMoveEvaluation,
+    setBestMoveForIndex: state.setBestMoveForIndex,
+    setAlternativeLinesForIndex: state.setAlternativeLinesForIndex,
+    setGameScore: state.setGameScore,
+    setEcoCode: state.setEcoCode,
+    setOpeningPly: state.setOpeningPly,
+    setOpeningDetected: state.setOpeningDetected,
+    setOpeningName: state.setOpeningName,
+    setClocks: state.setClocks,
+    lichessToken: state.lichessToken,
+    isAnalyzeFromPgn: state.isAnalyzeFromPgn,
+    wantsFullAnalysis: state.wantsFullAnalysis,
+    pgnCommentsByIndex: state.pgnCommentsByIndex,
+  })));
 
   const lastGameId = React.useRef(null);
   const lastAnalyzedFen = React.useRef(null);
@@ -38,6 +66,8 @@ export const useAnalysisSync = () => {
   React.useEffect(() => {
     if (!gameId || gameId === lastGameId.current) return;
     if (history.length === 0) return;
+    if (isAnalyzeFromPgn) return; // Saltear análisis automático si ya hay evaluaciones del PGN
+    if (!wantsFullAnalysis) return; // Esperar a que el usuario presione el botón de Analizar
 
     lastGameId.current = gameId;
     lastAnalyzedFen.current = null;
@@ -113,9 +143,10 @@ export const useAnalysisSync = () => {
     for (let i = 0; i <= currentMoveIndex; i++) {
       const move = history[i];
       if (!move) continue;
-      const clkComment = move.comments?.find(c => c.includes('[%clk'));
-      if (clkComment) {
-        const match = clkComment.match(/\[%clk\s+([^\]]+)\]/);
+      
+      const comment = pgnCommentsByIndex?.[i];
+      if (comment) {
+        const match = comment.match(/\[%clk\s+([^\]]+)\]/);
         if (match) {
           if (move.color === 'w') whiteTime = match[1];
           else blackTime = match[1];
@@ -124,5 +155,5 @@ export const useAnalysisSync = () => {
     }
 
     setClocks(whiteTime, blackTime);
-  }, [currentMoveIndex, history, setClocks]);
+  }, [currentMoveIndex, history, pgnCommentsByIndex, setClocks]);
 };

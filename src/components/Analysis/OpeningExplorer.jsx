@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { fetchOpeningExplorer } from '../../services/gameApi';
 import { Loader, AlertCircle } from 'lucide-react';
 import './OpeningExplorer.css';
@@ -24,7 +25,15 @@ export const OpeningExplorer = () => {
     openingName,
     ecoCode,
     makeMove,
-  } = useGameStore();
+  } = useGameStore(useShallow(state => ({
+    setArrows: state.setArrows,
+    game: state.game,
+    fen: state.fen,
+    lichessToken: state.lichessToken,
+    openingName: state.openingName,
+    ecoCode: state.ecoCode,
+    makeMove: state.makeMove,
+  })));
 
   const [data, setData] = React.useState(null);
   const [loading, setLoading] = React.useState(false);

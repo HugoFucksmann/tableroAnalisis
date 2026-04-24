@@ -1,7 +1,8 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, Key, Settings } from 'lucide-react';
+import { Search, ExternalLink, Loader, AlertCircle, Key, Settings, FileText } from 'lucide-react';
 import { EngineConfigModal } from './EngineConfigModal';
 import './GameImport.css';
 
@@ -19,13 +20,27 @@ export const GameImport = ({ onGameSelect }) => {
     lichessToken,
     setLichessToken,
     engineConfig,
-  } = useGameStore();
+  } = useGameStore(useShallow(state => ({
+    loadPgn: state.loadPgn,
+    isAnalyzing: state.isAnalyzing,
+    analysisProgress: state.analysisProgress,
+    searchUsername: state.searchUsername,
+    searchPlatform: state.searchPlatform,
+    importedGames: state.importedGames,
+    setSearchUsername: state.setSearchUsername,
+    setSearchPlatform: state.setSearchPlatform,
+    setImportedGames: state.setImportedGames,
+    lichessToken: state.lichessToken,
+    setLichessToken: state.setLichessToken,
+    engineConfig: state.engineConfig,
+  })));
 
   const [loadingId, setLoadingId] = React.useState(null);
   const [isFetching, setIsFetching] = React.useState(false);
   const [error, setError] = React.useState('');
   const [showTokenInput, setShowTokenInput] = React.useState(false);
   const [showEngineConfig, setShowEngineConfig] = React.useState(false);
+  const [customPgn, setCustomPgn] = React.useState('');
 
   const handlePlatformSwitch = (p) => {
     setPlatform(p);
@@ -129,10 +144,35 @@ export const GameImport = ({ onGameSelect }) => {
           />
           Chess.com
         </button>
+        <button
+          className={`gi-toggle-btn ${platform === 'pgn' ? 'active' : ''}`}
+          onClick={() => handlePlatformSwitch('pgn')}
+        >
+          <FileText size={14} className="gi-platform-icon" />
+          PGN Manual
+        </button>
       </div>
 
-      {/* ── Search ──────────────────────────────────────────────── */}
-      <div className="gi-search-wrap">
+      {platform === 'pgn' ? (
+        <div className="gi-pgn-manual-wrap">
+          <textarea
+            className="gi-pgn-textarea premium-scroll"
+            placeholder="Pega el texto de tu PGN aquí..."
+            value={customPgn}
+            onChange={(e) => setCustomPgn(e.target.value)}
+          />
+          <button 
+            className="gi-pgn-load-btn" 
+            onClick={() => handleLoadGame(customPgn, Date.now())}
+            disabled={!customPgn.trim()}
+          >
+            Cargar al tablero
+          </button>
+        </div>
+      ) : (
+        <>
+          {/* ── Search ──────────────────────────────────────────────── */}
+          <div className="gi-search-wrap">
         <input
           className="gi-search-input"
           type="text"
@@ -238,7 +278,8 @@ export const GameImport = ({ onGameSelect }) => {
           </div>
         )}
       </div>
-
+      </>
+      )}
     </div>
   );
 };
