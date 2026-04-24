@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Cpu, Layers, Hash, Gauge } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -7,6 +8,8 @@ import './EngineConfigModal.css';
 const DEFAULT_CONFIG = {
   depth: 18,
   multiPv: 1,
+  liveDepth: 16,
+  liveMultiPv: 3,
   threads: 2,
   hash: 32,
 };
@@ -35,9 +38,9 @@ export const EngineConfigModal = ({ onClose }) => {
 
   const maxThreads = Math.max(1, (navigator.hardwareConcurrency ?? 4) - 1);
 
-  return (
+  return createPortal(
     <div className="ecm-backdrop" onClick={handleBackdrop}>
-      <div className="ecm-modal" role="dialog" aria-modal="true" aria-label="Configuración del motor">
+      <div className="ecm-modal premium-scroll" role="dialog" aria-modal="true" aria-label="Configuración del motor">
 
         {/* Header */}
         <div className="ecm-header">
@@ -60,61 +63,92 @@ export const EngineConfigModal = ({ onClose }) => {
         {/* Config items */}
         <div className="ecm-body">
 
-          {/* Depth */}
-          <ConfigRow
-            icon={<Gauge size={14} />}
-            label="Profundidad"
-            description="Semijugadas que analiza el motor"
-            value={config.depth}
-            min={10}
-            max={25}
-            step={1}
-            onChange={(v) => handleChange('depth', v)}
-            formatValue={(v) => `${v} ply`}
-            colorClass="accent-blue"
-          />
+          {/* SECTION: SYSTEM RESOURCES */}
+          <div className="ecm-section">
+            <h4 className="ecm-section-title">Hardware y Recursos</h4>
+            <ConfigRow
+              icon={<Cpu size={14} />}
+              label="Hilos CPU"
+              description={`Núcleos disponibles: ${navigator.hardwareConcurrency ?? '?'}`}
+              value={Math.min(config.threads, maxThreads)}
+              min={1}
+              max={maxThreads}
+              step={1}
+              onChange={(v) => handleChange('threads', v)}
+              formatValue={(v) => v === 1 ? '1 hilo' : `${v} hilos`}
+              colorClass="accent-green"
+            />
+            <ConfigRow
+              icon={<Hash size={14} />}
+              label="Memoria Hash"
+              description="Tabla de transposición del motor"
+              value={config.hash}
+              min={16}
+              max={256}
+              step={16}
+              onChange={(v) => handleChange('hash', v)}
+              formatValue={(v) => `${v} MB`}
+              colorClass="accent-orange"
+            />
+          </div>
 
-          {/* MultiPV */}
-          <ConfigRow
-            icon={<Layers size={14} />}
-            label="Líneas alternativas"
-            description="Cantidad de variantes por posición"
-            value={config.multiPv}
-            min={1}
-            max={5}
-            step={1}
-            onChange={(v) => handleChange('multiPv', v)}
-            formatValue={(v) => v === 1 ? '1 línea' : `${v} líneas`}
-            colorClass="accent-purple"
-          />
+          {/* SECTION: FULL ANALYSIS */}
+          <div className="ecm-section">
+            <h4 className="ecm-section-title">Análisis de Partida (Completo)</h4>
+            <ConfigRow
+              icon={<Gauge size={14} />}
+              label="Profundidad"
+              description="Profundidad objetivo para cada jugada"
+              value={config.depth}
+              min={10}
+              max={25}
+              step={1}
+              onChange={(v) => handleChange('depth', v)}
+              formatValue={(v) => `${v} ply`}
+              colorClass="accent-blue"
+            />
+            <ConfigRow
+              icon={<Layers size={14} />}
+              label="Líneas (MultiPV)"
+              description="Cantidad de variantes analizadas"
+              value={config.multiPv}
+              min={1}
+              max={5}
+              step={1}
+              onChange={(v) => handleChange('multiPv', v)}
+              formatValue={(v) => v === 1 ? '1 línea' : `${v} líneas`}
+              colorClass="accent-purple"
+            />
+          </div>
 
-          {/* Threads */}
-          <ConfigRow
-            icon={<Cpu size={14} />}
-            label="Hilos CPU"
-            description={`Núcleos disponibles: ${navigator.hardwareConcurrency ?? '?'}`}
-            value={Math.min(config.threads, maxThreads)}
-            min={1}
-            max={maxThreads}
-            step={1}
-            onChange={(v) => handleChange('threads', v)}
-            formatValue={(v) => v === 1 ? '1 hilo' : `${v} hilos`}
-            colorClass="accent-green"
-          />
-
-          {/* Hash */}
-          <ConfigRow
-            icon={<Hash size={14} />}
-            label="Memoria Hash"
-            description="Tabla de transposición del motor"
-            value={config.hash}
-            min={16}
-            max={256}
-            step={16}
-            onChange={(v) => handleChange('hash', v)}
-            formatValue={(v) => `${v} MB`}
-            colorClass="accent-orange"
-          />
+          {/* SECTION: LIVE ANALYSIS */}
+          <div className="ecm-section">
+            <h4 className="ecm-section-title">Análisis en Vivo (Exploración)</h4>
+            <ConfigRow
+              icon={<Gauge size={14} />}
+              label="Profundidad"
+              description="Profundidad para las flechas en el tablero"
+              value={config.liveDepth}
+              min={10}
+              max={25}
+              step={1}
+              onChange={(v) => handleChange('liveDepth', v)}
+              formatValue={(v) => `${v} ply`}
+              colorClass="accent-blue"
+            />
+            <ConfigRow
+              icon={<Layers size={14} />}
+              label="Flechas (MultiPV)"
+              description="Cantidad de flechas simultáneas"
+              value={config.liveMultiPv}
+              min={1}
+              max={5}
+              step={1}
+              onChange={(v) => handleChange('liveMultiPv', v)}
+              formatValue={(v) => v === 1 ? '1 flecha' : `${v} flechas`}
+              colorClass="accent-purple"
+            />
+          </div>
 
         </div>
 
@@ -129,7 +163,8 @@ export const EngineConfigModal = ({ onClose }) => {
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

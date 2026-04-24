@@ -30,6 +30,8 @@ export const createAnalysisSlice = (set, get) => ({
   engineConfig: {
     depth: 18,
     multiPv: 1,
+    liveDepth: 16,
+    liveMultiPv: 3,
     threads: 2,
     hash: 32,
   },

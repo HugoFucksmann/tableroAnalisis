@@ -42,12 +42,17 @@ export const createGameSlice = (set, get) => ({
   pgnCommentsByIndex: {}, // { moveIndex: commentString } extraído al cargar el PGN
 
   setGame: (newGame) => {
+    const headers = newGame.header();
     const verboseHistory = newGame.history({ verbose: true });
+    const targetIdx = verboseHistory.length > 0 ? 0 : -1;
+    const gameCopy = replayTo(verboseHistory, targetIdx);
+    if (headers.FEN && targetIdx === -1) gameCopy.load(headers.FEN);
+
     set({
-      game: newGame,
-      fen: newGame.fen(),
+      game: gameCopy,
+      fen: gameCopy.fen(),
       history: verboseHistory,
-      currentMoveIndex: verboseHistory.length - 1,
+      currentMoveIndex: targetIdx,
     });
   },
 
@@ -246,11 +251,17 @@ export const createGameSlice = (set, get) => ({
         }
       }
 
+      const targetIdx = verboseHistory.length > 0 ? 0 : -1;
+      const gameCopy = replayTo(verboseHistory, targetIdx);
+      if (headers.FEN && targetIdx === -1) gameCopy.load(headers.FEN);
+
+      const evalObj = newEvaluationHistory.find(e => e.moveIndex === targetIdx);
+
       set({
-        game: newGame,
-        fen: newGame.fen(),
+        game: gameCopy,
+        fen: gameCopy.fen(),
         history: verboseHistory,
-        currentMoveIndex: lastIdx,
+        currentMoveIndex: targetIdx,
         ...ANALYSIS_RESET,
         evaluationHistory: newEvaluationHistory,
         moveEvaluations: newMoveEvaluations,
@@ -259,7 +270,7 @@ export const createGameSlice = (set, get) => ({
         wantsFullAnalysis: false,
         gameHeaders: headers,
         pgnCommentsByIndex,
-        evaluation: hasEvaluations ? (newEvaluationHistory.find(e => e.moveIndex === lastIdx)?.score || 0) : 0
+        evaluation: evalObj ? evalObj.score : 0
       });
 
       // Setear relojes después del set principal para que el efecto del hook no los pise

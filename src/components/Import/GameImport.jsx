@@ -2,8 +2,7 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, Settings, FileText } from 'lucide-react';
-import { EngineConfigModal } from './EngineConfigModal';
+import { Search, ExternalLink, Loader, AlertCircle, FileText } from 'lucide-react';
 import './GameImport.css';
 
 export const GameImport = ({ onGameSelect }) => {
@@ -19,7 +18,6 @@ export const GameImport = ({ onGameSelect }) => {
     setImportedGames: setGames,
     lichessToken,
     setLichessToken,
-    engineConfig,
   } = useGameStore(useShallow(state => ({
     loadPgn: state.loadPgn,
     isAnalyzing: state.isAnalyzing,
@@ -32,7 +30,6 @@ export const GameImport = ({ onGameSelect }) => {
     setImportedGames: state.setImportedGames,
     lichessToken: state.lichessToken,
     setLichessToken: state.setLichessToken,
-    engineConfig: state.engineConfig,
   })));
 
   const [loadingId, setLoadingId] = React.useState(null);
@@ -40,7 +37,6 @@ export const GameImport = ({ onGameSelect }) => {
   const [isFetchingMore, setIsFetchingMore] = React.useState(false);
   const [error, setError] = React.useState('');
   const [showTokenInput, setShowTokenInput] = React.useState(false);
-  const [showEngineConfig, setShowEngineConfig] = React.useState(false);
   const [customPgn, setCustomPgn] = React.useState('');
 
   // Estados de paginación
@@ -132,9 +128,9 @@ export const GameImport = ({ onGameSelect }) => {
   // Carga inicial: buscar partidas al montar o al cambiar plataforma si la lista está vacía
   const lastSearchRef = React.useRef({ username: '', platform: '' });
   React.useEffect(() => {
-    const shouldSearch = 
-      username && 
-      games.length === 0 && 
+    const shouldSearch =
+      username &&
+      games.length === 0 &&
       (lastSearchRef.current.username !== username || lastSearchRef.current.platform !== platform);
 
     if (shouldSearch) {
@@ -159,34 +155,8 @@ export const GameImport = ({ onGameSelect }) => {
 
   const listTitle = username ? `Partidas de ${username}` : 'Búsqueda de partidas';
 
-  // Quick summary shown in the engine row badge
-  const depth = engineConfig?.depth ?? 18;
-  const multiPv = engineConfig?.multiPv ?? 1;
-  const configSummary = `D${depth} · ${multiPv}PV`;
-
   return (
     <div className="gi-root">
-
-      {/* ── Engine settings row ─────────────────────────────────── */}
-      <div className="gi-engine-selector">
-        <div className="gi-engine-info">
-          <span className="gi-engine-label">Motor:</span>
-          <span className="gi-engine-name">Stockfish 18 Lite</span>
-          <span className="gi-engine-config-badge">{configSummary}</span>
-        </div>
-        <button
-          className="gi-engine-gear-btn"
-          onClick={() => setShowEngineConfig(true)}
-          title="Configurar motor de análisis"
-          aria-label="Configurar motor de análisis"
-        >
-          <Settings size={14} />
-        </button>
-      </div>
-
-      {showEngineConfig && (
-        <EngineConfigModal onClose={() => setShowEngineConfig(false)} />
-      )}
 
       {/* ── Platform toggle ─────────────────────────────────────── */}
       <div className="gi-platform-toggle">
@@ -231,8 +201,8 @@ export const GameImport = ({ onGameSelect }) => {
             value={customPgn}
             onChange={(e) => setCustomPgn(e.target.value)}
           />
-          <button 
-            className="gi-pgn-load-btn" 
+          <button
+            className="gi-pgn-load-btn"
             onClick={() => handleLoadGame(customPgn, Date.now())}
             disabled={!customPgn.trim()}
           >
@@ -243,86 +213,86 @@ export const GameImport = ({ onGameSelect }) => {
         <>
           {/* ── Search ──────────────────────────────────────────────── */}
           <div className="gi-search-wrap">
-        <input
-          className="gi-search-input"
-          type="text"
-          placeholder={`Usuario en ${platform === 'lichess' ? 'Lichess' : 'Chess.com'}…`}
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          onKeyDown={handleSearch}
-        />
-        <button
-          className="gi-search-btn"
-          onClick={handleSearch}
-          disabled={isFetching || !username.trim()}
-          aria-label="Buscar"
-        >
-          {isFetching
-            ? <Loader size={15} className="gi-spin" />
-            : <Search size={15} />}
-        </button>
-      </div>
-
-
-      {error && (
-        <div className="gi-error">
-          <AlertCircle size={13} />
-          <span>{error}</span>
-        </div>
-      )}
-
-      {/* ── Game list ───────────────────────────────────────────── */}
-      <div className="gi-list-section">
-        <p className="gi-list-label">{listTitle}</p>
-
-        {isFetching ? (
-          <div className="gi-fetching">
-            <Loader size={22} className="gi-spin" />
-            <span>Buscando partidas…</span>
+            <input
+              className="gi-search-input"
+              type="text"
+              placeholder={`Usuario en ${platform === 'lichess' ? 'Lichess' : 'Chess.com'}…`}
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={handleSearch}
+            />
+            <button
+              className="gi-search-btn"
+              onClick={handleSearch}
+              disabled={isFetching || !username.trim()}
+              aria-label="Buscar"
+            >
+              {isFetching
+                ? <Loader size={15} className="gi-spin" />
+                : <Search size={15} />}
+            </button>
           </div>
-        ) : (
-          <div className="gi-list premium-scroll">
-            {games.length > 0 ? (
-              <>
-                {games.map((game) => (
-                  <button
-                    key={game.id}
-                    className={`gi-card ${loadingId === game.id ? 'loading' : ''}`}
-                    onClick={() => handleLoadGame(game.pgn, game.id)}
-                    disabled={!!loadingId}
-                  >
-                    <div className="gi-card-players">
-                      <span className="gi-player white" title={game.white}>{game.white}</span>
-                      <span className="gi-result">{game.result}</span>
-                      <span className="gi-player black" title={game.black}>{game.black}</span>
-                    </div>
-                    <div className="gi-card-meta">
-                      <span className="gi-date">{game.date}</span>
-                      {loadingId === game.id
-                        ? <Loader size={13} className="gi-spin" />
-                        : <ExternalLink size={13} className="gi-ext-icon" />}
-                    </div>
-                  </button>
-                ))}
-                {/* Sentinel para infinite scroll */}
-                <div ref={sentinelRef} className="gi-sentinel">
-                  {isFetchingMore && (
-                    <div className="gi-loading-more">
-                      <Loader size={18} className="gi-spin" />
-                      <span>Cargando más...</span>
-                    </div>
-                  )}
-                </div>
-              </>
+
+
+          {error && (
+            <div className="gi-error">
+              <AlertCircle size={13} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* ── Game list ───────────────────────────────────────────── */}
+          <div className="gi-list-section">
+            <p className="gi-list-label">{listTitle}</p>
+
+            {isFetching ? (
+              <div className="gi-fetching">
+                <Loader size={22} className="gi-spin" />
+                <span>Buscando partidas…</span>
+              </div>
             ) : (
-              !isFetching && !error && (
-                <div className="gi-empty-state" />
-              )
+              <div className="gi-list premium-scroll">
+                {games.length > 0 ? (
+                  <>
+                    {games.map((game) => (
+                      <button
+                        key={game.id}
+                        className={`gi-card ${loadingId === game.id ? 'loading' : ''}`}
+                        onClick={() => handleLoadGame(game.pgn, game.id)}
+                        disabled={!!loadingId}
+                      >
+                        <div className="gi-card-players">
+                          <span className="gi-player white" title={game.white}>{game.white}</span>
+                          <span className="gi-result">{game.result}</span>
+                          <span className="gi-player black" title={game.black}>{game.black}</span>
+                        </div>
+                        <div className="gi-card-meta">
+                          <span className="gi-date">{game.date}</span>
+                          {loadingId === game.id
+                            ? <Loader size={13} className="gi-spin" />
+                            : <ExternalLink size={13} className="gi-ext-icon" />}
+                        </div>
+                      </button>
+                    ))}
+                    {/* Sentinel para infinite scroll */}
+                    <div ref={sentinelRef} className="gi-sentinel">
+                      {isFetchingMore && (
+                        <div className="gi-loading-more">
+                          <Loader size={18} className="gi-spin" />
+                          <span>Cargando más...</span>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                ) : (
+                  !isFetching && !error && (
+                    <div className="gi-empty-state" />
+                  )
+                )}
+              </div>
             )}
           </div>
-        )}
-      </div>
-      </>
+        </>
       )}
     </div>
   );

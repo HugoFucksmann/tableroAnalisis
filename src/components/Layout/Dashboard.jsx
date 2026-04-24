@@ -8,9 +8,11 @@ import { BoardControls } from '../Board/BoardControls';
 import { EvaluationGraph } from '../Analysis/EvaluationGraph';
 import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
 import { stockfishService } from '../../services/stockfishService';
-import { Key } from 'lucide-react';
+import { Key, Settings, Cpu, Download } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
+import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
+import { EngineConfigModal } from '../Import/EngineConfigModal';
 import './Dashboard.css';
 
 const isMobileViewport = () =>
@@ -21,20 +23,44 @@ export const Dashboard = () => {
   const [isImportCollapsed, setIsImportCollapsed] = useState(isMobileViewport());
   const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(isMobileViewport());
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+  const [showEngineConfig, setShowEngineConfig] = useState(false);
 
-  const { 
-    openingName, 
-    ecoCode, 
-    showTokenInput, 
+  const {
+    openingName,
+    ecoCode,
+    showTokenInput,
     setShowTokenInput,
-    lichessToken 
+    lichessToken,
+    history,
+    moveEvaluations,
+    evaluationHistory,
+    engineConfig,
+    gameHeaders,
+    isAnalyzeFromPgn,
+    startFullAnalysis,
+    pgnCommentsByIndex,
+    analysisReady,
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
     showTokenInput: state.showTokenInput,
     setShowTokenInput: state.setShowTokenInput,
     lichessToken: state.lichessToken,
+    history: state.history,
+    moveEvaluations: state.moveEvaluations,
+    evaluationHistory: state.evaluationHistory,
+    engineConfig: state.engineConfig,
+    gameHeaders: state.gameHeaders,
+    isAnalyzeFromPgn: state.isAnalyzeFromPgn,
+    startFullAnalysis: state.startFullAnalysis,
+    pgnCommentsByIndex: state.pgnCommentsByIndex,
+    analysisReady: state.analysisReady,
   })));
+
+  const handleDownloadPgn = () => {
+    const pgn = generateAnnotatedPgn(history, moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex);
+    downloadPgn(pgn, 'analisis_partida.pgn');
+  };
 
   useEffect(() => {
     // Limpieza al desmontar el Dashboard para liberar memoria
@@ -60,7 +86,7 @@ export const Dashboard = () => {
 
         {/* ── Right: Side panels ────────────────────────────── */}
         <aside className="side-panels">
-          
+
           {/* Controls + Graph — High Priority */}
           <div className="panel-container glass-panel controls-panel">
             <div className="panel-header">
@@ -90,7 +116,7 @@ export const Dashboard = () => {
               </div>
               <div className="panel-actions">
                 {!isExplorerCollapsed && (
-                  <button 
+                  <button
                     className={`panel-action-btn ${lichessToken ? 'has-token' : ''} ${showTokenInput ? 'active' : ''}`}
                     onClick={(e) => { e.stopPropagation(); setShowTokenInput(!showTokenInput); }}
                     title="Configurar Token Lichess"
@@ -107,8 +133,37 @@ export const Dashboard = () => {
           {/* Import */}
           <div className={`panel-container glass-panel import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
             <div className="panel-header" onClick={() => setIsImportCollapsed(!isImportCollapsed)}>
-              <h3>Importar</h3>
-              <span className="collapse-toggle">{isImportCollapsed ? '+' : '−'}</span>
+              <div className="panel-title-group">
+                <h3>Importar</h3>
+              </div>
+              <div className="panel-actions">
+                <>
+                  {(!analysisReady || isAnalyzeFromPgn) && (
+                    <button
+                      className="panel-action-btn"
+                      title="Analizar Partida con Stockfish"
+                      onClick={(e) => { e.stopPropagation(); startFullAnalysis(); }}
+                    >
+                      <Cpu size={14} />
+                    </button>
+                  )}
+                  <button
+                    className="panel-action-btn"
+                    title="Descargar PGN"
+                    onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
+                  >
+                    <Download size={14} />
+                  </button>
+                  <button
+                    className="panel-action-btn"
+                    title="Configurar motor de análisis"
+                    onClick={(e) => { e.stopPropagation(); setShowEngineConfig(true); }}
+                  >
+                    <Settings size={14} />
+                  </button>
+                </>
+                <span className="collapse-toggle">{isImportCollapsed ? '+' : '−'}</span>
+              </div>
             </div>
             {!isImportCollapsed && (
               <GameImport onGameSelect={() => setIsImportCollapsed(true)} />
@@ -116,6 +171,10 @@ export const Dashboard = () => {
           </div>
         </aside>
       </main>
+
+      {showEngineConfig && (
+        <EngineConfigModal onClose={() => setShowEngineConfig(false)} />
+      )}
     </div>
   );
-};
+};

@@ -22,9 +22,9 @@ export const createUISlice = (set, get) => ({
   setGamePhase: (phase) => set({ gamePhase: phase }),
   setOpeningName: (name) => set({ openingName: name }),
   setClocks: (white, black) => set({ clocks: { white, black } }),
-  setPlayers: (white, black, whiteElo = null, blackElo = null) => set({ 
-    players: { white, black }, 
-    playerElos: { white: whiteElo, black: blackElo } 
+  setPlayers: (white, black, whiteElo = null, blackElo = null) => set({
+    players: { white, black },
+    playerElos: { white: whiteElo, black: blackElo }
   }),
   setImportedGames: (games) => set({ importedGames: games }),
   setSearchUsername: (username) => set({ searchUsername: username }),

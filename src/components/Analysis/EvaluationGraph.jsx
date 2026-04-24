@@ -1,5 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import './EvaluationGraph.css';
 
 const WIDTH = 400;
@@ -27,8 +28,10 @@ function getX(index, total) {
 }
 
 export const EvaluationGraph = () => {
-  const { evaluationHistory, currentMoveIndex, history, goToMove, gameScore, isAnalyzing, moveEvaluations } =
+  const { evaluationHistory, currentMoveIndex, history, goToMove, gameScore, isAnalyzing, moveEvaluations, analysisReady } =
     useGameStore();
+
+  const MISTAKE_TYPES = ['Error grave', 'Error', 'Imprecisión'];
 
   const total = history.length;
   const midY = getY(0);
@@ -57,11 +60,10 @@ export const EvaluationGraph = () => {
     [evaluationHistory, currentMoveIndex]
   );
 
-  // ── Mistake markers derived from moveEvaluations + evaluationHistory ─────
   const mistakeMarkers = React.useMemo(() => {
     if (!moveEvaluations || total === 0) return [];
     return Object.entries(moveEvaluations)
-      .filter(([, type]) => MISTAKE_STYLES[type])
+      .filter(([, type]) => MISTAKE_TYPES.includes(type))
       .map(([idxStr, type]) => {
         const idx = parseInt(idxStr);
         const evalObj = evaluationHistory.find(e => e.moveIndex === idx);
@@ -69,6 +71,13 @@ export const EvaluationGraph = () => {
         return { idx, type, x: getX(idx, total), y: getY(score), style: MISTAKE_STYLES[type] };
       });
   }, [moveEvaluations, evaluationHistory, total]);
+
+  const mistakeIndices = React.useMemo(() => {
+    return mistakeMarkers.map(m => m.idx).sort((a, b) => a - b);
+  }, [mistakeMarkers]);
+
+  const prevMistake = mistakeIndices.filter(i => i < currentMoveIndex).at(-1) ?? null;
+  const nextMistake = mistakeIndices.find(i => i > currentMoveIndex) ?? null;
 
   const handleSvgClick = (e) => {
     if (total <= 1) return;
@@ -91,13 +100,40 @@ export const EvaluationGraph = () => {
   return (
     <div className="evaluation-graph-container glass-panel">
       <div className="graph-header">
-        <span className="graph-title">Evaluación</span>
-        {currentEval && (
-          <span className={`graph-current-eval ${currentEval.score >= 0 ? 'positive' : 'negative'}`}>
-            {currentEval.score >= 0 ? '+' : ''}{currentEval.score.toFixed(2)}
-          </span>
+        <div className="graph-title-group">
+          <span className="graph-title">Evaluación</span>
+          {currentEval && (
+            <span className={`graph-current-eval ${currentEval.score >= 0 ? 'positive' : 'negative'}`}>
+              {currentEval.score >= 0 ? '+' : ''}{currentEval.score.toFixed(2)}
+            </span>
+          )}
+          {isAnalyzing && <span className="graph-analyzing-dot" title="Analizando..." />}
+        </div>
+
+        {analysisReady && mistakeIndices.length > 0 && (
+          <div className="graph-mistake-nav">
+            <button
+              className="graph-nav-btn"
+              title="Error anterior"
+              disabled={prevMistake === null}
+              onClick={() => goToMove(prevMistake)}
+            >
+              <ChevronLeft size={14} />
+            </button>
+            <div className="graph-mistake-count">
+              <AlertTriangle size={12} />
+              <span>{mistakeIndices.length}</span>
+            </div>
+            <button
+              className="graph-nav-btn"
+              title="Error siguiente"
+              disabled={nextMistake === null}
+              onClick={() => goToMove(nextMistake)}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
         )}
-        {isAnalyzing && <span className="graph-analyzing-dot" title="Analizando..." />}
       </div>
 
       <svg
@@ -189,7 +225,7 @@ export const EvaluationGraph = () => {
       </svg>
 
       {/* Precisión final */}
-      {gameScore && !isAnalyzing && (
+      {gameScore && (
         <div className="accuracy-row">
           <div className="accuracy-chip white">
             <span className="chip-color-dot" style={{ background: '#f1f1f1' }} />

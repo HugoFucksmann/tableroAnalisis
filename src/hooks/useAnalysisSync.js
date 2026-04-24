@@ -32,6 +32,8 @@ export const useAnalysisSync = () => {
     isAnalyzeFromPgn,
     wantsFullAnalysis,
     pgnCommentsByIndex,
+    engineConfig,
+    alternativeLines,
   } = useGameStore(useShallow(state => ({
     fen: state.fen,
     game: state.game,
@@ -57,6 +59,8 @@ export const useAnalysisSync = () => {
     isAnalyzeFromPgn: state.isAnalyzeFromPgn,
     wantsFullAnalysis: state.wantsFullAnalysis,
     pgnCommentsByIndex: state.pgnCommentsByIndex,
+    engineConfig: state.engineConfig,
+    alternativeLines: state.alternativeLines,
   })));
 
   const lastGameId = React.useRef(null);
@@ -114,9 +118,13 @@ export const useAnalysisSync = () => {
 
   React.useEffect(() => {
     const hasEval = evaluationHistory?.some(e => e.moveIndex === currentMoveIndex);
+    const cachedLinesCount = alternativeLines?.[currentMoveIndex]?.length || 0;
+    const targetMultiPv = engineConfig?.liveMultiPv || 3;
+    const needsLiveAnalysis = !hasEval || cachedLinesCount < targetMultiPv;
+
     const sameFen = lastAnalyzedFen.current === fen;
 
-    if (hasEval || isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || sameFen) return;
+    if (!needsLiveAnalysis || isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || sameFen) return;
 
     lastAnalyzedFen.current = fen;
     analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {

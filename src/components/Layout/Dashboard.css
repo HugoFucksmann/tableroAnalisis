@@ -302,8 +302,10 @@
 
   .board-section {
     min-height: auto;
-    padding: 0; /* Sin padding para evitar que se salga del viewport */
-    background: transparent; /* Quitar fondo en mobile para ganar espacio visual */
+    padding: 0;
+    /* Sin padding para evitar que se salga del viewport */
+    background: transparent;
+    /* Quitar fondo en mobile para ganar espacio visual */
     border: none;
     overflow: visible;
   }

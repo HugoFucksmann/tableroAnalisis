@@ -8,6 +8,12 @@
   background: var(--bg-secondary);
 }
 
+/* Evitar que el gráfico se ilumine al pasar el mouse */
+.evaluation-graph-container.glass-panel:hover {
+  background: var(--bg-secondary);
+  border-color: var(--glass-border);
+}
+
 /* Estado vacío */
 .graph-placeholder {
   height: 5rem;
@@ -23,8 +29,59 @@
 .graph-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-2);
+  min-height: 1.5rem;
+}
+
+.graph-title-group {
+  display: flex;
+  align-items: center;
   gap: var(--space-3);
-  margin-bottom: var(--space-1);
+}
+
+.graph-mistake-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  background: rgba(255, 255, 255, 0.03);
+  padding: 2px 4px;
+  border-radius: 4px;
+  border: none;
+}
+
+.graph-nav-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+  transition: all 0.2s ease;
+}
+
+.graph-nav-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+}
+
+.graph-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.graph-mistake-count {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  color: #e09a30;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
 .graph-title {

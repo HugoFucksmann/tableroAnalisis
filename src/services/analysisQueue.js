@@ -133,7 +133,8 @@ class AnalysisQueue {
             onStatus?.(true);
 
             const isBlackTurn = fen.includes(' b ');
-            const depth = engineConfig.depth ?? 18;
+            const depth = engineConfig.liveDepth ?? engineConfig.depth ?? 18;
+            const multiPv = engineConfig.liveMultiPv ?? engineConfig.multiPv ?? 1;
 
             const result = await stockfishService.analyzePosition(
                 fen, depth, signal,
@@ -143,7 +144,7 @@ class AnalysisQueue {
                         bestMove, moveIndex,
                     });
                 },
-                engineConfig.multiPv || 1
+                multiPv
             );
 
             if (result && !signal.aborted) {
