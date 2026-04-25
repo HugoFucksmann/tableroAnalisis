@@ -5,7 +5,8 @@ import './EvaluationBar.css';
 
 export const EvaluationBar = ({ orientation = 'vertical' }) => {
   const evaluation = useGameStore(state => state.evaluation);
-  const evaluationValue = evaluation ?? 0;
+  const evaluationValue = evaluation?.score ?? 0;
+  const mate = evaluation?.mate;
   
   // Normalizar la evaluación para el porcentaje (limitando a +/- 5)
   const clampedEval = Math.max(-5, Math.min(5, evaluationValue));
@@ -39,7 +40,10 @@ export const EvaluationBar = ({ orientation = 'vertical' }) => {
         <div className="eval-marker center"></div>
       </div>
       <div className="eval-value-display" title="Ventaja numérica">
-        {displayValue}
+        <div className="eval-score">{displayValue}</div>
+        {Number.isInteger(mate) && (
+          <div className="eval-mate">M{Math.abs(mate)}</div>
+        )}
       </div>
     </div>
   );

@@ -93,8 +93,8 @@ export const useAnalysisSync = () => {
         setOpeningDetected(true);
       },
 
-      onMoveResult: ({ index, score, label, bestMove, lines }) => {
-        if (score !== undefined) setEvaluation(score, index);
+      onMoveResult: ({ index, score, mate, label, bestMove, lines }) => {
+        if (score !== undefined) setEvaluation({ score, mate }, index);
         if (label) setMoveEvaluation(index, label);
         if (bestMove) setBestMoveForIndex(index, bestMove);
         if (lines?.length) setAlternativeLinesForIndex(index, lines);
@@ -134,7 +134,7 @@ export const useAnalysisSync = () => {
     analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
       onStatus: (v) => setAnalyzing(v),
       onResult: (result) => {
-        if (result.score !== undefined) setEvaluation(result.score, result.moveIndex);
+        if (result.score !== undefined) setEvaluation({ score: result.score, mate: result.mate }, result.moveIndex);
         if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
         if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
       },

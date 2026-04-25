@@ -10,7 +10,7 @@
 
 export const createAnalysisSlice = (set, get) => ({
   // ── Evaluación ──────────────────────────────────────────────────────────────
-  evaluation: 0,
+  evaluation: { score: 0, mate: null },
   evaluationHistory: [],   // [{ moveIndex, score }]
   moveEvaluations: {},   // { [moveIndex]: 'Excelente' | 'Libro' | ... }
   bestMoves: {},   // { [moveIndex]: 'e2e4' }
@@ -36,25 +36,28 @@ export const createAnalysisSlice = (set, get) => ({
     hash: 32,
   },
 
-  // ── Setters de evaluación ───────────────────────────────────────────────────
-  setEvaluation: (score, moveIndex) => {
+  setEvaluation: (evalData, moveIndex) => {
     const state = get();
     const idx = moveIndex !== undefined ? moveIndex : state.currentMoveIndex;
+    
+    // Normalizar la entrada si envían solo un número por error (retrocompatibilidad)
+    const normalized = typeof evalData === 'number' ? { score: evalData, mate: null } : evalData;
+
     const existing = state.evaluationHistory.findIndex(e => e.moveIndex === idx);
     let newHistory;
 
     if (existing >= 0) {
       newHistory = [...state.evaluationHistory];
-      newHistory[existing] = { moveIndex: idx, score };
+      newHistory[existing] = { moveIndex: idx, ...normalized };
     } else {
       newHistory = [
         ...state.evaluationHistory,
-        { moveIndex: idx, score },
+        { moveIndex: idx, ...normalized },
       ].sort((a, b) => a.moveIndex - b.moveIndex);
     }
 
     set({
-      evaluation: idx === state.currentMoveIndex ? score : state.evaluation,
+      evaluation: idx === state.currentMoveIndex ? normalized : state.evaluation,
       evaluationHistory: newHistory,
     });
   },
