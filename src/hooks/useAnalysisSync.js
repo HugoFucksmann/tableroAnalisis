@@ -18,6 +18,7 @@ export const useAnalysisSync = () => {
     setAnalysisProgress,
     setAnalysisReady,
     setEvaluation,
+    setEvaluationDirect,
     setMoveEvaluation,
     setBestMoveForIndex,
     setAlternativeLinesForIndex,
@@ -46,6 +47,7 @@ export const useAnalysisSync = () => {
     setAnalysisProgress: state.setAnalysisProgress,
     setAnalysisReady: state.setAnalysisReady,
     setEvaluation: state.setEvaluation,
+    setEvaluationDirect: state.setEvaluationDirect,
     setMoveEvaluation: state.setMoveEvaluation,
     setBestMoveForIndex: state.setBestMoveForIndex,
     setAlternativeLinesForIndex: state.setAlternativeLinesForIndex,
@@ -66,11 +68,12 @@ export const useAnalysisSync = () => {
   const lastGameId = React.useRef(null);
   const lastAnalyzedFen = React.useRef(null);
 
+  // ── Análisis completo de la partida ────────────────────────────────────────
   React.useEffect(() => {
     if (!gameId || gameId === lastGameId.current) return;
     if (history.length === 0) return;
-    if (isAnalyzeFromPgn) return; // Saltear análisis automático si ya hay evaluaciones del PGN
-    if (!wantsFullAnalysis) return; // Esperar a que el usuario presione el botón de Analizar
+    if (isAnalyzeFromPgn) return;
+    if (!wantsFullAnalysis) return;
 
     lastGameId.current = gameId;
     lastAnalyzedFen.current = null;
@@ -101,25 +104,31 @@ export const useAnalysisSync = () => {
       },
 
       onComplete: (accuracy) => {
-        // Primero quitamos el modal de carga
         setAnalysisReady(true);
         setAnalyzing(false);
-        
-        // Luego calculamos/mostramos la precisión (se sentirá asíncrono)
         setTimeout(() => {
           setGameScore(accuracy);
         }, 300);
       },
     });
 
-
-    // Bug fix #2: cancelar análisis si el componente se desmonta
-    // o si cambia el gameId antes de que termine.
     return () => {
       analysisQueue.cancel();
     };
   }, [gameId]);
 
+  // ── Sincronizar barra al navegar o cuando llega análisis del movimiento actual
+  // Usa setEvaluationDirect para solo escribir `evaluation` sin tocar
+  // evaluationHistory, evitando el loop infinito.
+  React.useEffect(() => {
+    if (currentMoveIndex < -1) return;
+    const cached = evaluationHistory?.find(e => e.moveIndex === currentMoveIndex);
+    if (cached) {
+      setEvaluationDirect({ score: cached.score, mate: cached.mate ?? null });
+    }
+  }, [currentMoveIndex, evaluationHistory]);
+
+  // ── Live analysis para movimientos sin evaluación o líneas incompletas ──────
   React.useEffect(() => {
     const hasEval = evaluationHistory?.some(e => e.moveIndex === currentMoveIndex);
     const cachedLinesCount = alternativeLines?.[currentMoveIndex]?.length || 0;
@@ -141,9 +150,7 @@ export const useAnalysisSync = () => {
     });
   }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]);
 
-
-  // Calcular relojes de forma eficiente: solo leer el último valor por color
-  // usando useMemo en vez de un useEffect+setState para evitar un render extra.
+  // ── Relojes desde comentarios PGN ─────────────────────────────────────────
   const clocks = React.useMemo(() => {
     if (history.length === 0 || !pgnCommentsByIndex) return { white: null, black: null };
 

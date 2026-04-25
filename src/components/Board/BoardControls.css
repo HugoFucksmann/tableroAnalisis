@@ -9,6 +9,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
+  /* Mantenemos bg-tertiary para asegurar legibilidad sobre el glass */
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
 }
@@ -20,8 +21,8 @@
 }
 
 .control-btn {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
   color: var(--text-secondary);
   padding: var(--space-2);
   border-radius: calc(var(--border-radius) * 0.6);
@@ -34,7 +35,7 @@
 
 .control-btn:hover:not(:disabled) {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-primary);
   transform: translateY(-0.0625rem);
 }
 
@@ -44,7 +45,7 @@
 
 .control-btn.active {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-primary);
   border-color: var(--accent-primary);
 }
 

@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════
-   MoveList — crece para llenar el panel Historial (flex:1)
-   ═══════════════════════════════════════════════════════════════ */
+/* MoveList */
 
 .move-list-container {
   display: flex;
@@ -15,7 +13,6 @@
   overflow: hidden;
 }
 
-/* ── Header fijo ────────────────────────────────────────────────── */
 .move-list-header {
   display: grid;
   grid-template-columns: 2rem 1fr 1fr;
@@ -30,7 +27,6 @@
   flex-shrink: 0;
 }
 
-/* ── Body con scroll ────────────────────────────────────────────── */
 .move-list-body {
   flex: 1;
   min-height: 0;
@@ -38,7 +34,6 @@
   overflow-y: auto;
 }
 
-/* ── Fila de movimiento ─────────────────────────────────────────── */
 .move-row {
   display: grid;
   grid-template-columns: 2rem 1fr 1fr;

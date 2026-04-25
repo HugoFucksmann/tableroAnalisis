@@ -12,8 +12,14 @@ function replayTo(history, index) {
   return g;
 }
 
+// Helper para construir el objeto evaluation desde un entry del historial
+function evalFromEntry(evalObj) {
+  if (!evalObj) return { score: 0, mate: null };
+  return { score: evalObj.score ?? 0, mate: evalObj.mate ?? null };
+}
+
 const ANALYSIS_RESET = {
-  evaluation: 0,
+  evaluation: { score: 0, mate: null },  // objeto consistente con analysisSlice
   evaluationHistory: [],
   moveEvaluations: {},
   bestMoves: {},
@@ -67,12 +73,11 @@ export const createGameSlice = (set, get) => ({
       if (nextMove && nextMove.san === result.san) {
         const safeIndex = state.currentMoveIndex + 1;
         const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
-        const currentEval = evalObj ? evalObj.score : 0;
         set({
           game: gameCopy,
           fen: gameCopy.fen(),
           currentMoveIndex: safeIndex,
-          evaluation: currentEval,
+          evaluation: evalFromEntry(evalObj),
           arrows: []
         });
         playChessSound(result.captured || result.san?.includes('x') ? 'capture' : 'move');
@@ -116,7 +121,7 @@ export const createGameSlice = (set, get) => ({
         fen: gameCopy.fen(),
         history: newHistory,
         currentMoveIndex: newHistory.length - 1,
-        evaluation: 0,
+        evaluation: { score: 0, mate: null },
         bestMoves: newBestMoves,
         moveEvaluations: newMoveEvaluations,
         alternativeLines: newAlternativeLines,
@@ -147,7 +152,7 @@ export const createGameSlice = (set, get) => ({
       fen: gameCopy.fen(),
       history: state.mainLineData.history,
       currentMoveIndex: targetIndex,
-      evaluation: evalObj ? evalObj.score : 0,
+      evaluation: evalFromEntry(evalObj),
 
       evaluationHistory: state.mainLineData.evaluationHistory,
       bestMoves: state.mainLineData.bestMoves,
@@ -167,8 +172,13 @@ export const createGameSlice = (set, get) => ({
     try {
       const gameCopy = replayTo(state.history, safeIndex);
       const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
-      const currentEval = evalObj ? evalObj.score : 0;
-      set({ game: gameCopy, fen: gameCopy.fen(), currentMoveIndex: safeIndex, evaluation: currentEval, arrows: [] });
+      set({
+        game: gameCopy,
+        fen: gameCopy.fen(),
+        currentMoveIndex: safeIndex,
+        evaluation: evalFromEntry(evalObj),
+        arrows: []
+      });
       playChessSound('move');
     } catch (e) {
       console.error('goToMove error:', e);
@@ -178,7 +188,13 @@ export const createGameSlice = (set, get) => ({
   resetGame: () => {
     const state = get();
     if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
-    set({ game: new Chess(), fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1', history: [], currentMoveIndex: -1, ...ANALYSIS_RESET });
+    set({
+      game: new Chess(),
+      fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+      history: [],
+      currentMoveIndex: -1,
+      ...ANALYSIS_RESET
+    });
     playChessSound('notify');
   },
 
@@ -204,7 +220,7 @@ export const createGameSlice = (set, get) => ({
       state.setGameId(Date.now());
 
       const verboseHistory = newGame.history({ verbose: true });
-      
+
       const newEvaluationHistory = [];
       const newMoveEvaluations = {};
       let hasEvaluations = false;
@@ -215,18 +231,18 @@ export const createGameSlice = (set, get) => ({
       for (let i = 0; i < verboseHistory.length; i++) {
         const move = verboseHistory[i];
         const matchComment = comments.find(c => c.fen === move.after);
-        
+
         if (matchComment && matchComment.comment) {
           pgnCommentsByIndex[i] = matchComment.comment;
           const commentStr = matchComment.comment;
-          
+
           const evalMatch = commentStr.match(/\[%eval\s+([-\d.]+)\]/);
           if (evalMatch) {
-            newEvaluationHistory.push({ moveIndex: i, score: parseFloat(evalMatch[1]) });
+            // Guardar con mate: null para consistencia con el objeto evaluation
+            newEvaluationHistory.push({ moveIndex: i, score: parseFloat(evalMatch[1]), mate: null });
             hasEvaluations = true;
           }
 
-          // Usar la fuente de verdad centralizada de labels
           for (const label of MOVE_LABELS) {
             if (commentStr.includes(label)) {
               newMoveEvaluations[i] = label;
@@ -236,7 +252,7 @@ export const createGameSlice = (set, get) => ({
         }
       }
 
-      // Calcular el reloj inicial (posición final de la partida cargada)
+      // Calcular el reloj inicial
       let initialWhiteClock = null;
       let initialBlackClock = null;
       const lastIdx = verboseHistory.length - 1;
@@ -270,12 +286,11 @@ export const createGameSlice = (set, get) => ({
         wantsFullAnalysis: false,
         gameHeaders: headers,
         pgnCommentsByIndex,
-        evaluation: evalObj ? evalObj.score : 0
+        evaluation: evalFromEntry(evalObj),
       });
 
       // Setear relojes después del set principal para que el efecto del hook no los pise
       state.setClocks(initialWhiteClock, initialBlackClock);
-
 
       playChessSound('notify');
       return true;
@@ -286,7 +301,7 @@ export const createGameSlice = (set, get) => ({
   },
 
   setCurrentMoveIndex: (index) => set({ currentMoveIndex: index, arrows: [] }),
-  
+
   startFullAnalysis: () => {
     const state = get();
     if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);

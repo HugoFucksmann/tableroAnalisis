@@ -48,12 +48,6 @@ class AnalysisQueue {
             const completedMoves = new Set();
             const finalMoveData = new Array(totalMoves);
 
-            // [FIX] openingDone era una variable local capturada por el closure del .finally().
-            // El problema: el .finally() se ejecuta cuando la Promise de detectOpenings resuelve,
-            // pero en ese punto el loop de Stockfish puede estar en cualquier posición.
-            // Si el engine ya resolvió posiciones que el opening no confirmó todavía,
-            // esos movimientos quedaban bloqueados en #tryResolveMove por `isOpeningResolved`.
-            // Solución: usar un objeto mutable { value } que el closure captura por referencia.
             const openingState = { done: false };
 
             const openingPromise = OpeningService.detectOpenings({
@@ -65,8 +59,7 @@ class AnalysisQueue {
                 onOpeningDetected
             });
 
-            // [FIX] Corremos el opening en paralelo con Stockfish pero mantenemos
-            // una referencia a la Promise para poder awaitearlo si el engine termina primero.
+            // Análisis de apertura en paralelo
             openingPromise.finally(() => {
                 openingState.done = true;
                 // Resolver todos los plies pendientes ahora que sabemos el estado de libro
@@ -116,8 +109,7 @@ class AnalysisQueue {
                 }
             }
 
-            // [FIX] Si el engine terminó antes que el opening service, esperamos
-            // que el opening termine para no cortar el análisis prematuramente.
+            // Esperar a que el servicio de apertura termine
             if (!signal.aborted) {
                 await openingPromise.catch(() => { }); // el error ya se maneja internamente
             }
@@ -183,8 +175,7 @@ class AnalysisQueue {
         }
     }
 
-    // [FIX] openingDone ahora es openingState: { done: boolean } — objeto mutable
-    // para que el closure del .finally() y este método lean el mismo valor.
+    // Resolvemos el estado del libro de apertura de forma síncrona con el engine
     #tryResolveMove(ply, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedSet, onMoveResult, focusIdx) {
         if (ply < 0 || ply >= history.length || completedSet.has(ply)) return;
 

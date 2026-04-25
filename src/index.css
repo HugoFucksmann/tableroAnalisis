@@ -13,9 +13,16 @@
   --bg-tertiary: #1f222d;
 
   /* ── Colors: Accents ────────────────────────────────────────── */
-  --accent-primary: #4e9af1;
+  --accent-primary: #437ec1;
   --accent-secondary: #3a7bd5;
   --accent-glow: rgba(78, 154, 241, 0.2);
+  --error-primary: #ff5555;
+  --error-bg: rgba(255, 85, 85, 0.08);
+  --error-border: rgba(255, 85, 85, 0.18);
+  --success-primary: #4ade80;
+  --success-glow: rgba(74, 222, 128, 0.2);
+  --warning-primary: #fb923c;
+  --warning-glow: rgba(251, 146, 60, 0.2);
 
   /* ── Colors: Text ───────────────────────────────────────────── */
   --text-primary: #f8f9fa;

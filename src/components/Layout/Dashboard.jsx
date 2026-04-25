@@ -147,13 +147,15 @@ export const Dashboard = () => {
                       <Cpu size={14} />
                     </button>
                   )}
-                  <button
-                    className="panel-action-btn"
-                    title="Descargar PGN"
-                    onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
-                  >
-                    <Download size={14} />
-                  </button>
+                  {analysisReady && (
+                    <button
+                      className="panel-action-btn"
+                      title="Descargar PGN"
+                      onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
+                    >
+                      <Download size={14} />
+                    </button>
+                  )}
                   <button
                     className="panel-action-btn"
                     title="Configurar motor de análisis"

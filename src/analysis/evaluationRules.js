@@ -26,7 +26,8 @@ export const EvaluationEngine = {
             for (const move of validMoves) {
                 const lossPct = move.wpLoss * 100;
 
-                let moveAcc = lossPct <= 0 ? 100 : 100 * Math.exp(-0.085 * lossPct);
+                //  let moveAcc = lossPct <= 0 ? 100 : 100 * Math.exp(-0.085 * lossPct);
+                let moveAcc = lossPct <= 0 ? 100 : Math.max(0, 103.1668 * Math.exp(-0.07354 * lossPct) - 3.1669);
                 moveAcc = Math.max(0, Math.min(100, moveAcc));
 
                 sumAccuracy += moveAcc;

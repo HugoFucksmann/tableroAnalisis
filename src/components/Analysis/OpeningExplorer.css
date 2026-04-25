@@ -1,6 +1,4 @@
-/* ═══════════════════════════════════════════════════════════════
-   OpeningExplorer — crece para llenar el panel Explorador (flex:1)
-   ═══════════════════════════════════════════════════════════════ */
+/* OpeningExplorer */
 
 .explorer-container {
   display: flex;
@@ -11,7 +9,6 @@
   overflow-x: hidden;
 }
 
-/* ── Tabs de ELO ────────────────────────────────────────────────── */
 .elo-tabs {
   display: flex;
   gap: var(--space-1);
@@ -40,10 +37,9 @@
 
 .elo-tab.active {
   background: var(--accent-primary);
-  color: white;
+  color: var(--text-primary);
 }
 
-/* ── Input de Token (ahora toggleado desde el Dashboard) ────────── */
 .explorer-token-input-wrap {
   display: flex;
   flex-direction: column;
@@ -51,7 +47,7 @@
   padding: var(--space-3);
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--glass-border);
   animation: slideDown 0.2s ease-out;
   margin-bottom: var(--space-2);
 }
@@ -60,7 +56,7 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   background: var(--bg-secondary);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--glass-border);
   border-radius: calc(var(--border-radius) * 0.5);
   color: var(--text-primary);
   font-size: var(--text-xs);
@@ -83,7 +79,6 @@
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── Lista de movimientos con estadísticas ──────────────────────── */
 .moves-stats-list {
   display: flex;
   flex-direction: column;
@@ -209,7 +204,7 @@
 }
 
 .explorer-container.error {
-  color: #ff5f5f;
+  color: var(--error-primary);
 }
 
 /* ── Spinner ────────────────────────────────────────────────────── */
