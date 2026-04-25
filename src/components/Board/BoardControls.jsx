@@ -1,12 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   ChevronsLeft,
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
   RefreshCcw,
-  RotateCcw,
-  AlertTriangle,
 } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -21,7 +19,6 @@ export const BoardControls = () => {
     boardOrientation, setBoardOrientation,
     analysisReady,
   } = useGameStore(useShallow(state => ({
-    resetGame: state.resetGame,
     goToMove: state.goToMove,
     currentMoveIndex: state.currentMoveIndex,
     history: state.history,
@@ -60,9 +57,6 @@ export const BoardControls = () => {
       <div className="utility-group">
         <button className="control-btn secondary" title="Girar Tablero" onClick={handleToggleOrientation}>
           <RefreshCcw size={18} />
-        </button>
-        <button className="control-btn danger" title="Reiniciar" onClick={resetGame}>
-          <RotateCcw size={18} />
         </button>
       </div>
 

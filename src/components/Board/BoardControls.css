@@ -57,7 +57,5 @@
   background: var(--text-muted);
 }
 
-.control-btn.danger:hover:not(:disabled) {
-  background: #e05555;
-}
+
 
