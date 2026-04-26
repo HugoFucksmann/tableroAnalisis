@@ -123,6 +123,7 @@ class StockfishService {
                         this._resolveIdle = null;
                     }
                     signal?.removeEventListener('abort', onAbort);
+                    clearTimeout(searchTimeout);
                 }
             };
 
@@ -148,8 +149,19 @@ class StockfishService {
 
             signal?.addEventListener('abort', onAbort);
 
+            // Timeout de seguridad extremo por si el motor se cuelga silenciosamente (30s)
+            const searchTimeout = setTimeout(() => {
+                if (!isFinished) {
+                    console.error('El análisis superó los 30 segundos y parece colgado. Reiniciando engine.');
+                    this.worker?.postMessage('stop');
+                    cleanup();
+                    this.destroy(); // Forzar recreación en la próxima llamada
+                    resolve({ score: 0, mate: null, bestMove: lastBestMove || 'e2e4', lines: Object.values(lines) });
+                }
+            }, 30000);
+
             const messageHandler = (line) => {
-                if (isFinished) return; // FIX: Prevenir promesas fantasmas tras abortar
+                if (isFinished) return;
 
                 if (line.startsWith('info') && line.includes('score')) {
                     const multipvMatch = line.match(/multipv (\d+)/);
