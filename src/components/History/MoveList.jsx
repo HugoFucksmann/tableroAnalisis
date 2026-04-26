@@ -1,4 +1,5 @@
 import React, { useMemo, useRef, useEffect } from 'react';
+import { RotateCcw } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
@@ -6,7 +7,14 @@ import { getPieceIcon } from '../../utils/chessUtils';
 import './MoveList.css';
 
 export const MoveList = () => {
-  const { history, moveEvaluations, currentMoveIndex, goToMove, isExploreMode, restoreMainLine } = useGameStore(useShallow(state => ({
+  const {
+    history,
+    moveEvaluations,
+    currentMoveIndex,
+    goToMove,
+    isExploreMode,
+    restoreMainLine,
+  } = useGameStore(useShallow(state => ({
     history: state.history,
     moveEvaluations: state.moveEvaluations,
     currentMoveIndex: state.currentMoveIndex,
@@ -19,17 +27,15 @@ export const MoveList = () => {
 
   // Auto-scroll al movimiento activo
   useEffect(() => {
-    if (scrollRef.current) {
-      const activeItem = scrollRef.current.querySelector('.move-item.active');
-      if (activeItem) {
-        activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      }
+    if (!scrollRef.current) return;
+    const activeItem = scrollRef.current.querySelector('.move-item.active');
+    if (activeItem) {
+      activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
   }, [currentMoveIndex]);
 
   const getSan = (entry) => (entry && typeof entry === 'object' ? entry.san : entry);
 
-  // FIX: Memoización O(N) solo cuando cambia el historial o las evaluaciones
   const movePairs = useMemo(() => {
     const pairs = [];
     for (let i = 0; i < history.length; i += 2) {
@@ -47,7 +53,6 @@ export const MoveList = () => {
   const renderMove = (move, side) => {
     if (!move) return null;
     const config = EVAL_CONFIG[move.eval];
-
     const pieceMatch = move.san.match(/^([NBRQK])/);
     const piece = pieceMatch ? pieceMatch[1] : null;
     const moveText = piece ? move.san.substring(1) : move.san;
@@ -76,19 +81,24 @@ export const MoveList = () => {
   };
 
   return (
-    <div className="move-list-container premium-scroll" ref={scrollRef}>
+    <div className="move-list-container premium-scroll">
+      {/* Header with optional explore-mode restore button */}
       <div className="move-list-header">
         <span>#</span>
         <span>Blancas</span>
         <span>Negras</span>
-      </div>
-      <div className="move-list-body">
         {isExploreMode && (
-          <div className="explore-mode-banner">
-            <span>Modo Exploración</span>
-            <button onClick={restoreMainLine} className="restore-main-btn">Volver a la partida</button>
-          </div>
+          <button
+            className="explore-restore-btn"
+            onClick={restoreMainLine}
+            title="Volver a la partida principal"
+          >
+            <RotateCcw size={11} />
+          </button>
         )}
+      </div>
+
+      <div className="move-list-body" ref={scrollRef}>
         {movePairs.map((pair) => (
           <div key={pair.round} className="move-row">
             <span className="round-num">{pair.round}.</span>

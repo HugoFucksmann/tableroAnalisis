@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════
-   PlayerArea — franja de jugador
+   PlayerArea
    ═══════════════════════════════════════════════════════════════ */
 
 .player-area {
@@ -12,7 +12,6 @@
     border-radius: var(--border-radius);
     border: 1px solid rgba(255, 255, 255, 0.05);
     border-left: 0.1875rem solid transparent;
-    /* ~3px — grosor visual del acento */
     transition:
         background 0.35s ease,
         border-left-color 0.35s ease,
@@ -21,7 +20,7 @@
     overflow: hidden;
 }
 
-/* Shimmer que aparece al activarse */
+/* Shimmer on active */
 .player-area::before {
     content: '';
     position: absolute;
@@ -32,7 +31,7 @@
     pointer-events: none;
 }
 
-/* ── Estado activo ──────────────────────────────────────────────── */
+/* ── Active state ───────────────────────────────────────────────── */
 .player-area.active {
     box-shadow: 0 0.125rem 1.125rem rgba(0, 0, 0, 0.35);
 }
@@ -51,7 +50,7 @@
     background: linear-gradient(100deg, rgba(99, 110, 114, 0.09) 0%, var(--bg-tertiary) 55%);
 }
 
-/* ── Identidad (izquierda) ──────────────────────────────────────── */
+/* ── Identity ───────────────────────────────────────────────────── */
 .player-identity {
     display: flex;
     align-items: center;
@@ -62,7 +61,6 @@
 
 .player-avatar {
     width: 1.5rem;
-    /* ~24px */
     height: 1.5rem;
     flex-shrink: 0;
     border-radius: calc(var(--border-radius) * 0.5);
@@ -101,7 +99,7 @@
     color: var(--text-muted);
 }
 
-/* ── Derecha: piezas capturadas + reloj ─────────────────────────── */
+/* ── Right side: material + clock ───────────────────────────────── */
 .player-right {
     display: flex;
     align-items: center;
@@ -109,14 +107,12 @@
     flex-shrink: 0;
 }
 
-/* ── Piezas capturadas ──────────────────────────────────────────── */
+/* ── Captured pieces ────────────────────────────────────────────── */
 .captured-pieces {
     display: flex;
     flex-wrap: wrap;
     gap: 1px;
-    /* 1px intencional — densidad visual */
     max-width: 6rem;
-    /* ~96px */
 }
 
 .captured-piece {
@@ -137,7 +133,7 @@
     color: #7a8899;
 }
 
-/* ── Diferencia de material ─────────────────────────────────────── */
+/* ── Material advantage ─────────────────────────────────────────── */
 .material-diff {
     font-size: var(--text-xs);
     font-weight: 800;
@@ -149,14 +145,14 @@
     letter-spacing: 0.025em;
 }
 
-/* ── Reloj ──────────────────────────────────────────────────────── */
+/* ── Clock ──────────────────────────────────────────────────────── */
+/* Plain monospace display — no colon animation */
 .clock-time {
     font-family: 'Courier New', Courier, monospace;
     font-size: var(--text-lg);
     font-weight: 900;
     color: var(--text-muted);
     min-width: 3.5rem;
-    /* ~56px — evita saltos de layout al cambiar dígitos */
     text-align: right;
     letter-spacing: 0.0625em;
     transition: color 0.3s ease;
@@ -166,28 +162,8 @@
     color: var(--accent-primary);
 }
 
-.clock-colon {
-    display: inline-block;
-}
-
-.clock-time.ticking .clock-colon {
-    animation: colon-blink 1s step-end infinite;
-}
-
-@keyframes colon-blink {
-
-    0%,
-    100% {
-        opacity: 1;
-    }
-
-    50% {
-        opacity: 0;
-    }
-}
-
 @media (max-width: 768px) {
     .player-area {
         display: none;
     }
-}
+}

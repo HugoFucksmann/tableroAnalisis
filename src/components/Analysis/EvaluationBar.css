@@ -1,4 +1,4 @@
-/* Evaluation Bar */
+/* Evaluation Bar — Premium */
 
 .eval-bar-wrapper {
   display: flex;
@@ -16,19 +16,22 @@
   flex-direction: row;
 }
 
+/* ── Container ──────────────────────────────────────────────────── */
 .eval-bar-container {
-  background-color: var(--eval-black); /* Fondo negro por defecto */
   border-radius: var(--border-radius-lg);
   position: relative;
   overflow: hidden;
+  /* Dark base = black's territory */
+  background-color: var(--eval-black);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--shadow);
+  box-shadow:
+    var(--shadow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .vertical .eval-bar-container {
   width: 100%;
   flex: 1;
-  background-color: var(--eval-white); /* En vertical, el fondo es blanco */
 }
 
 .horizontal .eval-bar-container {
@@ -36,30 +39,34 @@
   flex: 1;
 }
 
+/* ── Fill (white side) ──────────────────────────────────────────── */
 .eval-bar-fill {
-  background-color: var(--eval-black);
   position: absolute;
   transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .vertical .eval-bar-fill {
   width: 100%;
-  top: 0;
+  bottom: 0;
   left: 0;
-  /* En vertical el fill negro baja desde arriba */
+  /* White fills upward from the bottom */
+  background: linear-gradient(to top,
+      var(--eval-white) 0%,
+      rgba(200, 207, 214, 0.9) 100%);
 }
 
 .horizontal .eval-bar-fill {
   height: 100%;
   top: 0;
   left: 0;
-  background-color: var(--eval-white); /* En horizontal el fill blanco crece a la derecha */
+  background: linear-gradient(to right,
+      rgba(200, 207, 214, 0.85) 0%,
+      var(--eval-white) 100%);
 }
 
-/* Indicador central (0.0) */
+/* ── Center marker (0.0 line) ───────────────────────────────────── */
 .eval-marker.center {
   position: absolute;
-  background: rgba(255, 255, 255, 0.2);
   z-index: 2;
 }
 
@@ -68,6 +75,8 @@
   left: 0;
   width: 100%;
   height: 1px;
+  background: rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 4px rgba(255, 255, 255, 0.08);
 }
 
 .horizontal .eval-marker.center {
@@ -75,12 +84,26 @@
   top: 0;
   width: 1px;
   height: 100%;
+  background: rgba(255, 255, 255, 0.2);
 }
 
+/* ── Inner gloss overlay ────────────────────────────────────────── */
+.eval-bar-container::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(to bottom,
+      rgba(255, 255, 255, 0.04) 0%,
+      transparent 50%);
+  pointer-events: none;
+  z-index: 3;
+}
+
+/* ── Score display ──────────────────────────────────────────────── */
 .eval-value-display {
-  font-family: var(--font-main);
-  font-weight: 700;
-  font-size: var(--text-xs);
+  font-family: 'Courier New', Courier, monospace;
+  font-weight: 800;
   color: var(--text-secondary);
   background: var(--bg-secondary);
   padding: var(--space-1) var(--space-2);
@@ -95,26 +118,28 @@
   text-align: center;
   box-shadow: var(--shadow-lg);
   user-select: none;
+  letter-spacing: 0.02em;
 }
 
 .eval-score {
+  font-size: 0.72rem;
   line-height: 1.1;
+}
+
+/* Positive = white advantage → light */
+.eval-score.positive {
+  color: var(--eval-white);
+}
+
+/* Negative = black advantage → muted */
+.eval-score.negative {
+  color: var(--text-muted);
 }
 
 .eval-mate {
   color: var(--accent-primary);
-  font-size: 0.65rem;
-  font-weight: 800;
+  font-size: 0.6rem;
+  font-weight: 900;
   line-height: 1;
+  letter-spacing: 0.04em;
 }
-
-
-/* Efecto sutil de brillo en el borde */
-.eval-bar-container::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.05);
-  pointer-events: none;
-}
