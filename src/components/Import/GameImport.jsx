@@ -92,12 +92,14 @@ export const GameImport = ({ onGameSelect }) => {
     try {
       if (platform === 'lichess') {
         const result = await fetchLichessGames(username.trim(), 15, lastTimestamp, lichessToken);
-        setGames([...games, ...result.games]);
+        const allGames = [...games, ...result.games];
+        setGames(allGames.slice(-60));
         setLastTimestamp(result.lastTimestamp);
         setHasMore(result.hasMore);
       } else if (platform === 'chesscom') {
         const result = await fetchChesscomGames(username.trim(), 15, chesscomPagination);
-        setGames([...games, ...result.games]);
+        const allGames = [...games, ...result.games];
+        setGames(allGames.slice(-60));
         setChesscomPagination(result.pagination);
         setHasMore(result.hasMore);
       }

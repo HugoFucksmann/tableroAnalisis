@@ -55,9 +55,8 @@ export const Dashboard = () => {
 
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
-    lichessToken, history, moveEvaluations, evaluationHistory,
-    engineConfig, gameHeaders, isAnalyzeFromPgn, startFullAnalysis,
-    pgnCommentsByIndex, analysisReady,
+    lichessToken, history, isAnalyzeFromPgn, startFullAnalysis,
+    analysisReady,
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -65,17 +64,13 @@ export const Dashboard = () => {
     setShowTokenInput: state.setShowTokenInput,
     lichessToken: state.lichessToken,
     history: state.history,
-    moveEvaluations: state.moveEvaluations,
-    evaluationHistory: state.evaluationHistory,
-    engineConfig: state.engineConfig,
-    gameHeaders: state.gameHeaders,
     isAnalyzeFromPgn: state.isAnalyzeFromPgn,
     startFullAnalysis: state.startFullAnalysis,
-    pgnCommentsByIndex: state.pgnCommentsByIndex,
     analysisReady: state.analysisReady,
   })));
 
   const handleDownloadPgn = () => {
+    const { moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex } = useGameStore.getState();
     const pgn = generateAnnotatedPgn(history, moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex);
     downloadPgn(pgn, 'analisis_partida.pgn');
   };

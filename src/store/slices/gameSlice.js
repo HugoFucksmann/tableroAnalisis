@@ -69,11 +69,11 @@ export const createGameSlice = (set, get) => ({
 
       const isEnteringExploreMode = !state.isExploreMode;
       const mainLineData = isEnteringExploreMode ? {
-        history: [...state.history],
-        evaluationHistory: { ...state.evaluationHistory },
-        bestMoves: { ...state.bestMoves },
-        moveEvaluations: { ...state.moveEvaluations },
-        alternativeLines: { ...state.alternativeLines },
+        history: state.history,
+        evaluationHistory: state.evaluationHistory,
+        bestMoves: state.bestMoves,
+        moveEvaluations: state.moveEvaluations,
+        alternativeLines: state.alternativeLines,
         branchIndex: state.currentMoveIndex,
       } : state.mainLineData;
 
@@ -110,13 +110,12 @@ export const createGameSlice = (set, get) => ({
     const gameCopy = replayTo(state.mainLineData.history, targetIndex);
     const evalObj = state.mainLineData.evaluationHistory[targetIndex];
 
-    get().setEvaluationHistory(state.mainLineData.evaluationHistory);
-    get().setBestMoves(state.mainLineData.bestMoves);
-    get().setMoveEvaluations(state.mainLineData.moveEvaluations);
-    get().setAlternativeLines(state.mainLineData.alternativeLines);
-    get().setEvaluationDirect(evalFromEntry(evalObj));
-
     set({
+      evaluationHistory: state.mainLineData.evaluationHistory,
+      bestMoves: state.mainLineData.bestMoves,
+      moveEvaluations: state.mainLineData.moveEvaluations,
+      alternativeLines: state.mainLineData.alternativeLines,
+      evaluation: evalFromEntry(evalObj),
       game: gameCopy,
       fen: gameCopy.fen(),
       history: state.mainLineData.history,

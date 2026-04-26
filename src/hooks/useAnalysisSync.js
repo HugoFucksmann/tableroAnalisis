@@ -74,7 +74,10 @@ export const useAnalysisSync = () => {
       onStatus: setAnalyzing,
       onProgress: setAnalysisProgress,
       onOpeningDetected: ({ openingName, ecoCode, openingPly, bookPlies }) => {
-        bookPlies.forEach(ply => setMoveEvaluation(ply, 'Libro'));
+        const currentEvals = useGameStore.getState().moveEvaluations;
+        const batchEvals = { ...currentEvals };
+        bookPlies.forEach(ply => { batchEvals[ply] = 'Libro'; });
+        useGameStore.setState({ moveEvaluations: batchEvals });
         if (openingName) setOpeningName(openingName);
         if (ecoCode) setEcoCode(ecoCode);
         setOpeningPly(openingPly);

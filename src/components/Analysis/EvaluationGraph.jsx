@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import './EvaluationGraph.css';
 
@@ -28,7 +29,16 @@ function getX(index, total) {
 
 export const EvaluationGraph = () => {
   const { evaluationHistory, currentMoveIndex, history, goToMove, gameScore, isAnalyzing, moveEvaluations, analysisReady } =
-    useGameStore();
+    useGameStore(useShallow(state => ({
+      evaluationHistory: state.evaluationHistory,
+      currentMoveIndex: state.currentMoveIndex,
+      history: state.history,
+      goToMove: state.goToMove,
+      gameScore: state.gameScore,
+      isAnalyzing: state.isAnalyzing,
+      moveEvaluations: state.moveEvaluations,
+      analysisReady: state.analysisReady,
+    })));
 
   const MISTAKE_TYPES = ['Error grave', 'Error', 'Imprecisión'];
   const total = history.length;

@@ -44,7 +44,7 @@ export const generateAnnotatedPgn = (
                 break;
             }
 
-            const evalObj = evaluationHistory.find(e => e.moveIndex === i);
+            const evalObj = evaluationHistory?.[i];
             const moveEval = moveEvaluations[i];
 
             // Extraer [%clk] del comentario original si existe

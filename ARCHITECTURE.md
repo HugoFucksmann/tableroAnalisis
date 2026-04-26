@@ -80,5 +80,5 @@ tableroAnalisis/
 
 ## 8. Consideraciones de Seguridad
 Para que Stockfish funcione con multihilo, la aplicación requiere `Cross-Origin Isolation`:
-- `Cross-Origin-Embedder-Policy: require-corp`
+- `Cross-Origin-Embedder-Policy: credentialless`
 - `Cross-Origin-Opener-Policy: same-origin`

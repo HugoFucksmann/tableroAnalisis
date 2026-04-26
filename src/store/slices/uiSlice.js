@@ -17,7 +17,11 @@ export const createUISlice = (set, get) => ({
   setBoardOrientation: (orientation) => set({ boardOrientation: orientation }),
   setGamePhase: (phase) => set({ gamePhase: phase }),
   setOpeningName: (name) => set({ openingName: name }),
-  setClocks: (white, black) => set({ clocks: { white, black } }),
+  setClocks: (white, black) => {
+    const current = get().clocks;
+    if (current.white === white && current.black === black) return;
+    set({ clocks: { white, black } });
+  },
   setPlayers: (white, black, whiteElo = null, blackElo = null) => set({
     players: { white, black },
     playerElos: { white: whiteElo, black: blackElo }
