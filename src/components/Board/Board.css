@@ -46,7 +46,7 @@
 .board-frame {
   flex: 1;
   padding: var(--space-1);
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.06), rgba(0, 0, 0, 0.25));
+  background: linear-gradient(145deg, var(--glass), var(--bg-tertiary));
   border-radius: var(--border-radius);
   border: 1px solid var(--glass-border);
   box-shadow:

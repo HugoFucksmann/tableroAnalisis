@@ -118,7 +118,7 @@
 
 .analysis-modal-progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent-primary), #409cde);
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-secondary));
     border-radius: 99px;
     transition: width 0.4s ease;
 }

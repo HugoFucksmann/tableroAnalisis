@@ -15,7 +15,7 @@ import './Board.css';
 /**
  * Converts a UCI move string (e.g. "e2e4") to a react-chessboard v5 Arrow object.
  */
-function uciToArrow(uci, color = 'rgb(0, 193, 177)') {
+function uciToArrow(uci, color = 'rgba(217, 119, 6, 0.8)') {
   if (!uci || uci.length < 4) return null;
   return { startSquare: uci.slice(0, 2), endSquare: uci.slice(2, 4), color };
 }
@@ -134,7 +134,7 @@ export const Board = () => {
     lines.forEach((line) => {
       const opacities = { 1: '0.9', 2: '0.7', 3: '0.5', 4: '0.3', 5: '0.15' };
       const opacity = opacities[line.multipv] || '0.1';
-      const color = `rgba(0, 193, 177, ${opacity})`;
+      const color = `rgba(217, 119, 6, ${opacity})`;
 
       const arrow = uciToArrow(line.move, color);
       if (arrow) {
@@ -146,7 +146,7 @@ export const Board = () => {
     });
 
     if (arrowMap.size === 0 && bestMoves[currentMoveIndex]) {
-      const arrow = uciToArrow(bestMoves[currentMoveIndex], 'rgba(0, 193, 177, 0.9)');
+      const arrow = uciToArrow(bestMoves[currentMoveIndex], 'rgba(217, 119, 6, 0.8)');
       if (arrow) {
         const key = `${arrow.startSquare}-${arrow.endSquare}`;
         arrowMap.set(key, arrow);
@@ -229,8 +229,8 @@ export const Board = () => {
                 position: fen,
                 onPieceDrop: onDrop,
                 boardOrientation: boardOrientation,
-                darkSquareStyle: { backgroundColor: '#2d3436' },
-                lightSquareStyle: { backgroundColor: '#636e72' },
+                darkSquareStyle: { backgroundColor: '#292524' },
+                lightSquareStyle: { backgroundColor: '#57534e' },
                 arrows: combinedArrows,
                 squareStyles: squareStyles,
                 animationDurationInMs: 180,

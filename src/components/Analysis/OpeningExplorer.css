@@ -47,7 +47,7 @@
   padding: var(--space-3);
   background: var(--bg-tertiary);
   border-radius: var(--border-radius);
-  border: 1px dashed var(--glass-border);
+  border: 1px solid var(--glass-border);
   animation: slideDown 0.2s ease-out;
   margin-bottom: var(--space-2);
 }
@@ -117,7 +117,7 @@
 }
 
 .move-stat-row:hover, .move-stat-row.hovered {
-  background-color: rgba(78, 154, 241, 0.08);
+  background-color: var(--accent-glow);
 }
 
 .move-san {
@@ -149,18 +149,18 @@
 }
 
 .bar-segment.white {
-  background-color: #f1f1f1;
-  color: #333;
+  background-color: var(--eval-white);
+  color: var(--eval-black);
 }
 
 .bar-segment.draw {
-  background-color: #888888;
-  color: #fff;
+  background-color: var(--text-muted);
+  color: var(--text-primary);
 }
 
 .bar-segment.black {
-  background-color: #333333;
-  color: #eee;
+  background-color: var(--eval-black);
+  color: var(--eval-white);
 }
 
 .games-count {
@@ -198,9 +198,9 @@
   font-size: var(--text-sm);
   text-align: center;
   padding: var(--space-3);
-  background: rgba(78, 154, 241, 0.03);
+  background: var(--accent-glow-muted);
   border-radius: calc(var(--border-radius) * 0.75);
-  border: 1px dashed rgba(78, 154, 241, 0.1);
+  border: 1px solid var(--glass-border);
 }
 
 .explorer-container.error {

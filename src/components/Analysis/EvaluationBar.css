@@ -52,7 +52,7 @@
   /* White fills upward from the bottom */
   background: linear-gradient(to top,
       var(--eval-white) 0%,
-      rgba(200, 207, 214, 0.9) 100%);
+      rgba(255, 255, 255, 0.8) 100%);
 }
 
 .horizontal .eval-bar-fill {
@@ -60,7 +60,7 @@
   top: 0;
   left: 0;
   background: linear-gradient(to right,
-      rgba(200, 207, 214, 0.85) 0%,
+      rgba(255, 255, 255, 0.75) 0%,
       var(--eval-white) 100%);
 }
 

@@ -8,34 +8,36 @@
 
 :root {
   /* ── Colors: Base ───────────────────────────────────────────── */
-  --bg-primary: #0a0b10;
-  --bg-secondary: #161821;
-  --bg-tertiary: #1f222d;
+  --bg-primary: #050505;
+  --bg-secondary: #0d0d0d;
+  --bg-tertiary: #171717;
 
   /* ── Colors: Accents ────────────────────────────────────────── */
-  --accent-primary: #437ec1;
-  --accent-secondary: #3a7bd5;
-  --accent-glow: rgba(78, 154, 241, 0.2);
-  --error-primary: #ff5555;
-  --error-bg: rgba(255, 85, 85, 0.08);
-  --error-border: rgba(255, 85, 85, 0.18);
-  --success-primary: #4ade80;
-  --success-glow: rgba(74, 222, 128, 0.2);
-  --warning-primary: #fb923c;
-  --warning-glow: rgba(251, 146, 60, 0.2);
+  --accent-primary: #d97706;
+  /* Ámbar cálido */
+  --accent-secondary: #b45309;
+  --accent-glow: rgba(217, 119, 6, 0.2);
+  --accent-glow-muted: rgba(217, 119, 6, 0.05);
+  --error-primary: #ef4444;
+  --error-bg: rgba(239, 68, 68, 0.08);
+  --error-border: rgba(239, 68, 68, 0.15);
+  --success-primary: #10b981;
+  --success-glow: rgba(16, 185, 129, 0.15);
+  --warning-primary: #f59e0b;
+  --warning-glow: rgba(245, 158, 11, 0.15);
 
   /* ── Colors: Text ───────────────────────────────────────────── */
-  --text-primary: #f8f9fa;
-  --text-secondary: #a0a0a0;
-  --text-muted: #6c757d;
+  --text-primary: #fafaf9;
+  --text-secondary: #a8a29e;
+  --text-muted: #57534e;
 
   /* ── Colors: Chess Specific ─────────────────────────────────── */
-  --eval-white: #e9ecef;
-  --eval-black: #2b2d33;
+  --eval-white: #f5f5f4;
+  --eval-black: #1c1917;
 
   /* ── Colors: Glass / Surface ────────────────────────────────── */
-  --glass: rgba(255, 255, 255, 0.02);
-  --glass-border: rgba(255, 255, 255, 0.05);
+  --glass: transparent;
+  --glass-border: rgba(217, 119, 6, 0.1);
 
   /* ── Typography ─────────────────────────────────────────────── */
   --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
@@ -116,16 +118,10 @@ body {
 /* ── Utility: Glass Panel ───────────────────────────────────────── */
 .glass-panel {
   background: var(--glass);
-  backdrop-filter: blur(0.75rem);
   border: 1px solid var(--glass-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow);
   transition: var(--transition);
-}
-
-.glass-panel:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
 }
 
 /* ── Utility: Premium Scrollbar (Global & Scoped Unificado) ─────── */

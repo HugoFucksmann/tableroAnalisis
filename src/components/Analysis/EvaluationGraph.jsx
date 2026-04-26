@@ -154,12 +154,12 @@ export const EvaluationGraph = () => {
       >
         <defs>
           <linearGradient id="evalGradientWhite" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#f1f1f1" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="#f1f1f1" stopOpacity="0.05" />
+            <stop offset="0%" stopColor="var(--eval-white)" stopOpacity="0.5" />
+            <stop offset="100%" stopColor="var(--eval-white)" stopOpacity="0.05" />
           </linearGradient>
           <linearGradient id="evalGradientBlack" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="#2d3436" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="#2d3436" stopOpacity="0.05" />
+            <stop offset="0%" stopColor="var(--eval-black)" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="var(--eval-black)" stopOpacity="0.05" />
           </linearGradient>
           <clipPath id="clipAbove">
             <rect x="0" y="0" width={WIDTH} height={midY} />
@@ -227,13 +227,13 @@ export const EvaluationGraph = () => {
         gameScore ? (
           <div className="accuracy-row">
             <div className="accuracy-chip white">
-              <span className="chip-color-dot" style={{ background: '#f1f1f1' }} />
+              <span className="chip-color-dot" style={{ background: 'var(--eval-white)' }} />
               <span>{gameScore.white}%</span>
             </div>
             <span className="accuracy-label-center">precisión</span>
             <div className="accuracy-chip black">
               <span>{gameScore.black}%</span>
-              <span className="chip-color-dot" style={{ background: '#333' }} />
+              <span className="chip-color-dot" style={{ background: 'var(--eval-black)' }} />
             </div>
           </div>
         ) : (

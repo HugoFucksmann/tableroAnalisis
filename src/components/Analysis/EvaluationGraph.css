@@ -137,14 +137,14 @@
 }
 
 .baseline {
-  stroke: rgba(255, 255, 255, 0.15);
+  stroke: var(--glass-border);
   stroke-width: 1;
   stroke-dasharray: 3 3;
 }
 
 .eval-line {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.7);
+  stroke: var(--text-secondary);
   stroke-width: 1.5;
   stroke-linejoin: round;
   stroke-linecap: round;
@@ -184,7 +184,7 @@
   width: 0.5rem;
   height: 0.5rem;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--glass-border);
   flex-shrink: 0;
 }
 

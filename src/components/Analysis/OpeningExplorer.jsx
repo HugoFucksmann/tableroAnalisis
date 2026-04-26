@@ -5,7 +5,7 @@ import { fetchOpeningExplorer } from '../../services/gameApi';
 import { Loader, AlertCircle } from 'lucide-react';
 import './OpeningExplorer.css';
 
-function sanToArrow(san, chessInstance, color = 'rgb(0, 100, 255)') {
+function sanToArrow(san, chessInstance, color = 'rgba(217, 119, 6, 0.8)') {
   try {
     const moves = chessInstance.moves({ verbose: true });
     const match = moves.find(m => m.san === san);
@@ -55,7 +55,7 @@ export const OpeningExplorer = () => {
 
         const bookArrows = (explorerData.moves ?? [])
           .slice(0, 2)
-          .map(m => sanToArrow(m.san, game, 'rgba(100, 149, 237, 0.45)'))
+          .map(m => sanToArrow(m.san, game, 'rgba(217, 119, 6, 0.45)'))
           .filter(Boolean);
         setArrows(bookArrows);
       })
@@ -70,7 +70,7 @@ export const OpeningExplorer = () => {
 
   const handleMoveHover = React.useCallback((san) => {
     setHovered(san);
-    const arrow = sanToArrow(san, game, 'rgba(0, 120, 255, 0.8)');
+    const arrow = sanToArrow(san, game, 'rgba(217, 119, 6, 0.8)');
     setArrows(arrow ? [arrow] : []);
   }, [game, setArrows]);
 
@@ -79,7 +79,7 @@ export const OpeningExplorer = () => {
     if (!data) return;
     const arrows = (data.moves ?? [])
       .slice(0, 3)
-      .map(m => sanToArrow(m.san, game, 'rgba(100, 149, 237, 0.45)'))
+      .map(m => sanToArrow(m.san, game, 'rgba(217, 119, 6, 0.45)'))
       .filter(Boolean);
     setArrows(arrows);
   }, [game, setArrows, data]);
