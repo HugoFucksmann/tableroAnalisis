@@ -1,16 +1,56 @@
-# React + Vite
+# ♟️ Tablero de Análisis de Ajedrez
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Una aplicación web moderna y profesional para el análisis de partidas de ajedrez, diseñada para ofrecer la experiencia de un software de escritorio con la flexibilidad de la web.
 
-Currently, two official plugins are available:
+![Dashboard Preview](src/assets/hero.png)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 🚀 Características Principales
 
-## React Compiler
+- **Análisis en Tiempo Real**: Integración con **Stockfish 18 WASM** ejecutándose localmente en tu navegador.
+- **Importación Directa**: Carga tus partidas de **Lichess** y **Chess.com** simplemente ingresando tu nombre de usuario.
+- **Explorador de Aperturas**: Conexión con la base de datos de Lichess para identificar teoría y estadísticas de jugadas.
+- **Gráfica de Evaluación**: Visualización dinámica de la ventaja a lo largo de la partida.
+- **Clasificación de Jugadas**: Identificación automática de jugadas *Brillantes*, *Mejores*, *Excelentes*, *Imprecisiones* y *Errores*.
+- **PWA (Progressive Web App)**: Instálala en tu escritorio o móvil y úsala con rendimiento nativo.
+- **Exportación PGN**: Descarga tus análisis con comentarios detallados y evaluaciones del motor.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 🛠️ Tecnologías
 
-## Expanding the ESLint configuration
+- **Frontend**: React 19, Vite 8, Framer Motion.
+- **Estado**: Zustand 5.
+- **Ajedrez**: Chess.js, React-Chessboard.
+- **Motor**: Stockfish 18 (Multithreaded WASM).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 📦 Instalación y Uso
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/HugoFucksmann/tableroAnalisis.git
+   cd tableroAnalisis
+   ```
+
+2. **Instalar dependencias:**
+   ```bash
+   npm install
+   ```
+
+3. **Ejecutar en desarrollo:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Construir para producción:**
+   ```bash
+   npm run build
+   ```
+
+## 📖 Documentación Técnica
+
+Para una inmersión profunda en la arquitectura del sistema, el flujo de datos y las decisiones de diseño, consulta nuestro archivo:
+👉 [**ARCHITECTURE.md](./ARCHITECTURE.md)**
+
+## 🛡️ Configuración de Seguridad
+La aplicación requiere un entorno con `Cross-Origin Isolation` para habilitar el soporte de múltiples hilos en Stockfish. Asegúrate de que tu servidor de hosting soporte las cabeceras `COOP` y `COEP`.
+
+---
+Desarrollado con ❤️ por ElColof.

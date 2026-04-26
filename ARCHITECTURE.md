@@ -1,75 +1,65 @@
-# Tablero de Análisis de Ajedrez - Arquitectura Finalizada
+# ♟️ Arquitectura del Proyecto: Tablero de Análisis
 
-Este documento detalla la estructura modular, las tecnologías y el flujo de datos del proyecto tras la fase de diseño de interfaz.
+Este documento detalla las decisiones técnicas, la estructura del estado y el flujo de datos del Tablero de Análisis de Ajedrez.
 
-## 🚀 Tecnologías Core
+## 1. Visión General
+La aplicación es una herramienta de análisis de ajedrez de alto rendimiento basada en la web. Permite importar partidas de plataformas como Lichess y Chess.com, y realizar análisis en tiempo real utilizando Stockfish 18 (versión Lite).
 
-| Categoría | Tecnología | Detalles |
-| :--- | :--- | :--- |
-| **Frontend** | React (Vite) | SPA de alto rendimiento. |
-| **Lógica de Ajedrez** | [chess.js](https://github.com/jhlywa/chess.js) | Motor de reglas, validación y gestión de PGN/FEN. |
-| **Interfaz del Tablero** | [react-chessboard](https://github.com/Clariity/react-chessboard) | Componente visual reactivo y personalizable. |
-| **Estado Global** | [Zustand](https://github.com/pmndrs/zustand) | Store centralizado para sincronización en tiempo real. |
-| **Motor de Análisis** | Stockfish.js | Ejecución en Web Worker para análisis local sin latencia. |
-| **Iconografía** | Lucide React | Set de iconos consistentes y ligeros. |
-| **Estilos** | CSS Moderno | Uso de variables HSL, Glassmorphism y Grid Layout. |
+## 2. Tecnologías Principales
+- **React 19**: Framework de UI.
+- **Zustand 5**: Gestión de estado global con patrón de slices y persistencia parcial.
+- **Stockfish 18 WASM**: Motor de ajedrez ejecutado en un Web Worker.
+- **Chess.js v1.4**: Motor de lógica de ajedrez (validación, PGN, FEN).
+- **React-Chessboard**: Componente de interfaz de tablero.
+- **Framer Motion**: Orquestación de animaciones.
 
-## 🏗️ Estructura de Carpetas
+## 3. Arquitectura del Estado (Zustand)
+El estado se divide en tres slices principales que se fusionan en un único store:
 
-```text
-src/
-├── components/
-│   ├── Analysis/
-│   │   ├── EvaluationBar      # Barra lateral de ventaja (+/-)
-│   │   ├── EvaluationGraph    # Gráfico de tendencia de la partida
-│   │   └── OpeningExplorer    # Estadísticas de Lichess DB y filtros ELO
-│   ├── Board/
-│   │   ├── Board              # Tablero principal con relojes
-│   │   └── BoardControls      # Navegación (<< < > >>) y utilidades
-│   ├── History/
-│   │   └── MoveList           # Visor de PGN con iconos de piezas y valoración
-│   ├── Import/
-│   │   └── GameImport         # Selector de plataforma (Lichess/Chess.com)
-│   └── Layout/
-│       └── Dashboard          # Contenedor principal (Grid 1fr 400px)
-├── store/
-│   └── useGameStore           # Cerebro de la app (Estado, Historia, Eval)
-├── services/
-│   ├── lichessService         # Cliente API Lichess (Opening Explorer)
-│   ├── chessComService        # Cliente API Chess.com (Games)
-│   └── stockfishService       # Orquestador del Web Worker
-└── utils/
-    └── mockData               # Datos de prueba para desarrollo offline
+### Slices
+- **GameSlice**: Gestiona el historial de la partida, la posición actual (FEN), las cabeceras y la lógica de movimientos.
+- **AnalysisSlice**: Almacena los resultados del motor (evaluaciones, mejores jugadas, líneas alternativas) y la configuración de Stockfish.
+- **UISlice**: Controla elementos visuales, modales, relojes y configuraciones de visualización.
+
+> [!WARNING]
+> **Deuda Técnica de Redundancia:** Actualmente existe un solapamiento de propiedades entre `GameSlice` y `AnalysisSlice`. Se requiere una refactorización para consolidar toda la lógica de evaluación exclusivamente en `AnalysisSlice`.
+
+## 4. Flujo de Sincronización y Motor
+El flujo de datos sigue un modelo de "Controlador por Hook":
+
+1.  **useAnalysisSync**: Este hook escucha cambios en el `fen` y `gameId`.
+2.  **AnalysisQueue**: Servicio que actúa como mutex para Stockfish. Asegura que el motor no sea saturado con múltiples peticiones concurrentes y gestiona la prioridad del análisis (primero la posición actual, luego el resto de la partida).
+3.  **StockfishService**: Encapsula el Web Worker. Gestiona la inicialización de la memoria (Hash) y los hilos (Threads).
+
+```mermaid
+sequenceDiagram
+    participant UI as Componente React
+    participant Hook as useAnalysisSync
+    participant Store as Zustand Store
+    participant Service as AnalysisQueue
+    participant Worker as Stockfish Worker
+
+    UI->>Store: makeMove()
+    Store->>Hook: Actualiza FEN
+    Hook->>Service: analyzeCurrentPosition(fen)
+    Service->>Worker: postMessage('go depth')
+    Worker-->>Service: 'info score cp...'
+    Service-->>Store: setEvaluation(data)
+    Store-->>UI: Re-render con nueva barra
 ```
 
-## 🧠 Gestión de Estado (Zustand)
+## 5. Reglas de Evaluación y Precisión
+El motor de evaluación (`evaluationRules.js`) utiliza una fórmula de probabilidad de victoria (Win Probability) para clasificar las jugadas:
+- **Brillante**: Jugada que mejora significativamente la probabilidad de victoria según el motor.
+- **Libro**: Jugadas identificadas en la base de datos de teoría de Lichess.
+- **Precisión (Accuracy)**: Calculada mediante una media armónica ponderada de la pérdida de probabilidad de victoria (WP Loss) en cada movimiento, excluyendo la fase de apertura.
 
-El `useGameStore` centraliza la verdad única de la aplicación:
-- **Game State:** Instancia de `Chess`, FEN actual e historial completo.
-- **Análisis:** Valoración numérica, historial de evaluación (para el gráfico) y sugerencias.
-- **Navegación:** Índice del movimiento actual para sincronizar UI y Gráfico.
-- **Importación:** Lista de partidas recuperadas y plataforma seleccionada.
+## 6. Optimizaciones de Rendimiento
+- **Smart Priority Order**: Durante el análisis de una partida completa, el sistema analiza primero el movimiento donde se encuentra el usuario, permitiendo retroalimentación instantánea.
+- **NDJSON Parsing**: Las partidas de Lichess se procesan línea por línea para minimizar el uso de memoria en importaciones masivas.
+- **Worker Recycling**: El worker se destruye y recrea solo cuando es estrictamente necesario para liberar recursos de memoria del navegador.
 
-## 📡 Integración de APIs (Lichess Opening Explorer)
-
-Basado en la documentación técnica de Lichess, la integración seguirá estas reglas:
-
-### Autenticación
-- Requiere **Personal Access Token (PAT)** enviado en la cabecera:
-  `Authorization: Bearer <TOKEN>`
-
-### Endpoints
-- **Maestros:** `https://explorer.lichess.ovh/master`
-- **Comunidad:** `https://explorer.lichess.ovh/lichess` (Filtros por ELO y ritmo).
-- **Jugador:** `https://explorer.lichess.ovh/player?player={user}&color={white|black}`
-
-### Datos a Extraer
-- **Métricas por jugada:** SAN (notación), UCI, victorias/tablas/derrotas.
-- **Metadatos:** Nombre de la apertura, código ECO, ELO promedio y performance.
-- **Partidas Reales:** Array de `topGames` para referencia histórica.
-
-## ✨ Experiencia de Usuario (UX)
-1.  **Tablero Masivo:** Ocupa el máximo espacio disponible (aspect-ratio 1:1).
-2.  **Visualización Pro:** Iconos de valoración (Brillante, Error grave, etc.) en el historial.
-3.  **Gráfico Interactivo:** Permite visualizar la "montaña rusa" de la partida y saltar a momentos críticos.
-4.  **Minimalismo:** Eliminación de headers innecesarios y reducción de paddings para un enfoque 100% analítico.
+## 7. Consideraciones de Seguridad (PWA/Isolation)
+Para que Stockfish funcione con multihilo y alto rendimiento, la aplicación requiere `Cross-Origin Isolation`. Esto se logra mediante cabeceras HTTP configuradas en `vite.config.js` y `netlify.toml`:
+- `Cross-Origin-Embedder-Policy: require-corp`
+- `Cross-Origin-Opener-Policy: same-origin`
