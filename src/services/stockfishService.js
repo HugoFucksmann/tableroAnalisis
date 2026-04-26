@@ -26,13 +26,30 @@ class StockfishService {
         this._config = { ...DEFAULT_ENGINE_CONFIG, ...config };
 
         this._initPromise = new Promise((resolve, reject) => {
+            // Verificación preventiva de Aislamiento de Origen
+            // Si no está aislado, Stockfish Multithreaded fallará al asignar memoria
+            const isIsolated = typeof self !== 'undefined' && self.crossOriginIsolated;
+            
+            if (!isIsolated && this._config.threads > 1) {
+                console.warn('⚠️ El sitio no está en un contexto aislado (Cross-Origin Isolated). Forzando 1 hilo para evitar errores de memoria WASM.');
+                this._config.threads = 1;
+            }
+
             try {
                 this.worker = new Worker(ENGINE_PATH, { type: 'classic' });
             } catch (e) {
                 this._initPromise = null;
-                reject(new Error(`No se pudo cargar Stockfish: ${e.message}`));
+                reject(new Error(`No se pudo crear el Worker: ${e.message}`));
                 return;
             }
+
+            // Timeout de seguridad para detectar fallos silenciosos de memoria WASM
+            const initTimeout = setTimeout(() => {
+                if (!this.ready) {
+                    this.destroy();
+                    reject(new Error('Tiempo de espera de inicialización agotado. Verifica los logs de la consola (posible error de memoria WASM).'));
+                }
+            }, 10000);
 
             this.worker.onmessage = (e) => {
                 const line = e.data;
@@ -45,6 +62,7 @@ class StockfishService {
                 }
 
                 if (line === 'readyok') {
+                    clearTimeout(initTimeout);
                     this.ready = true;
                     resolve();
                 }
@@ -55,9 +73,15 @@ class StockfishService {
             };
 
             this.worker.onerror = (e) => {
+                clearTimeout(initTimeout);
                 console.error('Stockfish worker error:', e);
+                // Detectar específicamente el error de memoria WASM
+                if (e.message?.includes('WebAssembly.Memory')) {
+                    reject(new Error('Error de memoria WASM: El navegador no pudo asignar memoria. Asegúrate de tener las cabeceras COOP/COEP correctamente configuradas.'));
+                } else {
+                    reject(e);
+                }
                 this.destroy();
-                reject(e);
             };
 
             this.worker.postMessage('uci');

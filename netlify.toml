@@ -5,11 +5,30 @@
 [build.environment]
   NPM_FLAGS = "--legacy-peer-deps"
 
+# Configuración global de cabeceras para Cross-Origin Isolation
+# Es vital para que Stockfish 18 pueda usar SharedArrayBuffer y multihilo
 [[headers]]
   for = "/*"
   [headers.values]
     Cross-Origin-Opener-Policy = "same-origin"
     Cross-Origin-Embedder-Policy = "require-corp"
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+# Asegurar que los archivos WASM se sirvan con el tipo correcto y caché agresiva
+[[headers]]
+  for = "*.wasm"
+  [headers.values]
+    Content-Type = "application/wasm"
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Configuración para evitar que el Service Worker interfiera con el aislamiento
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Service-Worker-Allowed = "/"
+    Cache-Control = "no-cache"
 
 [[redirects]]
   from = "/*"
