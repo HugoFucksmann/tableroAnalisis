@@ -38,6 +38,8 @@ class AnalysisQueue {
             await stockfishService.init(engineConfig);
             if (signal.aborted) return;
 
+            stockfishService.newGame();
+
             const positions = this.#buildPositions(history);
             const totalMoves = history.length;
 
@@ -59,6 +61,7 @@ class AnalysisQueue {
             });
 
             openingPromise.finally(() => {
+                if (signal.aborted) return;
                 openingState.done = true;
                 for (let i = 0; i < totalMoves; i++) {
                     this.#tryClassifyMove(i, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult);

@@ -10,7 +10,6 @@ export const DEFAULT_ENGINE_CONFIG = {
 class StockfishService {
     constructor() {
         this.worker = null;
-        this.resolvers = [];
         this._initPromise = null;
         this._resolveIdle = null;
         this._idlePromise = Promise.resolve();
@@ -18,6 +17,7 @@ class StockfishService {
         this.isSearching = false;
         this._config = { ...DEFAULT_ENGINE_CONFIG };
         this._currentReject = null;
+        this._activeHandler = null;
     }
 
     init(config = {}) {
@@ -26,12 +26,10 @@ class StockfishService {
         this._config = { ...DEFAULT_ENGINE_CONFIG, ...config };
 
         this._initPromise = new Promise((resolve, reject) => {
-            // Verificación preventiva de Aislamiento de Origen
-            // Si no está aislado, Stockfish Multithreaded fallará al asignar memoria
             const isIsolated = typeof self !== 'undefined' && self.crossOriginIsolated;
-            
+
             if (!isIsolated && this._config.threads > 1) {
-                console.warn('⚠️ El sitio no está en un contexto aislado (Cross-Origin Isolated). Forzando 1 hilo para evitar errores de memoria WASM.');
+                console.warn('⚠️ Contexto no aislado (Cross-Origin Isolated). Forzando 1 hilo.');
                 this._config.threads = 1;
             }
 
@@ -43,14 +41,6 @@ class StockfishService {
                 return;
             }
 
-            // Timeout de seguridad para detectar fallos silenciosos de memoria WASM
-            const initTimeout = setTimeout(() => {
-                if (!this.ready) {
-                    this.destroy();
-                    reject(new Error('Tiempo de espera de inicialización agotado. Verifica los logs de la consola (posible error de memoria WASM).'));
-                }
-            }, 10000);
-
             this.worker.onmessage = (e) => {
                 const line = e.data;
 
@@ -61,33 +51,37 @@ class StockfishService {
                     this.worker.postMessage('isready');
                 }
 
-                if (line === 'readyok') {
-                    clearTimeout(initTimeout);
+                if (line === 'readyok' && !this.ready) {
                     this.ready = true;
                     resolve();
                 }
 
-                if (this.resolvers.length > 0) {
-                    this.resolvers[0](line);
+                if (this._activeHandler) {
+                    this._activeHandler(line);
                 }
             };
 
             this.worker.onerror = (e) => {
-                clearTimeout(initTimeout);
                 console.error('Stockfish worker error:', e);
-                // Detectar específicamente el error de memoria WASM
+                this.destroy();
                 if (e.message?.includes('WebAssembly.Memory')) {
-                    reject(new Error('Error de memoria WASM: El navegador no pudo asignar memoria. Asegúrate de tener las cabeceras COOP/COEP correctamente configuradas.'));
+                    reject(new Error('Error de memoria WASM: Asegúrate de tener las cabeceras COOP/COEP correctamente configuradas.'));
                 } else {
                     reject(e);
                 }
-                this.destroy();
             };
 
             this.worker.postMessage('uci');
         });
 
         return this._initPromise;
+    }
+
+    /** Envía ucinewgame para limpiar hash tables. Llamar una vez por partida, no por posición. */
+    newGame() {
+        if (this.worker && this.ready) {
+            this.worker.postMessage('ucinewgame');
+        }
     }
 
     async analyzePosition(fen, depth, signal, onProgress, multiPv) {
@@ -112,7 +106,7 @@ class StockfishService {
                 if (!isFinished) {
                     isFinished = true;
                     this.isSearching = false;
-                    this.resolvers = this.resolvers.filter(r => r !== messageHandler);
+                    this._activeHandler = null;
 
                     if (this._currentReject === reject) {
                         this._currentReject = null;
@@ -123,7 +117,6 @@ class StockfishService {
                         this._resolveIdle = null;
                     }
                     signal?.removeEventListener('abort', onAbort);
-                    clearTimeout(searchTimeout);
                 }
             };
 
@@ -148,17 +141,6 @@ class StockfishService {
             };
 
             signal?.addEventListener('abort', onAbort);
-
-            // Timeout de seguridad extremo por si el motor se cuelga silenciosamente (30s)
-            const searchTimeout = setTimeout(() => {
-                if (!isFinished) {
-                    console.error('El análisis superó los 30 segundos y parece colgado. Reiniciando engine.');
-                    this.worker?.postMessage('stop');
-                    cleanup();
-                    this.destroy(); // Forzar recreación en la próxima llamada
-                    resolve({ score: 0, mate: null, bestMove: lastBestMove || 'e2e4', lines: Object.values(lines) });
-                }
-            }, 30000);
 
             const messageHandler = (line) => {
                 if (isFinished) return;
@@ -203,9 +185,8 @@ class StockfishService {
                 }
             };
 
-            this.resolvers.push(messageHandler);
+            this._activeHandler = messageHandler;
             this.worker.postMessage(`setoption name MultiPV value ${effectiveMultiPv}`);
-            this.worker.postMessage('ucinewgame');
             this.worker.postMessage('isready');
             this.worker.postMessage(`position fen ${fen}`);
             this.worker.postMessage(`go depth ${depth}`);
@@ -224,7 +205,7 @@ class StockfishService {
         this.worker = null;
         this.ready = false;
         this._initPromise = null;
-        this.resolvers = [];
+        this._activeHandler = null;
         this.isSearching = false;
 
         if (this._resolveIdle) {
