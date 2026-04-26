@@ -1,38 +1,16 @@
 import { Chess } from 'chess.js';
 import { analysisQueue } from '../../services/analysisQueue';
 import { playChessSound } from '../../utils/soundUtils';
-import { MOVE_LABELS } from '../../constants/chessConstants';
+import { replayTo, extractPgnData } from '../../utils/chessUtils';
 
-function replayTo(history, index) {
-  const g = new Chess();
-  const moves = index < 0 ? [] : history.slice(0, index + 1);
-  for (const m of moves) {
-    try { g.move(m); } catch { }
-  }
-  return g;
-}
-
-// Helper para construir el objeto evaluation desde un entry del historial
 function evalFromEntry(evalObj) {
   if (!evalObj) return { score: 0, mate: null };
   return { score: evalObj.score ?? 0, mate: evalObj.mate ?? null };
 }
 
-const ANALYSIS_RESET = {
-  evaluation: { score: 0, mate: null },  // objeto consistente con analysisSlice
-  evaluationHistory: [],
-  moveEvaluations: {},
-  bestMoves: {},
-  alternativeLines: {},
-  isAnalyzing: false,
-  analysisProgress: 0,
-  analysisReady: false,
-  gameScore: null,
+const GAME_RESET = {
   arrows: [],
   highlights: {},
-  ecoCode: '',
-  openingPly: -1,
-  openingDetected: false,
   isExploreMode: false,
   mainLineData: null,
   isAnalyzeFromPgn: false,
@@ -45,7 +23,11 @@ export const createGameSlice = (set, get) => ({
   history: [],
   currentMoveIndex: -1,
   gameHeaders: {},
-  pgnCommentsByIndex: {}, // { moveIndex: commentString } extraído al cargar el PGN
+  pgnCommentsByIndex: {},
+  ...GAME_RESET,
+
+  setArrows: (arrows) => set({ arrows }),
+  setHighlights: (highlights) => set({ highlights }),
 
   setGame: (newGame) => {
     const headers = newGame.header();
@@ -72,14 +54,15 @@ export const createGameSlice = (set, get) => ({
       const nextMove = state.history[state.currentMoveIndex + 1];
       if (nextMove && nextMove.san === result.san) {
         const safeIndex = state.currentMoveIndex + 1;
-        const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
+        const evalObj = state.evaluationHistory[safeIndex];
+
         set({
           game: gameCopy,
           fen: gameCopy.fen(),
           currentMoveIndex: safeIndex,
-          evaluation: evalFromEntry(evalObj),
           arrows: []
         });
+        get().setEvaluationDirect(evalFromEntry(evalObj));
         playChessSound(result.captured || result.san?.includes('x') ? 'capture' : 'move');
         return result;
       }
@@ -87,7 +70,7 @@ export const createGameSlice = (set, get) => ({
       const isEnteringExploreMode = !state.isExploreMode;
       const mainLineData = isEnteringExploreMode ? {
         history: [...state.history],
-        evaluationHistory: [...state.evaluationHistory],
+        evaluationHistory: { ...state.evaluationHistory },
         bestMoves: { ...state.bestMoves },
         moveEvaluations: { ...state.moveEvaluations },
         alternativeLines: { ...state.alternativeLines },
@@ -100,38 +83,18 @@ export const createGameSlice = (set, get) => ({
       ];
 
       analysisQueue.cancel();
-
-      const newBestMoves = { ...state.bestMoves };
-      const newMoveEvaluations = { ...state.moveEvaluations };
-      const newAlternativeLines = { ...state.alternativeLines };
-      const newEvaluationHistory = state.evaluationHistory.filter(e => e.moveIndex <= state.currentMoveIndex);
-
-      for (const key of Object.keys(newBestMoves)) {
-        if (parseInt(key) >= state.currentMoveIndex + 1) delete newBestMoves[key];
-      }
-      for (const key of Object.keys(newMoveEvaluations)) {
-        if (parseInt(key) >= state.currentMoveIndex + 1) delete newMoveEvaluations[key];
-      }
-      for (const key of Object.keys(newAlternativeLines)) {
-        if (parseInt(key) >= state.currentMoveIndex + 1) delete newAlternativeLines[key];
-      }
+      get().trimAnalysisState(state.currentMoveIndex);
 
       set({
         game: gameCopy,
         fen: gameCopy.fen(),
         history: newHistory,
         currentMoveIndex: newHistory.length - 1,
-        evaluation: { score: 0, mate: null },
-        bestMoves: newBestMoves,
-        moveEvaluations: newMoveEvaluations,
-        alternativeLines: newAlternativeLines,
-        evaluationHistory: newEvaluationHistory,
-        isAnalyzing: false,
-        analysisReady: true,
         arrows: [],
         isExploreMode: true,
         mainLineData,
       });
+
       playChessSound(result.captured || result.san?.includes('x') ? 'capture' : 'move');
       return result;
     } catch {
@@ -145,20 +108,19 @@ export const createGameSlice = (set, get) => ({
 
     const targetIndex = state.mainLineData.branchIndex;
     const gameCopy = replayTo(state.mainLineData.history, targetIndex);
-    const evalObj = state.mainLineData.evaluationHistory.find(e => e.moveIndex === targetIndex);
+    const evalObj = state.mainLineData.evaluationHistory[targetIndex];
+
+    get().setEvaluationHistory(state.mainLineData.evaluationHistory);
+    get().setBestMoves(state.mainLineData.bestMoves);
+    get().setMoveEvaluations(state.mainLineData.moveEvaluations);
+    get().setAlternativeLines(state.mainLineData.alternativeLines);
+    get().setEvaluationDirect(evalFromEntry(evalObj));
 
     set({
       game: gameCopy,
       fen: gameCopy.fen(),
       history: state.mainLineData.history,
       currentMoveIndex: targetIndex,
-      evaluation: evalFromEntry(evalObj),
-
-      evaluationHistory: state.mainLineData.evaluationHistory,
-      bestMoves: state.mainLineData.bestMoves,
-      moveEvaluations: state.mainLineData.moveEvaluations,
-      alternativeLines: state.mainLineData.alternativeLines,
-
       isExploreMode: false,
       mainLineData: null,
       arrows: [],
@@ -171,14 +133,14 @@ export const createGameSlice = (set, get) => ({
     const safeIndex = Math.max(-1, Math.min(index, state.history.length - 1));
     try {
       const gameCopy = replayTo(state.history, safeIndex);
-      const evalObj = state.evaluationHistory.find(e => e.moveIndex === safeIndex);
+      const evalObj = state.evaluationHistory[safeIndex];
       set({
         game: gameCopy,
         fen: gameCopy.fen(),
         currentMoveIndex: safeIndex,
-        evaluation: evalFromEntry(evalObj),
         arrows: []
       });
+      get().setEvaluationDirect(evalFromEntry(evalObj));
       playChessSound('move');
     } catch (e) {
       console.error('goToMove error:', e);
@@ -188,12 +150,15 @@ export const createGameSlice = (set, get) => ({
   resetGame: () => {
     const state = get();
     if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+
+    get().resetAnalysisState();
+
     set({
       game: new Chess(),
       fen: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
       history: [],
       currentMoveIndex: -1,
-      ...ANALYSIS_RESET
+      ...GAME_RESET
     });
     playChessSound('notify');
   },
@@ -220,78 +185,46 @@ export const createGameSlice = (set, get) => ({
       state.setGameId(Date.now());
 
       const verboseHistory = newGame.history({ verbose: true });
-
-      const newEvaluationHistory = [];
-      const newMoveEvaluations = {};
-      let hasEvaluations = false;
-
       const comments = newGame.getComments();
-      const pgnCommentsByIndex = {};
 
-      for (let i = 0; i < verboseHistory.length; i++) {
-        const move = verboseHistory[i];
-        const matchComment = comments.find(c => c.fen === move.after);
+      const {
+        evaluationHistory,
+        moveEvaluations,
+        pgnCommentsByIndex,
+        hasEvaluations,
+        initialWhiteClock,
+        initialBlackClock
+      } = extractPgnData(verboseHistory, comments);
 
-        if (matchComment && matchComment.comment) {
-          pgnCommentsByIndex[i] = matchComment.comment;
-          const commentStr = matchComment.comment;
-
-          const evalMatch = commentStr.match(/\[%eval\s+([-\d.]+)\]/);
-          if (evalMatch) {
-            // Guardar con mate: null para consistencia con el objeto evaluation
-            newEvaluationHistory.push({ moveIndex: i, score: parseFloat(evalMatch[1]), mate: null });
-            hasEvaluations = true;
-          }
-
-          for (const label of MOVE_LABELS) {
-            if (commentStr.includes(label)) {
-              newMoveEvaluations[i] = label;
-              break;
-            }
-          }
-        }
-      }
-
-      // Calcular el reloj inicial
-      let initialWhiteClock = null;
-      let initialBlackClock = null;
-      const lastIdx = verboseHistory.length - 1;
-      for (let i = 0; i <= lastIdx; i++) {
-        const comment = pgnCommentsByIndex[i];
-        if (comment) {
-          const match = comment.match(/\[%clk\s+([^\]]+)\]/);
-          if (match) {
-            if (verboseHistory[i].color === 'w') initialWhiteClock = match[1];
-            else initialBlackClock = match[1];
-          }
-        }
-      }
+      const evalHistoryDict = Array.isArray(evaluationHistory)
+        ? evaluationHistory.reduce((acc, curr) => ({ ...acc, [curr.moveIndex]: curr }), {})
+        : evaluationHistory;
 
       const targetIdx = verboseHistory.length > 0 ? 0 : -1;
       const gameCopy = replayTo(verboseHistory, targetIdx);
       if (headers.FEN && targetIdx === -1) gameCopy.load(headers.FEN);
 
-      const evalObj = newEvaluationHistory.find(e => e.moveIndex === targetIdx);
+      const evalObj = evalHistoryDict[targetIdx];
+
+      get().resetAnalysisState();
 
       set({
         game: gameCopy,
         fen: gameCopy.fen(),
         history: verboseHistory,
         currentMoveIndex: targetIdx,
-        ...ANALYSIS_RESET,
-        evaluationHistory: newEvaluationHistory,
-        moveEvaluations: newMoveEvaluations,
-        analysisReady: hasEvaluations,
+        ...GAME_RESET,
         isAnalyzeFromPgn: hasEvaluations,
-        wantsFullAnalysis: false,
         gameHeaders: headers,
         pgnCommentsByIndex,
-        evaluation: evalFromEntry(evalObj),
       });
 
-      // Setear relojes después del set principal para que el efecto del hook no los pise
-      state.setClocks(initialWhiteClock, initialBlackClock);
+      get().setEvaluationHistory(evalHistoryDict);
+      get().setMoveEvaluations(moveEvaluations);
+      get().setAnalysisReady(hasEvaluations);
+      get().setEvaluationDirect(evalFromEntry(evalObj));
 
+      state.setClocks(initialWhiteClock, initialBlackClock);
       playChessSound('notify');
       return true;
     } catch (e) {
@@ -305,18 +238,13 @@ export const createGameSlice = (set, get) => ({
   startFullAnalysis: () => {
     const state = get();
     if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+
+    get().resetAnalysisState();
+
     set({
       isAnalyzeFromPgn: false,
       wantsFullAnalysis: true,
       gameId: Date.now(),
-      evaluationHistory: [],
-      moveEvaluations: {},
-      bestMoves: {},
-      alternativeLines: {},
-      analysisReady: false,
-      isAnalyzing: false,
-      analysisProgress: 0,
-      gameScore: null,
     });
   },
 });

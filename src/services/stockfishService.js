@@ -17,6 +17,7 @@ class StockfishService {
         this.ready = false;
         this.isSearching = false;
         this._config = { ...DEFAULT_ENGINE_CONFIG };
+        this._currentReject = null;
     }
 
     init(config = {}) {
@@ -66,23 +67,32 @@ class StockfishService {
     }
 
     async analyzePosition(fen, depth, signal, onProgress, multiPv) {
+        if (!fen || typeof fen !== 'string' || fen.trim().split(/\s+/).length < 4) {
+            return Promise.reject(new Error('FEN inválido'));
+        }
+
         await this._idlePromise;
 
         const effectiveMultiPv = multiPv ?? this._config.multiPv;
 
         return new Promise((resolve, reject) => {
             if (!this.ready) {
-                reject(new Error('Stockfish no esta listo'));
+                reject(new Error('Stockfish no está listo'));
                 return;
             }
 
             let isFinished = false;
+            this._currentReject = reject;
 
             const cleanup = () => {
                 if (!isFinished) {
                     isFinished = true;
                     this.isSearching = false;
                     this.resolvers = this.resolvers.filter(r => r !== messageHandler);
+
+                    if (this._currentReject === reject) {
+                        this._currentReject = null;
+                    }
 
                     if (this._resolveIdle) {
                         this._resolveIdle();
@@ -105,14 +115,18 @@ class StockfishService {
             let lastBestMove = '';
 
             const onAbort = () => {
-                this.worker?.postMessage('stop');
-                cleanup();
-                reject(new DOMException('Aborted', 'AbortError'));
+                if (!isFinished) {
+                    this.worker?.postMessage('stop');
+                    cleanup();
+                    reject(new DOMException('Aborted', 'AbortError'));
+                }
             };
 
             signal?.addEventListener('abort', onAbort);
 
             const messageHandler = (line) => {
+                if (isFinished) return; // FIX: Prevenir promesas fantasmas tras abortar
+
                 if (line.startsWith('info') && line.includes('score')) {
                     const multipvMatch = line.match(/multipv (\d+)/);
                     const cpMatch = line.match(/score cp (-?\d+)/);
@@ -176,18 +190,18 @@ class StockfishService {
         this._initPromise = null;
         this.resolvers = [];
         this.isSearching = false;
+
         if (this._resolveIdle) {
             this._resolveIdle();
             this._resolveIdle = null;
         }
         this._idlePromise = Promise.resolve();
+
+        if (this._currentReject) {
+            this._currentReject(new DOMException('Engine destroyed', 'AbortError'));
+            this._currentReject = null;
+        }
     }
 }
 
-
 export const stockfishService = new StockfishService();
-
-
-
-
-

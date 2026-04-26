@@ -15,31 +15,49 @@ import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
 import { EngineConfigModal } from '../Import/EngineConfigModal';
 import './Dashboard.css';
 
-const isMobileViewport = () =>
-  typeof window !== 'undefined' && window.innerWidth <= 1100;
+// FIX: Hook personalizado extraído para limpiar el Dashboard
+const usePanelManagement = () => {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth <= 1100 : false
+  );
+  const [isImportCollapsed, setIsImportCollapsed] = useState(isMobile);
+  const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(isMobile);
+  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const currentIsMobile = window.innerWidth <= 1100;
+      if (currentIsMobile !== isMobile) {
+        setIsMobile(currentIsMobile);
+        setIsImportCollapsed(currentIsMobile);
+        setIsExplorerCollapsed(currentIsMobile);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isMobile]);
+
+  return {
+    isImportCollapsed, setIsImportCollapsed,
+    isExplorerCollapsed, setIsExplorerCollapsed,
+    isHistoryCollapsed, setIsHistoryCollapsed
+  };
+};
 
 export const Dashboard = () => {
-  // Panel states
-  const [isImportCollapsed, setIsImportCollapsed] = useState(isMobileViewport());
-  const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(isMobileViewport());
-  const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
+  const {
+    isImportCollapsed, setIsImportCollapsed,
+    isExplorerCollapsed, setIsExplorerCollapsed,
+    isHistoryCollapsed, setIsHistoryCollapsed
+  } = usePanelManagement();
+
   const [showEngineConfig, setShowEngineConfig] = useState(false);
 
   const {
-    openingName,
-    ecoCode,
-    showTokenInput,
-    setShowTokenInput,
-    lichessToken,
-    history,
-    moveEvaluations,
-    evaluationHistory,
-    engineConfig,
-    gameHeaders,
-    isAnalyzeFromPgn,
-    startFullAnalysis,
-    pgnCommentsByIndex,
-    analysisReady,
+    openingName, ecoCode, showTokenInput, setShowTokenInput,
+    lichessToken, history, moveEvaluations, evaluationHistory,
+    engineConfig, gameHeaders, isAnalyzeFromPgn, startFullAnalysis,
+    pgnCommentsByIndex, analysisReady,
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -63,10 +81,7 @@ export const Dashboard = () => {
   };
 
   useEffect(() => {
-    // Limpieza al desmontar el Dashboard para liberar memoria
-    return () => {
-      stockfishService.destroy();
-    };
+    return () => stockfishService.destroy();
   }, []);
 
   const explorerTitle = (openingName && openingName !== 'Initial Position') ? openingName : 'Explorador';
@@ -76,18 +91,14 @@ export const Dashboard = () => {
       <AnalysisLoadingModal />
 
       <main className="dashboard-content">
-        {/* ── Left: Board Section ───────────────────────────────────── */}
         <section className="board-section glass-panel">
           <div className="board-wrapper">
             <Board />
           </div>
         </section>
 
-
-        {/* ── Right: Side panels ────────────────────────────── */}
         <aside className="side-panels">
-
-          {/* Controls + Graph — High Priority */}
+          {/* Controls + Graph */}
           <div className="panel-container glass-panel controls-panel">
             <div className="panel-header">
               <h3>Análisis</h3>
@@ -137,46 +148,40 @@ export const Dashboard = () => {
                 <h3>Importar</h3>
               </div>
               <div className="panel-actions">
-                <>
-                  {(!analysisReady || isAnalyzeFromPgn) && (
-                    <button
-                      className="panel-action-btn"
-                      title="Analizar Partida con Stockfish"
-                      onClick={(e) => { e.stopPropagation(); startFullAnalysis(); }}
-                    >
-                      <Cpu size={14} />
-                    </button>
-                  )}
-                  {analysisReady && (
-                    <button
-                      className="panel-action-btn"
-                      title="Descargar PGN"
-                      onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
-                    >
-                      <Download size={14} />
-                    </button>
-                  )}
+                {(!analysisReady || isAnalyzeFromPgn) && (
                   <button
                     className="panel-action-btn"
-                    title="Configurar motor de análisis"
-                    onClick={(e) => { e.stopPropagation(); setShowEngineConfig(true); }}
+                    title="Analizar Partida con Stockfish"
+                    onClick={(e) => { e.stopPropagation(); startFullAnalysis(); }}
                   >
-                    <Settings size={14} />
+                    <Cpu size={14} />
                   </button>
-                </>
+                )}
+                {analysisReady && (
+                  <button
+                    className="panel-action-btn"
+                    title="Descargar PGN"
+                    onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
+                  >
+                    <Download size={14} />
+                  </button>
+                )}
+                <button
+                  className="panel-action-btn"
+                  title="Configurar motor de análisis"
+                  onClick={(e) => { e.stopPropagation(); setShowEngineConfig(true); }}
+                >
+                  <Settings size={14} />
+                </button>
                 <span className="collapse-toggle">{isImportCollapsed ? '+' : '−'}</span>
               </div>
             </div>
-            {!isImportCollapsed && (
-              <GameImport onGameSelect={() => setIsImportCollapsed(true)} />
-            )}
+            {!isImportCollapsed && <GameImport onGameSelect={() => setIsImportCollapsed(true)} />}
           </div>
         </aside>
       </main>
 
-      {showEngineConfig && (
-        <EngineConfigModal onClose={() => setShowEngineConfig(false)} />
-      )}
+      {showEngineConfig && <EngineConfigModal onClose={() => setShowEngineConfig(false)} />}
     </div>
   );
 };

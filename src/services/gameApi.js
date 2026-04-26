@@ -1,4 +1,4 @@
-export async function fetchLichessGames(username, max = 15, until = null, token = '') {
+export async function fetchLichessGames(username, max = 15, until = null, token = '', signal = null) {
   try {
     const headers = { 'Accept': 'application/x-ndjson' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -6,46 +6,43 @@ export async function fetchLichessGames(username, max = 15, until = null, token 
     let url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${max}&pgnInJson=true`;
     if (until) url += `&until=${until}`;
 
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers, signal });
     if (!res.ok) throw new Error('Usuario no encontrado o error en Lichess');
 
     const text = await res.text();
-
     const lines = text.split('\n').filter(line => line.trim().length > 0);
 
-    const games = lines.map(line => {
-      const game = JSON.parse(line);
-      return {
-        id: game.id,
-        white: game.players.white.user?.name || 'Anon',
-        black: game.players.black.user?.name || 'Anon',
-        result: game.winner === 'white' ? '1-0' : game.winner === 'black' ? '0-1' : '1/2-1/2',
-        date: new Date(game.createdAt).toLocaleDateString(),
-        pgn: game.pgn,
-        createdAt: game.createdAt,
-      };
-    });
+    // Fix NDJSON Crashing: Si la API corta el string a la mitad, no rompemos toda la ejecución
+    const games = lines.reduce((acc, line) => {
+      try {
+        const game = JSON.parse(line);
+        acc.push({
+          id: game.id,
+          white: game.players.white.user?.name || 'Anon',
+          black: game.players.black.user?.name || 'Anon',
+          result: game.winner === 'white' ? '1-0' : game.winner === 'black' ? '0-1' : '1/2-1/2',
+          date: new Date(game.createdAt).toLocaleDateString(),
+          pgn: game.pgn,
+          createdAt: game.createdAt,
+        });
+      } catch (e) {
+        console.warn('Línea NDJSON corrupta ignorada (Conexión cortada por el servidor)');
+      }
+      return acc;
+    }, []);
 
-    const result = {
+    return {
       games,
       lastTimestamp: games.length > 0 ? games[games.length - 1].createdAt : null,
       hasMore: games.length === max
     };
-
-    console.log('[Lichess Games Data]:', result);
-    return result;
   } catch (err) {
-    console.error(err);
+    if (err.name !== 'AbortError') console.error(err);
     throw err;
   }
 }
 
-/**
- * Para Chess.com, la paginación es manual por archivos mensuales.
- * @param {string} username 
- * @param {object} pagination { archives, currentArchiveIdx, offset }
- */
-export async function fetchChesscomGames(username, max = 15, pagination = null) {
+export async function fetchChesscomGames(username, max = 15, pagination = null, signal = null) {
   try {
     const headers = {
       'User-Agent': 'ChessPuzzleTrainer/1.0 (Contact: elcolof@gmail.com)',
@@ -57,10 +54,9 @@ export async function fetchChesscomGames(username, max = 15, pagination = null) 
     let offset = pagination?.offset ?? 0;
 
     if (!archives) {
-      const archiveRes = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/archives`, { headers });
+      const archiveRes = await fetch(`https://api.chess.com/pub/player/${encodeURIComponent(username)}/games/archives`, { headers, signal });
       if (!archiveRes.ok) throw new Error('Usuario no encontrado en Chess.com');
       const archiveData = await archiveRes.json();
-      console.log('[Chess.com Archives Data]:', archiveData);
 
       if (!archiveData.archives || archiveData.archives.length === 0) return { games: [], pagination: null };
       archives = [...archiveData.archives].reverse();
@@ -69,7 +65,7 @@ export async function fetchChesscomGames(username, max = 15, pagination = null) 
     let collectedGames = [];
 
     while (currentIdx < archives.length && collectedGames.length < max) {
-      const res = await fetch(archives[currentIdx], { headers });
+      const res = await fetch(archives[currentIdx], { headers, signal });
 
       if (!res.ok) {
         currentIdx++;
@@ -78,10 +74,8 @@ export async function fetchChesscomGames(username, max = 15, pagination = null) 
       }
 
       const data = await res.json();
-      console.log('[Chess.com Monthly Data]:', data);
       const allMonthlyGames = [...data.games].reverse();
       const available = allMonthlyGames.slice(offset);
-
       const needed = max - collectedGames.length;
       const toAdd = available.slice(0, needed);
 
@@ -109,43 +103,31 @@ export async function fetchChesscomGames(username, max = 15, pagination = null) 
       };
     });
 
-    const finalResult = {
+    return {
       games: formattedGames,
-      pagination: {
-        archives,
-        currentArchiveIdx: currentIdx,
-        offset
-      },
+      pagination: { archives, currentArchiveIdx: currentIdx, offset },
       hasMore: currentIdx < archives.length || (currentIdx === archives.length - 1 && offset > 0)
     };
-
-    console.log('[Chess.com Formatted Result]:', finalResult);
-    return finalResult;
   } catch (err) {
-    console.error(err);
+    if (err.name !== 'AbortError') console.error(err);
     throw err;
   }
 }
 
-export async function fetchOpeningExplorer(fen, token = '', ratings = '1600,1800,2000,2200,2500') {
+export async function fetchOpeningExplorer(fen, token = '', ratings = '1600,1800,2000,2200,2500', signal = null) {
   try {
-    // Normalizamos el FEN para la API (primeras 4 partes son suficientes)
     const fenParts = fen.split(' ');
     const cleanFen = fenParts.slice(0, 4).join(' ');
 
     const url = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(cleanFen)}&ratings=${ratings}`;
-
     const headers = {};
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(url, { headers });
+    const res = await fetch(url, { headers, signal });
 
-    if (!res.ok) {
-      throw new Error(`Lichess API error: ${res.status}`);
-    }
+    if (!res.ok) throw new Error(`Lichess API error: ${res.status}`);
 
     const data = await res.json();
-    //console.log('[Lichess Explorer Data]:', data);
 
     if (!data.moves) return { opening: 'Posición no encontrada', moves: [] };
 
@@ -167,7 +149,7 @@ export async function fetchOpeningExplorer(fen, token = '', ratings = '1600,1800
       })
     };
   } catch (err) {
-    console.error('fetchOpeningExplorer error:', err);
+    if (err.name !== 'AbortError') console.error('fetchOpeningExplorer error:', err);
     throw err;
   }
 }

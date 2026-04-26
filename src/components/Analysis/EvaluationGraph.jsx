@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
 import './EvaluationGraph.css';
@@ -7,7 +7,6 @@ const WIDTH = 400;
 const HEIGHT = 80;
 const PADDING = 6;
 
-// ── Mistake classification ────────────────────────────────────────────────────
 const MISTAKE_STYLES = {
   'Error grave': { color: '#e05555', symbol: '??' },
   'Error': { color: '#e09a30', symbol: '?' },
@@ -32,12 +31,12 @@ export const EvaluationGraph = () => {
     useGameStore();
 
   const MISTAKE_TYPES = ['Error grave', 'Error', 'Imprecisión'];
-
   const total = history.length;
   const midY = getY(0);
 
-  const { sorted, areaPath, linePoints } = React.useMemo(() => {
-    const sortedData = [...evaluationHistory].sort((a, b) => a.moveIndex - b.moveIndex);
+  const { sorted, areaPath, linePoints } = useMemo(() => {
+    // FIX: Convertir el diccionario en array antes de ordenar
+    const sortedData = Object.values(evaluationHistory || {}).sort((a, b) => a.moveIndex - b.moveIndex);
     const linePts = sortedData.map(d => `${getX(d.moveIndex, total)},${getY(d.score)}`);
 
     let areaP = '';
@@ -55,24 +54,23 @@ export const EvaluationGraph = () => {
     return { sorted: sortedData, areaPath: areaP, linePoints: linePts };
   }, [evaluationHistory, total, midY]);
 
-  const currentEval = React.useMemo(() =>
-    evaluationHistory.find(e => e.moveIndex === currentMoveIndex),
-    [evaluationHistory, currentMoveIndex]
-  );
+  // FIX: Acceso O(1) al diccionario
+  const currentEval = evaluationHistory?.[currentMoveIndex];
 
-  const mistakeMarkers = React.useMemo(() => {
+  const mistakeMarkers = useMemo(() => {
     if (!moveEvaluations || total === 0) return [];
     return Object.entries(moveEvaluations)
       .filter(([, type]) => MISTAKE_TYPES.includes(type))
       .map(([idxStr, type]) => {
         const idx = parseInt(idxStr);
-        const evalObj = evaluationHistory.find(e => e.moveIndex === idx);
+        // FIX: Acceso O(1) al diccionario
+        const evalObj = evaluationHistory?.[idx];
         const score = evalObj?.score ?? 0;
         return { idx, type, x: getX(idx, total), y: getY(score), style: MISTAKE_STYLES[type] };
       });
   }, [moveEvaluations, evaluationHistory, total]);
 
-  const mistakeIndices = React.useMemo(() => {
+  const mistakeIndices = useMemo(() => {
     return mistakeMarkers.map(m => m.idx).sort((a, b) => a - b);
   }, [mistakeMarkers]);
 
@@ -161,20 +159,15 @@ export const EvaluationGraph = () => {
           </clipPath>
         </defs>
 
-        {/* Área ventaja blancas */}
         <path d={areaPath} fill="url(#evalGradientWhite)" clipPath="url(#clipAbove)" />
-        {/* Área ventaja negras */}
         <path d={areaPath} fill="url(#evalGradientBlack)" clipPath="url(#clipBelow)" />
 
-        {/* Baseline */}
         <line x1={PADDING} y1={midY} x2={WIDTH - PADDING} y2={midY} className="baseline" />
 
-        {/* Línea de evaluación */}
         {sorted.length > 1 && (
           <polyline points={linePoints.join(' ')} className="eval-line" />
         )}
 
-        {/* ── Mistake markers ─────────────────────────────────────────── */}
         {mistakeMarkers.map(({ idx, x, y, style, type }) => {
           const isCurrent = idx === currentMoveIndex;
           return (
@@ -183,7 +176,6 @@ export const EvaluationGraph = () => {
               className="mistake-marker-group"
               onClick={(e) => { e.stopPropagation(); goToMove(idx); }}
             >
-              {/* Vertical tick at bottom */}
               <line
                 x1={x} y1={HEIGHT - PADDING}
                 x2={x} y2={HEIGHT - PADDING - 5}
@@ -191,7 +183,6 @@ export const EvaluationGraph = () => {
                 strokeWidth={isCurrent ? 2 : 1.5}
                 opacity={isCurrent ? 1 : 0.7}
               />
-              {/* Diamond marker on the eval line */}
               <polygon
                 points={`${x},${y - 4} ${x + 3},${y} ${x},${y + 4} ${x - 3},${y}`}
                 fill={style.color}
@@ -202,7 +193,6 @@ export const EvaluationGraph = () => {
           );
         })}
 
-        {/* Marcador movimiento actual */}
         {currentMoveIndex >= 0 && (
           <line
             x1={getX(currentMoveIndex, total)}
@@ -213,7 +203,6 @@ export const EvaluationGraph = () => {
           />
         )}
 
-        {/* Punto activo */}
         {currentEval && (
           <circle
             cx={getX(currentEval.moveIndex, total)}
@@ -224,7 +213,6 @@ export const EvaluationGraph = () => {
         )}
       </svg>
 
-      {/* Precisión final */}
       {analysisReady && (
         gameScore ? (
           <div className="accuracy-row">

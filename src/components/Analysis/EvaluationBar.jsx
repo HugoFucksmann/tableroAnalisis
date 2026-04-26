@@ -3,36 +3,37 @@ import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/useGameStore';
 import './EvaluationBar.css';
 
+const MAX_EVAL_DISPLAY = 5; // Constante para eliminar los Magic Numbers visuales
+
 export const EvaluationBar = ({ orientation = 'vertical' }) => {
   const evaluation = useGameStore(state => state.evaluation);
   const evaluationValue = evaluation?.score ?? 0;
   const mate = evaluation?.mate;
-  
-  // Normalizar la evaluación para el porcentaje (limitando a +/- 5)
-  const clampedEval = Math.max(-5, Math.min(5, evaluationValue));
-  const percentage = ((clampedEval + 5) / 10) * 100;
 
-  const displayValue = evaluationValue > 0 
-    ? `+${evaluationValue.toFixed(1)}` 
+  const clampedEval = Math.max(-MAX_EVAL_DISPLAY, Math.min(MAX_EVAL_DISPLAY, evaluationValue));
+  const percentage = ((clampedEval + MAX_EVAL_DISPLAY) / (MAX_EVAL_DISPLAY * 2)) * 100;
+
+  const displayValue = evaluationValue > 0
+    ? `+${evaluationValue.toFixed(1)}`
     : evaluationValue.toFixed(1);
 
   const isVertical = orientation === 'vertical';
 
   return (
-    <div 
+    <div
       className={`eval-bar-wrapper ${orientation}`}
       role="progressbar"
       aria-valuenow={evaluationValue}
-      aria-valuemin="-5"
-      aria-valuemax="5"
+      aria-valuemin={-MAX_EVAL_DISPLAY}
+      aria-valuemax={MAX_EVAL_DISPLAY}
       aria-label={`Evaluación: ${displayValue}`}
     >
       <div className="eval-bar-container">
         <motion.div
           className="eval-bar-fill"
           initial={isVertical ? { height: '50%' } : { width: '50%' }}
-          animate={isVertical 
-            ? { height: `${100 - percentage}%` } 
+          animate={isVertical
+            ? { height: `${100 - percentage}%` }
             : { width: `${percentage}%` }
           }
           transition={{ type: 'spring', stiffness: 50, damping: 20 }}
@@ -48,5 +49,3 @@ export const EvaluationBar = ({ orientation = 'vertical' }) => {
     </div>
   );
 };
-
-

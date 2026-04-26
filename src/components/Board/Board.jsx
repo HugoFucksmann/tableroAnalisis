@@ -64,6 +64,7 @@ export const Board = () => {
   })));
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [promotionMove, setPromotionMove] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -87,21 +88,18 @@ export const Board = () => {
 
     const handleWheel = (e) => {
       e.preventDefault();
-      
+
       const now = performance.now();
-      // Throttle de 60ms para evitar saltos locos con trackpads o scroll muy rápido
       if (now - lastScrollTime < 60) return;
 
       const { currentMoveIndex: currentIdx, maxIndex } = scrollState.current;
 
-      // Scroll hacia abajo (deltaY > 0) -> Siguiente jugada
       if (e.deltaY > 0) {
         if (currentIdx < maxIndex) {
           goToMove(currentIdx + 1);
           lastScrollTime = now;
         }
-      } 
-      // Scroll hacia arriba (deltaY < 0) -> Jugada anterior
+      }
       else if (e.deltaY < 0) {
         if (currentIdx > -1) {
           goToMove(currentIdx - 1);
@@ -118,29 +116,22 @@ export const Board = () => {
   const material = React.useMemo(() => calculateMaterial(fen), [fen]);
   const activeColor = React.useMemo(() => getActiveColor(fen), [fen]);
 
-  // Last-move highlight squares
   const squareStyles = React.useMemo(() => {
     const highlights = {};
-    
-    // 1. Last move highlights
     const move = currentMoveIndex >= 0 ? history[currentMoveIndex] : null;
     if (move) {
       highlights[move.from] = { backgroundColor: 'rgba(255, 255, 100, 0.22)' };
       highlights[move.to] = { backgroundColor: 'rgba(255, 255, 100, 0.32)' };
     }
-
     return highlights;
   }, [currentMoveIndex, history]);
 
-  // Merged arrows: engine alternative lines (max 5) + store arrows (opening explorer)
   const combinedArrows = React.useMemo(() => {
     const storeArrows = arrows ?? [];
     const lines = alternativeLines[currentMoveIndex] ?? [];
     const arrowMap = new Map();
 
-    // 1) Motor: Mostrar todas las líneas alternativas calculadas por el motor (según config MultiPV)
     lines.forEach((line) => {
-      // Opacidad decreciente según el ranking: 90%, 70%, 50%, 30%, 15%
       const opacities = { 1: '0.9', 2: '0.7', 3: '0.5', 4: '0.3', 5: '0.15' };
       const opacity = opacities[line.multipv] || '0.1';
       const color = `rgba(0, 193, 177, ${opacity})`;
@@ -154,7 +145,6 @@ export const Board = () => {
       }
     });
 
-    // Fallback: si no hay líneas pero sí bestMove (por si acaso)
     if (arrowMap.size === 0 && bestMoves[currentMoveIndex]) {
       const arrow = uciToArrow(bestMoves[currentMoveIndex], 'rgba(0, 193, 177, 0.9)');
       if (arrow) {
@@ -163,13 +153,8 @@ export const Board = () => {
       }
     }
 
-    // 2) Flechas del store (ej: Opening Explorer)
     for (const arrow of storeArrows) {
       const key = `${arrow.startSquare}-${arrow.endSquare}`;
-      
-      // Si es un "hover" activo del explorador (suele ser 1 sola flecha),
-      // sobreescribimos la flecha del motor para que destaque la azul fuerte.
-      // Si son las flechas default del libro (varias), priorizamos las del motor.
       if (storeArrows.length === 1) {
         arrowMap.set(key, arrow);
       } else {
@@ -178,14 +163,39 @@ export const Board = () => {
         }
       }
     }
-    
+
     return Array.from(arrowMap.values());
   }, [alternativeLines, bestMoves, currentMoveIndex, arrows]);
 
   // ── Event handlers ────────────────────────────────────────────────────────
-  function onDrop({ sourceSquare, targetSquare }) {
+
+  function onDrop(arg1, arg2, arg3) {
+    // Compatibilidad tanto si los argumentos vienen desestructurados en un objeto o de forma nativa
+    const sourceSquare = typeof arg1 === 'object' ? arg1.sourceSquare : arg1;
+    const targetSquare = typeof arg1 === 'object' ? arg1.targetSquare : arg2;
+    const piece = typeof arg1 === 'object' ? arg1.piece : arg3;
+
     if (!targetSquare || sourceSquare === targetSquare) return false;
+
+    // Verificar si es un peón y si está en la fila de promoción
+    const isPawn = piece ? piece[1] === 'P' : true;
+    const isPromotionRank = targetSquare[1] === '8' || targetSquare[1] === '1';
+
+    if (isPawn && isPromotionRank) {
+      setPromotionMove({ from: sourceSquare, to: targetSquare });
+      return false;
+    }
+
     return makeMove({ from: sourceSquare, to: targetSquare, promotion: 'q' }) !== null;
+  }
+
+  function onPromotionPieceSelect(piece) {
+    if (piece && promotionMove) {
+      const promPiece = piece[1].toLowerCase();
+      makeMove({ ...promotionMove, promotion: promPiece });
+    }
+    setPromotionMove(null);
+    return true;
   }
 
   // ── Layout helpers ────────────────────────────────────────────────────────
@@ -225,6 +235,8 @@ export const Board = () => {
                 squareStyles: squareStyles,
                 animationDurationInMs: 180,
               }}
+              promotionToSquare={promotionMove?.to ?? null}
+              onPromotionPieceSelect={onPromotionPieceSelect}
             />
             <EvalBadgeOverlay
               currentMoveIndex={currentMoveIndex}

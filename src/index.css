@@ -40,38 +40,22 @@
   /* ── Typography ─────────────────────────────────────────────── */
   --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
 
-  /* Escala tipográfica con clamp(mínimo, fluido, máximo)
-     Mínimo: 1280px desktop, Máximo: 1920px+               */
   --text-xs: clamp(0.625rem, 0.55vw, 0.75rem);
-  /* ~10–12px */
   --text-sm: clamp(0.75rem, 0.65vw, 0.875rem);
-  /* ~12–14px */
   --text-md: clamp(0.875rem, 0.75vw, 1rem);
-  /* ~14–16px */
   --text-lg: clamp(1rem, 0.9vw, 1.25rem);
-  /* ~16–20px */
   --text-xl: clamp(1.125rem, 1.1vw, 1.5rem);
-  /* ~18–24px */
 
   /* ── Spacing ────────────────────────────────────────────────── */
-  /* Escala de 4pt base, relativa al viewport para fluir entre resoluciones */
   --space-1: clamp(0.25rem, 0.3vw, 0.375rem);
-  /* ~4–6px   */
   --space-2: clamp(0.375rem, 0.4vw, 0.5rem);
-  /* ~6–8px   */
   --space-3: clamp(0.5rem, 0.5vw, 0.625rem);
-  /* ~8–10px  */
   --space-4: clamp(0.625rem, 0.6vw, 0.75rem);
-  /* ~10–12px */
   --space-5: clamp(0.75rem, 0.7vw, 1rem);
-  /* ~12–16px */
   --space-6: clamp(1rem, 0.9vw, 1.25rem);
-  /* ~16–20px */
   --space-8: clamp(1.25rem, 1.2vw, 1.75rem);
-  /* ~20–28px */
 
   /* ── Layout ─────────────────────────────────────────────────── */
-  /* Side panel: un poco más ancho como se pidió */
   --side-panel-width: clamp(18.5rem, 24vw, 24rem);
 
   @media (max-width: 1440px) {
@@ -99,8 +83,9 @@
 
 /* ── Body ───────────────────────────────────────────────────────── */
 html {
-  /* Permite que 1rem = 16px siempre, sin override del user-agent */
   font-size: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: #333 #1a1a1a;
 }
 
 body {
@@ -143,51 +128,26 @@ body {
   background: rgba(255, 255, 255, 0.05);
 }
 
-/* ── Utility: Premium Scrollbar ─────────────────────────────────── */
+/* ── Utility: Premium Scrollbar (Global & Scoped Unificado) ─────── */
+::-webkit-scrollbar,
 .premium-scroll::-webkit-scrollbar {
-  width: 0.3rem;
+  width: 8px;
 }
 
+::-webkit-scrollbar-track,
 .premium-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
+::-webkit-scrollbar-thumb,
 .premium-scroll::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 0.625rem;
+  border-radius: 10px;
+  border: 2px solid var(--bg-primary);
+  /* Efecto de padding integrado */
 }
 
+::-webkit-scrollbar-thumb:hover,
 .premium-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--accent-primary);
-}
-
-/* Para navegadores basados en WebKit (Chrome, Edge, Safari) */
-::-webkit-scrollbar {
-  width: 10px;
-  /* Ancho de la barra */
-}
-
-::-webkit-scrollbar-track {
-  background: #1a1a1a;
-  /* Fondo oscuro de la pista */
-}
-
-::-webkit-scrollbar-thumb {
-  background: #333;
-  /* Color oscuro del "pulgar" */
-  border-radius: 5px;
-  /* Redondeo */
-  border: 2px solid #1a1a1a;
-  /* Crea el efecto de espacio/subtileza */
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #444;
-  /* Un toque más claro al pasar el mouse */
-}
-
-/* Para Firefox */
-html {
-  scrollbar-width: thin;
-  scrollbar-color: #333 #1a1a1a;
 }

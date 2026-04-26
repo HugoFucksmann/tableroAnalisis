@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo, useRef, useEffect } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
@@ -14,10 +14,11 @@ export const MoveList = () => {
     isExploreMode: state.isExploreMode,
     restoreMainLine: state.restoreMainLine,
   })));
-  const scrollRef = React.useRef(null);
+
+  const scrollRef = useRef(null);
 
   // Auto-scroll al movimiento activo
-  React.useEffect(() => {
+  useEffect(() => {
     if (scrollRef.current) {
       const activeItem = scrollRef.current.querySelector('.move-item.active');
       if (activeItem) {
@@ -26,19 +27,22 @@ export const MoveList = () => {
     }
   }, [currentMoveIndex]);
 
-  const getSan = (entry) =>
-    entry && typeof entry === 'object' ? entry.san : entry;
+  const getSan = (entry) => (entry && typeof entry === 'object' ? entry.san : entry);
 
-  const movePairs = [];
-  for (let i = 0; i < history.length; i += 2) {
-    movePairs.push({
-      round: Math.floor(i / 2) + 1,
-      white: { ...history[i], san: getSan(history[i]), index: i, eval: moveEvaluations[i] },
-      black: history[i + 1]
-        ? { ...history[i + 1], san: getSan(history[i + 1]), index: i + 1, eval: moveEvaluations[i + 1] }
-        : null,
-    });
-  }
+  // FIX: Memoización O(N) solo cuando cambia el historial o las evaluaciones
+  const movePairs = useMemo(() => {
+    const pairs = [];
+    for (let i = 0; i < history.length; i += 2) {
+      pairs.push({
+        round: Math.floor(i / 2) + 1,
+        white: { ...history[i], san: getSan(history[i]), index: i, eval: moveEvaluations[i] },
+        black: history[i + 1]
+          ? { ...history[i + 1], san: getSan(history[i + 1]), index: i + 1, eval: moveEvaluations[i + 1] }
+          : null,
+      });
+    }
+    return pairs;
+  }, [history, moveEvaluations]);
 
   const renderMove = (move, side) => {
     if (!move) return null;

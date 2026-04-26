@@ -1,7 +1,6 @@
 import { Chess } from 'chess.js';
 import { stockfishService } from './stockfishService';
 import { useGameStore } from '../store/useGameStore';
-
 import { ChessMath } from '../utils/chessMath';
 import { EvaluationEngine } from '../analysis/evaluationRules';
 import { OpeningService, MAX_BOOK_PLY } from '../analysis/openingService';
@@ -26,7 +25,6 @@ class AnalysisQueue {
         if (!history || history.length === 0) return;
 
         const engineConfig = useGameStore.getState().engineConfig ?? {};
-
         stockfishService.destroy();
 
         this.#abortController = new AbortController();
@@ -47,6 +45,7 @@ class AnalysisQueue {
             const bookStatus = new Array(totalMoves).fill(null);
             const completedMoves = new Set();
             const finalMoveData = new Array(totalMoves);
+            let evaluatedCount = 0;
 
             const openingState = { done: false };
 
@@ -54,17 +53,15 @@ class AnalysisQueue {
                 positions, history, gameId, token: lichessToken, signal,
                 onPlyResolved: (ply, isBook) => {
                     bookStatus[ply] = isBook;
-                    this.#tryResolveMove(ply, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryClassifyMove(ply, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult);
                 },
                 onOpeningDetected
             });
 
-            // Análisis de apertura en paralelo
             openingPromise.finally(() => {
                 openingState.done = true;
-                // Resolver todos los plies pendientes ahora que sabemos el estado de libro
                 for (let i = 0; i < totalMoves; i++) {
-                    this.#tryResolveMove(i, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    this.#tryClassifyMove(i, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult);
                 }
             });
 
@@ -92,26 +89,34 @@ class AnalysisQueue {
                         lines: result.lines
                     };
 
-                    if (posIndex === 0) onMoveResult?.({ index: -1, bestMove: result.bestMove, lines: result.lines });
+                    evaluatedCount++;
 
-                    this.#tryResolveMove(posIndex - 1, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult, currentIndex);
-                    this.#tryResolveMove(posIndex, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    onMoveResult?.({
+                        index: posIndex === 0 ? -1 : posIndex - 1,
+                        score: evalResults[posIndex].score,
+                        mate: evalResults[posIndex].mate,
+                        bestMove: evalResults[posIndex].bestMove,
+                        lines: evalResults[posIndex].lines
+                    });
 
-                    const currentPct = Math.round((completedMoves.size / totalMoves) * 100);
+                    this.#tryClassifyMove(posIndex - 1, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult);
+                    this.#tryClassifyMove(posIndex, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult);
+
+                    const currentPct = Math.round((evaluatedCount / totalMoves) * 100);
                     onProgress?.(Math.min(99, currentPct), `Analizando (${currentPct}%)`);
 
                 } catch (e) {
                     if (e.name === 'AbortError') break;
 
                     evalResults[posIndex] = { wp: 0.5, score: 0.0, bestMove: null, lines: null };
-                    this.#tryResolveMove(posIndex - 1, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult, currentIndex);
-                    this.#tryResolveMove(posIndex, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult, currentIndex);
+                    evaluatedCount++;
+                    this.#tryClassifyMove(posIndex - 1, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult);
+                    this.#tryClassifyMove(posIndex, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedMoves, onMoveResult);
                 }
             }
 
-            // Esperar a que el servicio de apertura termine
             if (!signal.aborted) {
-                await openingPromise.catch(() => { }); // el error ya se maneja internamente
+                await openingPromise.catch(() => { });
             }
 
             if (!signal.aborted) {
@@ -128,7 +133,6 @@ class AnalysisQueue {
 
     async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
         const { onResult, onStatus } = callbacks;
-
         this.cancel();
 
         this.#abortController = new AbortController();
@@ -175,8 +179,7 @@ class AnalysisQueue {
         }
     }
 
-    // Resolvemos el estado del libro de apertura de forma síncrona con el engine
-    #tryResolveMove(ply, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedSet, onMoveResult, focusIdx) {
+    #tryClassifyMove(ply, history, positions, evalResults, bookStatus, openingState, finalMoveData, completedSet, onMoveResult) {
         if (ply < 0 || ply >= history.length || completedSet.has(ply)) return;
 
         const stateBefore = evalResults[ply];
@@ -184,10 +187,6 @@ class AnalysisQueue {
 
         if (!stateBefore || !stateAfter) return;
 
-        // Un ply está resuelto de apertura si:
-        // 1. Ya tiene un bookStatus asignado (true o false), O
-        // 2. El opening service terminó (openingState.done), O
-        // 3. El ply está fuera del rango de libro
         const isOpeningResolved = bookStatus[ply] !== null || openingState.done || ply >= MAX_BOOK_PLY;
         if (!isOpeningResolved) return;
 
@@ -202,12 +201,8 @@ class AnalysisQueue {
 
         onMoveResult?.({
             index: ply,
-            score: stateAfter.score,
-            mate: stateAfter.mate,
             label,
-            isBook,
-            bestMove: stateAfter.bestMove,
-            lines: stateAfter.lines,
+            isBook
         });
 
         let wpLoss = isWhiteMove ? (stateBefore.wp - stateAfter.wp) : (stateAfter.wp - stateBefore.wp);

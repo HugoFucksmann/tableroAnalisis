@@ -1,4 +1,4 @@
-import React from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { analysisQueue } from '../services/analysisQueue';
@@ -10,10 +10,6 @@ export const useAnalysisSync = () => {
     history,
     currentMoveIndex,
     gameId,
-
-    evaluationHistory,
-    isAnalyzing,
-
     setAnalyzing,
     setAnalysisProgress,
     setAnalysisReady,
@@ -23,7 +19,6 @@ export const useAnalysisSync = () => {
     setBestMoveForIndex,
     setAlternativeLinesForIndex,
     setGameScore,
-
     setEcoCode,
     setOpeningPly,
     setOpeningDetected,
@@ -33,16 +28,12 @@ export const useAnalysisSync = () => {
     isAnalyzeFromPgn,
     wantsFullAnalysis,
     pgnCommentsByIndex,
-    engineConfig,
-    alternativeLines,
   } = useGameStore(useShallow(state => ({
     fen: state.fen,
     game: state.game,
     history: state.history,
     currentMoveIndex: state.currentMoveIndex,
     gameId: state.gameId,
-    evaluationHistory: state.evaluationHistory,
-    isAnalyzing: state.isAnalyzing,
     setAnalyzing: state.setAnalyzing,
     setAnalysisProgress: state.setAnalysisProgress,
     setAnalysisReady: state.setAnalysisReady,
@@ -61,19 +52,15 @@ export const useAnalysisSync = () => {
     isAnalyzeFromPgn: state.isAnalyzeFromPgn,
     wantsFullAnalysis: state.wantsFullAnalysis,
     pgnCommentsByIndex: state.pgnCommentsByIndex,
-    engineConfig: state.engineConfig,
-    alternativeLines: state.alternativeLines,
   })));
 
-  const lastGameId = React.useRef(null);
-  const lastAnalyzedFen = React.useRef(null);
+  const lastGameId = useRef(null);
+  const lastAnalyzedFen = useRef(null);
 
   // ── Análisis completo de la partida ────────────────────────────────────────
-  React.useEffect(() => {
+  useEffect(() => {
     if (!gameId || gameId === lastGameId.current) return;
-    if (history.length === 0) return;
-    if (isAnalyzeFromPgn) return;
-    if (!wantsFullAnalysis) return;
+    if (history.length === 0 || isAnalyzeFromPgn || !wantsFullAnalysis) return;
 
     lastGameId.current = gameId;
     lastAnalyzedFen.current = null;
@@ -84,10 +71,8 @@ export const useAnalysisSync = () => {
       gameId,
       pgnHeaders,
       lichessToken,
-
-      onStatus: (v) => setAnalyzing(v),
-      onProgress: (pct, _msg) => setAnalysisProgress(pct),
-
+      onStatus: setAnalyzing,
+      onProgress: setAnalysisProgress,
       onOpeningDetected: ({ openingName, ecoCode, openingPly, bookPlies }) => {
         bookPlies.forEach(ply => setMoveEvaluation(ply, 'Libro'));
         if (openingName) setOpeningName(openingName);
@@ -95,80 +80,90 @@ export const useAnalysisSync = () => {
         setOpeningPly(openingPly);
         setOpeningDetected(true);
       },
-
       onMoveResult: ({ index, score, mate, label, bestMove, lines }) => {
         if (score !== undefined) setEvaluation({ score, mate }, index);
         if (label) setMoveEvaluation(index, label);
         if (bestMove) setBestMoveForIndex(index, bestMove);
         if (lines?.length) setAlternativeLinesForIndex(index, lines);
       },
-
       onComplete: (accuracy) => {
         setAnalysisReady(true);
         setAnalyzing(false);
-        setTimeout(() => {
-          setGameScore(accuracy);
-        }, 300);
+        setGameScore(accuracy);
       },
     });
 
-    return () => {
-      analysisQueue.cancel();
-    };
-  }, [gameId]);
+    return () => analysisQueue.cancel();
+  }, [gameId, history, isAnalyzeFromPgn, wantsFullAnalysis]);
 
-  // ── Sincronizar barra al navegar o cuando llega análisis del movimiento actual
-  // Usa setEvaluationDirect para solo escribir `evaluation` sin tocar
-  // evaluationHistory, evitando el loop infinito.
-  React.useEffect(() => {
+  // ── Sincronización al navegar por el historial ──────────────────────────────
+  useEffect(() => {
     if (currentMoveIndex < -1) return;
-    const cached = evaluationHistory?.find(e => e.moveIndex === currentMoveIndex);
+    // Leemos el store actual sin suscribirnos a todos los cambios de evaluación
+    const cached = useGameStore.getState().evaluationHistory[currentMoveIndex];
     if (cached) {
       setEvaluationDirect({ score: cached.score, mate: cached.mate ?? null });
     }
-  }, [currentMoveIndex, evaluationHistory]);
+  }, [currentMoveIndex, setEvaluationDirect]);
 
-  // ── Live analysis para movimientos sin evaluación o líneas incompletas ──────
-  React.useEffect(() => {
-    const hasEval = evaluationHistory?.some(e => e.moveIndex === currentMoveIndex);
-    const cachedLinesCount = alternativeLines?.[currentMoveIndex]?.length || 0;
-    const targetMultiPv = engineConfig?.liveMultiPv || 3;
+  // ── Análisis en vivo (Live Engine) ──────────────────────────────────────────
+  useEffect(() => {
+    const state = useGameStore.getState();
+    const hasEval = !!state.evaluationHistory[currentMoveIndex];
+    const cachedLinesCount = state.alternativeLines?.[currentMoveIndex]?.length || 0;
+    const targetMultiPv = state.engineConfig?.liveMultiPv || 3;
     const needsLiveAnalysis = !hasEval || cachedLinesCount < targetMultiPv;
 
-    const sameFen = lastAnalyzedFen.current === fen;
-
-    if (!needsLiveAnalysis || isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || sameFen) return;
+    if (!needsLiveAnalysis || state.isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || lastAnalyzedFen.current === fen) return;
 
     lastAnalyzedFen.current = fen;
     analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
-      onStatus: (v) => setAnalyzing(v),
+      onStatus: setAnalyzing,
       onResult: (result) => {
         if (result.score !== undefined) setEvaluation({ score: result.score, mate: result.mate }, result.moveIndex);
         if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
         if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
       },
     });
-  }, [fen, currentMoveIndex, evaluationHistory, isAnalyzing]);
+  }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing]);
 
-  // ── Relojes desde comentarios PGN ─────────────────────────────────────────
-  const clocks = React.useMemo(() => {
-    if (history.length === 0 || !pgnCommentsByIndex) return { white: null, black: null };
+  // ── Optimización O(1) de Relojes con Caché ─────────────────────────────────
+  const allClocks = useMemo(() => {
+    if (history.length === 0 || !pgnCommentsByIndex) return { initial: {}, moves: [] };
 
-    let white = null;
-    let black = null;
-    for (let i = 0; i <= currentMoveIndex; i++) {
-      const comment = pgnCommentsByIndex[i];
-      if (!comment) continue;
-      const match = comment.match(/\[%clk\s+([^\]]+)\]/);
-      if (match) {
-        if (history[i]?.color === 'w') white = match[1];
-        else black = match[1];
+    const movesClocks = new Array(history.length);
+    let initialWhite = null, initialBlack = null;
+
+    for (let i = 0; i < history.length; i++) {
+      const c = pgnCommentsByIndex[i];
+      if (c) {
+        const match = c.match(/\[%clk\s+([^\]]+)\]/);
+        if (match) {
+          if (history[i]?.color === 'w' && !initialWhite) initialWhite = match[1];
+          if (history[i]?.color === 'b' && !initialBlack) initialBlack = match[1];
+        }
       }
     }
-    return { white, black };
-  }, [currentMoveIndex, history, pgnCommentsByIndex]);
 
-  React.useEffect(() => {
-    setClocks(clocks.white, clocks.black);
-  }, [clocks, setClocks]);
+    let lastWhite = initialWhite, lastBlack = initialBlack;
+    for (let i = 0; i < history.length; i++) {
+      const comment = pgnCommentsByIndex[i];
+      if (comment) {
+        const match = comment.match(/\[%clk\s+([^\]]+)\]/);
+        if (match) {
+          if (history[i]?.color === 'w') lastWhite = match[1];
+          else lastBlack = match[1];
+        }
+      }
+      movesClocks[i] = { white: lastWhite, black: lastBlack };
+    }
+
+    return { initial: { white: initialWhite, black: initialBlack }, moves: movesClocks };
+  }, [history, pgnCommentsByIndex]);
+
+  useEffect(() => {
+    if (!allClocks.moves || allClocks.moves.length === 0) return;
+    const current = currentMoveIndex >= 0 ? allClocks.moves[currentMoveIndex] : allClocks.initial;
+    setClocks(current?.white || null, current?.black || null);
+  }, [currentMoveIndex, allClocks, setClocks]);
 };

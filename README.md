@@ -1,56 +1,62 @@
 # ♟️ Tablero de Análisis de Ajedrez
 
-Una aplicación web moderna y profesional para el análisis de partidas de ajedrez, diseñada para ofrecer la experiencia de un software de escritorio con la flexibilidad de la web.
+[![React](https://img.shields.io/badge/React-19-blue.svg)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-8-646CFF.svg)](https://vitejs.dev/)
+[![Zustand](https://img.shields.io/badge/Zustand-5-443E38.svg)](https://github.com/pmndrs/zustand)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+Una plataforma de análisis de ajedrez de **alto rendimiento**, diseñada para ofrecer la potencia de un software de escritorio (`ChessBase`, `Stockfish`) con la accesibilidad de la web moderna.
 
 ![Dashboard Preview](src/assets/hero.png)
 
-## 🚀 Características Principales
+## ✨ Características Premium
 
-- **Análisis en Tiempo Real**: Integración con **Stockfish 18 WASM** ejecutándose localmente en tu navegador.
-- **Importación Directa**: Carga tus partidas de **Lichess** y **Chess.com** simplemente ingresando tu nombre de usuario.
-- **Explorador de Aperturas**: Conexión con la base de datos de Lichess para identificar teoría y estadísticas de jugadas.
-- **Gráfica de Evaluación**: Visualización dinámica de la ventaja a lo largo de la partida.
-- **Clasificación de Jugadas**: Identificación automática de jugadas *Brillantes*, *Mejores*, *Excelentes*, *Imprecisiones* y *Errores*.
-- **PWA (Progressive Web App)**: Instálala en tu escritorio o móvil y úsala con rendimiento nativo.
-- **Exportación PGN**: Descarga tus análisis con comentarios detallados y evaluaciones del motor.
+*   **🚀 Motor Stockfish 18 (WASM)**: Análisis local ultra-rápido con soporte multihilo (SIMD).
+*   **📥 Importación Inteligente**: Sincronización instantánea con perfiles de **Lichess** y **Chess.com**.
+*   **📊 Gráfica de Tendencia**: Visualiza la ventaja a lo largo de la partida con navegación interactiva.
+*   **🎯 Clasificación Inteligente**: Algoritmos de precisión que detectan jugadas *Brillantes*, *Mejores* y *Errores* basados en Win Probability.
+*   **📖 Explorador de Teoría**: Integración profunda con la base de datos de Lichess (Master & Community).
+*   **📱 PWA Ready**: Experiencia nativa instalable con soporte offline y notificaciones.
+*   **📤 Exportación Enriquecida**: Genera PGNs anotados con evaluaciones del motor y comentarios.
 
-## 🛠️ Tecnologías
+## 🛠️ Stack Tecnológico
 
-- **Frontend**: React 19, Vite 8, Framer Motion.
-- **Estado**: Zustand 5.
-- **Ajedrez**: Chess.js, React-Chessboard.
-- **Motor**: Stockfish 18 (Multithreaded WASM).
+| Capa | Tecnología |
+| :--- | :--- |
+| **UI Framework** | React 19 (Fiber Architecture) |
+| **State Management** | Zustand 5 (Slice Pattern) |
+| **Chess Logic** | Chess.js v1.4 |
+| **Engine** | Stockfish 18 Multithreaded WASM |
+| **Animations** | Framer Motion |
+| **Styles** | Modern CSS (Variables, Glassmorphism) |
 
-## 📦 Instalación y Uso
+## 🚀 Instalación Rápida
 
-1. **Clonar el repositorio:**
-   ```bash
-   git clone https://github.com/HugoFucksmann/tableroAnalisis.git
-   cd tableroAnalisis
-   ```
+```bash
+# 1. Clonar el repositorio
+git clone https://github.com/HugoFucksmann/tableroAnalisis.git
 
-2. **Instalar dependencias:**
-   ```bash
-   npm install
-   ```
+# 2. Instalar dependencias
+npm install
 
-3. **Ejecutar en desarrollo:**
-   ```bash
-   npm run dev
-   ```
+# 3. Iniciar modo desarrollo
+npm run dev
+```
 
-4. **Construir para producción:**
-   ```bash
-   npm run build
-   ```
+## 🏗️ Arquitectura del Sistema
 
-## 📖 Documentación Técnica
+El proyecto sigue una arquitectura de **Servicios Desacoplados** y **Estado Centralizado**. Para una inmersión profunda en las tripas del sistema (WinProb, Mutex de Análisis, Worker Isolation):
 
-Para una inmersión profunda en la arquitectura del sistema, el flujo de datos y las decisiones de diseño, consulta nuestro archivo:
-👉 [**ARCHITECTURE.md](./ARCHITECTURE.md)**
+👉 [**Leer ARCHITECTURE.md](./ARCHITECTURE.md)**
 
-## 🛡️ Configuración de Seguridad
-La aplicación requiere un entorno con `Cross-Origin Isolation` para habilitar el soporte de múltiples hilos en Stockfish. Asegúrate de que tu servidor de hosting soporte las cabeceras `COOP` y `COEP`.
+## 🛡️ Despliegue y Seguridad
+
+Debido al uso de `SharedArrayBuffer` para el multihilo de Stockfish, la aplicación requiere **Aislamiento de Origen Cruzado (COI)**.
+
+Configuración incluida para:
+- **Netlify** (`netlify.toml`)
+- **Vercel** (`vercel.json`)
+- **Vite** (`vite.config.js`)
 
 ---
-Desarrollado con ❤️ por ElColof.
+Desarrollado con precisión técnica por **ElColof**.
