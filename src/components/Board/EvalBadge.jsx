@@ -13,12 +13,14 @@ const BADGE_SIZE = 26;
  *  moveEvaluations   string[]
  *  orientation       'white' | 'black'
  */
-export const EvalBadgeOverlay = ({
-    currentMoveIndex,
-    history,
-    moveEvaluations,
-    orientation,
-}) => {
+import { useCurrentMoveIndex, useHistory, useBoardOrientation } from '../../store/selectors/gameSelectors';
+import { useMoveEvaluations } from '../../store/selectors/analysisSelectors';
+
+export const EvalBadgeOverlay = () => {
+    const currentMoveIndex = useCurrentMoveIndex();
+    const history = useHistory();
+    const orientation = useBoardOrientation();
+    const moveEvaluations = useMoveEvaluations();
     const currentMove = currentMoveIndex >= 0 ? history[currentMoveIndex] : null;
     if (!currentMove) return null;
 

@@ -1,41 +1,8 @@
 import React from 'react';
 import './ArrowEvalOverlay.css';
 
-/**
- * Convierte una casilla ("e4") a porcentajes (0% a 100%).
- * Cada casilla mide 12.5%. Centramos sumando 6.25%.
- */
-function squareToPct(square, orientation) {
-    if (!square || square.length < 2) return null;
-
-    const file = square.charCodeAt(0) - 97; // a=0 … h=7
-    const rank = parseInt(square[1], 10) - 1; // 1=0 … 8=7
-
-    let col = file;
-    let row = 7 - rank;
-
-    if (orientation === 'black') {
-        col = 7 - file;
-        row = rank;
-    }
-
-    return {
-        x: (col * 12.5) + 6.25,
-        y: (row * 12.5) + 6.25,
-    };
-}
-
-function formatDelta(delta, mate) {
-    if (mate != null) {
-        return mate > 0 ? `M${mate}` : `-M${Math.abs(mate)}`;
-    }
-    if (delta == null || isNaN(delta)) return null;
-
-    const abs = Math.abs(delta);
-    if (abs < 0.05) return '=';
-    const sign = delta > 0 ? '+' : '−';
-    return `${sign}${abs.toFixed(1)}`;
-}
+import { squareToPct } from '../../utils/boardUtils';
+import { formatDelta } from '../../utils/arrowUtils';
 
 export const ArrowEvalOverlay = React.memo(({ arrowsWithDelta, orientation }) => {
     if (!arrowsWithDelta?.length) return null;

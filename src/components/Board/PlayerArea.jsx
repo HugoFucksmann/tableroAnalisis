@@ -59,7 +59,7 @@ const CapturedPieces = ({ pieces }) => {
 
 // ── Main component ────────────────────────────────────────────────
 
-export const PlayerArea = ({ side, name, elo, clock, material, isActive }) => {
+export const PlayerArea = React.memo(({ side, name, elo, clock, material, isActive }) => {
     const initial = name?.[0]?.toUpperCase() ?? '?';
 
     return (
@@ -85,4 +85,4 @@ export const PlayerArea = ({ side, name, elo, clock, material, isActive }) => {
             </div>
         </div>
     );
-};
+});

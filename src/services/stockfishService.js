@@ -163,7 +163,12 @@ class StockfishService {
                     }
 
                     if (onProgress && mvIdx === 1) {
-                        onProgress({ score: lines[1].score, mate: lines[1].mate, bestMove: lines[1].move });
+                        onProgress({ 
+                            score: lines[1].score, 
+                            mate: lines[1].mate, 
+                            bestMove: lines[1].move,
+                            lines: Object.values(lines).sort((a, b) => a.multipv - b.multipv)
+                        });
                     }
                 }
 

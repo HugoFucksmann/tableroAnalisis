@@ -158,11 +158,16 @@ class AnalysisQueue {
 
             const result = await stockfishService.analyzePosition(
                 fen, depth, signal,
-                ({ score, mate, bestMove }) => {
+                ({ score, mate, bestMove, lines }) => {
                     onResult?.({
                         score: ChessMath.cpToVisualScore(score, mate, isBlackTurn),
                         mate,
-                        bestMove, moveIndex,
+                        bestMove, 
+                        moveIndex,
+                        lines: lines?.map(line => ({
+                            ...line,
+                            score: ChessMath.cpToVisualScore(line.score, line.mate ?? null, isBlackTurn),
+                        })) ?? []
                     });
                 },
                 multiPv
