@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Chessboard } from 'react-chessboard';
 import { EvaluationBar } from '../Analysis/EvaluationBar';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { useAnalysisSync } from '../../hooks/useAnalysisSync';
-import { calculateMaterial, replayTo } from '../../utils/chessUtils';
+import { calculateMaterial } from '../../utils/chessUtils';
 
 import { PlayerArea } from './PlayerArea';
 import { EvalBadgeOverlay } from './EvalBadge';
+import { ArrowEvalOverlay } from './ArrowEvalOverlay';
 import './Board.css';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -28,40 +29,57 @@ function getActiveColor(fen) {
   return fen?.split(' ')[1] === 'b' ? 'black' : 'white';
 }
 
+/**
+ * Calcula la diferencia de evaluación.
+ * Asegura que ambas unidades estén en "peones" (no centipeones).
+ */
+function computeDelta(lineObj, currentScore, currentMate) {
+  if (lineObj.mate != null) return { delta: null, mate: lineObj.mate };
+  if (currentMate != null) return { delta: null, mate: null };
+
+  const rawScore = lineObj.score ?? lineObj.cp ?? lineObj.visualScore;
+  if (rawScore == null || currentScore == null) return { delta: null, mate: null };
+
+  let parsedLine = parseFloat(rawScore);
+  const parsedCurrent = parseFloat(currentScore);
+
+  if (isNaN(parsedLine) || isNaN(parsedCurrent)) return { delta: null, mate: null };
+
+  // Corrección de unidades:
+  // Si el score viene como número directamente (desde Stockfish), siempre es en centipeones.
+  if (typeof lineObj.score === 'number') {
+    parsedLine = lineObj.score / 100;
+  } else if (Math.abs(parsedLine) > 15) {
+    // Fallback por si viene en formato string pero sigue siendo centipeones
+    parsedLine = parsedLine / 100;
+  }
+
+  const delta = parsedLine - parsedCurrent;
+
+  return { delta, mate: null };
+}
+
 // ── Component ────────────────────────────────────────────────────────────────
 
 export const Board = () => {
   useAnalysisSync();
 
-  const {
-    fen,
-    makeMove,
-    clocks,
-    players,
-    playerElos,
-    history,
-    currentMoveIndex,
-    moveEvaluations,
-    bestMoves,
-    alternativeLines,
-    arrows,
-    boardOrientation,
-    goToMove,
-  } = useGameStore(useShallow(state => ({
-    fen: state.fen,
-    makeMove: state.makeMove,
-    clocks: state.clocks,
-    players: state.players,
-    playerElos: state.playerElos,
-    history: state.history,
-    currentMoveIndex: state.currentMoveIndex,
-    moveEvaluations: state.moveEvaluations,
-    bestMoves: state.bestMoves,
-    alternativeLines: state.alternativeLines,
-    arrows: state.arrows,
-    boardOrientation: state.boardOrientation,
-    goToMove: state.goToMove,
-  })));
+  const fen = useGameStore(state => state.fen);
+  const makeMove = useGameStore(state => state.makeMove);
+  const clocks = useGameStore(state => state.clocks);
+  const players = useGameStore(state => state.players);
+  const playerElos = useGameStore(state => state.playerElos);
+  const history = useGameStore(state => state.history);
+  const currentMoveIndex = useGameStore(state => state.currentMoveIndex);
+  const boardOrientation = useGameStore(state => state.boardOrientation);
+  const goToMove = useGameStore(state => state.goToMove);
+  const arrows = useGameStore(state => state.arrows);
+  const moveEvaluations = useGameStore(state => state.moveEvaluations);
+
+  // Subscripciones específicas a la jugada actual para evitar re-renders por otras jugadas
+  const currentLines = useGameStore(state => state.alternativeLines[state.currentMoveIndex]);
+  const currentBestMove = useGameStore(state => state.bestMoves[state.currentMoveIndex]);
+  const currentEval = useGameStore(useShallow(state => state.evaluationHistory[state.currentMoveIndex]));
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
   const [promotionMove, setPromotionMove] = useState(null);
@@ -73,8 +91,8 @@ export const Board = () => {
   }, []);
 
   // ── Wheel navigation ──────────────────────────────────────────────────────
-  const boardRef = React.useRef(null);
-  const scrollState = React.useRef({ currentMoveIndex, maxIndex: history.length - 1 });
+  const boardRef = useRef(null);
+  const scrollState = useRef({ currentMoveIndex, maxIndex: history.length - 1 });
 
   useEffect(() => {
     scrollState.current = { currentMoveIndex, maxIndex: history.length - 1 };
@@ -126,58 +144,70 @@ export const Board = () => {
     return highlights;
   }, [currentMoveIndex, history]);
 
-  const combinedArrows = React.useMemo(() => {
+  // ── Arrows logic ─────────────────────────────────────────────────────────
+  const { combinedArrows, arrowsWithDelta } = React.useMemo(() => {
     const storeArrows = arrows ?? [];
-    const lines = alternativeLines[currentMoveIndex] ?? [];
-    const arrowMap = new Map();
+    const lines = currentLines ?? [];
+    const arrowMap = new Map(); // key → { arrow, delta, mate, isEngineArrow }
 
+    const currentScore = currentEval?.score ?? null;
+    const currentMate = currentEval?.mate ?? null;
+
+    // 1. Líneas MultiPV del motor (con delta de evaluación)
     lines.forEach((line) => {
       const opacities = { 1: '0.9', 2: '0.7', 3: '0.5', 4: '0.3', 5: '0.15' };
       const opacity = opacities[line.multipv] || '0.1';
       const color = `rgba(217, 119, 6, ${opacity})`;
 
       const arrow = uciToArrow(line.move, color);
-      if (arrow) {
-        const key = `${arrow.startSquare}-${arrow.endSquare}`;
-        if (!arrowMap.has(key)) {
-          arrowMap.set(key, arrow);
-        }
-      }
+      if (!arrow) return;
+
+      const key = `${arrow.startSquare}-${arrow.endSquare}`;
+      if (arrowMap.has(key)) return;
+
+      const { delta, mate } = computeDelta(line, currentScore, currentMate);
+
+      arrowMap.set(key, { arrow, delta, mate, isEngineArrow: true });
     });
 
-    if (arrowMap.size === 0 && bestMoves[currentMoveIndex]) {
-      const arrow = uciToArrow(bestMoves[currentMoveIndex], 'rgba(217, 119, 6, 0.8)');
+    // 2. Fallback: single bestMove (Si el motor solo dio la jugada principal)
+    if (arrowMap.size === 0 && currentBestMove) {
+      const arrow = uciToArrow(currentBestMove, 'rgba(217, 119, 6, 0.8)');
       if (arrow) {
         const key = `${arrow.startSquare}-${arrow.endSquare}`;
-        arrowMap.set(key, arrow);
+        // Como es la mejor jugada por defecto (no tenemos scores alternativos), 
+        // le asignamos un delta de 0 para que muestre el símbolo '='.
+        arrowMap.set(key, { arrow, delta: 0, mate: currentMate, isEngineArrow: true });
       }
     }
 
-    for (const arrow of storeArrows) {
-      const key = `${arrow.startSquare}-${arrow.endSquare}`;
+    // 3. Flechas del store (Aperturas o pintadas manualmente)
+    for (const storeArrow of storeArrows) {
+      const key = `${storeArrow.startSquare}-${storeArrow.endSquare}`;
       if (storeArrows.length === 1) {
-        arrowMap.set(key, arrow);
+        // Single store arrow overrides (e.g. hovered explorer move)
+        arrowMap.set(key, { arrow: storeArrow, delta: null, mate: null, isEngineArrow: false });
       } else {
         if (!arrowMap.has(key)) {
-          arrowMap.set(key, arrow);
+          arrowMap.set(key, { arrow: storeArrow, delta: null, mate: null, isEngineArrow: false });
         }
       }
     }
-
-    return Array.from(arrowMap.values());
-  }, [alternativeLines, bestMoves, currentMoveIndex, arrows]);
+    const entries = Array.from(arrowMap.values());
+    return {
+      combinedArrows: entries.map(e => e.arrow),
+      arrowsWithDelta: entries,
+    };
+  }, [currentLines, currentBestMove, currentMoveIndex, arrows, currentEval]);
 
   // ── Event handlers ────────────────────────────────────────────────────────
-
   function onDrop(arg1, arg2, arg3) {
-    // Compatibilidad tanto si los argumentos vienen desestructurados en un objeto o de forma nativa
     const sourceSquare = typeof arg1 === 'object' ? arg1.sourceSquare : arg1;
     const targetSquare = typeof arg1 === 'object' ? arg1.targetSquare : arg2;
     const piece = typeof arg1 === 'object' ? arg1.piece : arg3;
 
     if (!targetSquare || sourceSquare === targetSquare) return false;
 
-    // Verificar si es un peón y si está en la fila de promoción
     const isPawn = piece ? piece[1] === 'P' : true;
     const isPromotionRank = targetSquare[1] === '8' || targetSquare[1] === '1';
 
@@ -223,6 +253,7 @@ export const Board = () => {
         </div>
 
         <div className="board-frame">
+          {/* IMPORTANTE: position: relative en el CSS de board-main-area */}
           <div className="board-main-area" ref={boardRef}>
             <Chessboard
               options={{
@@ -238,6 +269,13 @@ export const Board = () => {
               promotionToSquare={promotionMove?.to ?? null}
               onPromotionPieceSelect={onPromotionPieceSelect}
             />
+
+            {/* Eval delta badges floating above each engine arrow */}
+            <ArrowEvalOverlay
+              arrowsWithDelta={arrowsWithDelta}
+              orientation={boardOrientation}
+            />
+
             <EvalBadgeOverlay
               currentMoveIndex={currentMoveIndex}
               history={history}

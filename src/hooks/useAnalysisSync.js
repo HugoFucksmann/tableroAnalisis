@@ -120,14 +120,22 @@ export const useAnalysisSync = () => {
     if (!needsLiveAnalysis || state.isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || lastAnalyzedFen.current === fen) return;
 
     lastAnalyzedFen.current = fen;
+    let isActive = true;
+
     analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
       onStatus: setAnalyzing,
       onResult: (result) => {
+        if (!isActive) return;
         if (result.score !== undefined) setEvaluation({ score: result.score, mate: result.mate }, result.moveIndex);
         if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
         if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
       },
     });
+
+    return () => {
+      isActive = false;
+      analysisQueue.cancel();
+    };
   }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing]);
 
   // ── Optimización O(1) de Relojes con Caché ─────────────────────────────────
