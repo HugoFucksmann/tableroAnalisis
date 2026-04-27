@@ -89,7 +89,10 @@ class AnalysisQueue {
                         score: ChessMath.cpToVisualScore(result.score, result.mate, isBlackTurn),
                         mate: result.mate,
                         bestMove: result.bestMove,
-                        lines: result.lines
+                        lines: result.lines?.map(line => ({
+                            ...line,
+                            score: ChessMath.cpToVisualScore(line.score, line.mate ?? null, isBlackTurn),
+                        })) ?? []
                     };
 
                     evaluatedCount++;
@@ -169,7 +172,12 @@ class AnalysisQueue {
                 onResult?.({
                     score: ChessMath.cpToVisualScore(result.score, result.mate, isBlackTurn),
                     mate: result.mate,
-                    bestMove: result.bestMove, moveIndex, lines: result.lines,
+                    bestMove: result.bestMove, 
+                    moveIndex, 
+                    lines: result.lines?.map(line => ({
+                        ...line,
+                        score: ChessMath.cpToVisualScore(line.score, line.mate ?? null, isBlackTurn),
+                    })) ?? [],
                 });
             }
         } catch (e) {

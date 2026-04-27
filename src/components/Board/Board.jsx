@@ -33,30 +33,27 @@ function getActiveColor(fen) {
  * Calcula la diferencia de evaluación.
  * Asegura que ambas unidades estén en "peones" (no centipeones).
  */
-function computeDelta(lineObj, currentScore, currentMate) {
+function computeDelta(lineObj, baselineScore, baselineMate, isBlackTurn) {
   if (lineObj.mate != null) return { delta: null, mate: lineObj.mate };
-  if (currentMate != null) return { delta: null, mate: null };
+  if (baselineMate != null) return { delta: null, mate: null };
 
-  const rawScore = lineObj.score ?? lineObj.cp ?? lineObj.visualScore;
-  if (rawScore == null || currentScore == null) return { delta: null, mate: null };
+  const lineScore = lineObj.score;
+  if (lineScore == null || baselineScore == null) return { delta: null, mate: null };
 
-  let parsedLine = parseFloat(rawScore);
-  const parsedCurrent = parseFloat(currentScore);
+  const parsedLine = parseFloat(lineScore);
+  const parsedBaseline = parseFloat(baselineScore);
 
-  if (isNaN(parsedLine) || isNaN(parsedCurrent)) return { delta: null, mate: null };
+  if (isNaN(parsedLine) || isNaN(parsedBaseline)) return { delta: null, mate: null };
 
-  // Corrección de unidades:
-  // Si el score viene como número directamente (desde Stockfish), siempre es en centipeones.
-  if (typeof lineObj.score === 'number') {
-    parsedLine = lineObj.score / 100;
-  } else if (Math.abs(parsedLine) > 15) {
-    // Fallback por si viene en formato string pero sigue siendo centipeones
-    parsedLine = parsedLine / 100;
-  }
+  // Ambos ya son white-centric pawns (positivos = ventaja blanca).
+  const rawDelta = parsedLine - parsedBaseline;
+  
+  // Convertimos a perspectiva del jugador (player-relative):
+  // Si juegan negras, un incremento positivo de rawDelta significa
+  // que las blancas mejoran, por lo que las negras pierden (delta negativo).
+  const playerDelta = isBlackTurn ? -rawDelta : rawDelta;
 
-  const delta = parsedLine - parsedCurrent;
-
-  return { delta, mate: null };
+  return { delta: playerDelta, mate: null };
 }
 
 // ── Component ────────────────────────────────────────────────────────────────
@@ -150,8 +147,12 @@ export const Board = () => {
     const lines = currentLines ?? [];
     const arrowMap = new Map(); // key → { arrow, delta, mate, isEngineArrow }
 
-    const currentScore = currentEval?.score ?? null;
-    const currentMate = currentEval?.mate ?? null;
+    const isBlackTurn = activeColor === 'black';
+
+    // Opción B: Usar la mejor jugada del motor como base comparativa
+    const bestLine = lines.find(l => l.multipv === 1);
+    const baselineScore = bestLine?.score ?? currentEval?.score ?? null;
+    const baselineMate = bestLine?.mate ?? currentEval?.mate ?? null;
 
     // 1. Líneas MultiPV del motor (con delta de evaluación)
     lines.forEach((line) => {
@@ -165,7 +166,7 @@ export const Board = () => {
       const key = `${arrow.startSquare}-${arrow.endSquare}`;
       if (arrowMap.has(key)) return;
 
-      const { delta, mate } = computeDelta(line, currentScore, currentMate);
+      const { delta, mate } = computeDelta(line, baselineScore, baselineMate, isBlackTurn);
 
       arrowMap.set(key, { arrow, delta, mate, isEngineArrow: true });
     });
@@ -177,7 +178,7 @@ export const Board = () => {
         const key = `${arrow.startSquare}-${arrow.endSquare}`;
         // Como es la mejor jugada por defecto (no tenemos scores alternativos), 
         // le asignamos un delta de 0 para que muestre el símbolo '='.
-        arrowMap.set(key, { arrow, delta: 0, mate: currentMate, isEngineArrow: true });
+        arrowMap.set(key, { arrow, delta: 0, mate: baselineMate, isEngineArrow: true });
       }
     }
 
@@ -198,7 +199,7 @@ export const Board = () => {
       combinedArrows: entries.map(e => e.arrow),
       arrowsWithDelta: entries,
     };
-  }, [currentLines, currentBestMove, currentMoveIndex, arrows, currentEval]);
+  }, [currentLines, currentBestMove, currentMoveIndex, arrows, currentEval, activeColor]);
 
   // ── Event handlers ────────────────────────────────────────────────────────
   function onDrop(arg1, arg2, arg3) {
