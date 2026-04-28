@@ -7,12 +7,13 @@
   height: 100%;
   min-height: 0;
   overflow-x: hidden;
+  padding: 0 var(--space-4) var(--space-3);
 }
 
 .elo-tabs {
   display: flex;
   gap: var(--space-1);
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   padding: 0.1875rem;
   /* 3px — margen interno del pill, se mantiene pequeño */
   border-radius: calc(var(--border-radius) * 0.75);
@@ -45,7 +46,7 @@
   flex-direction: column;
   gap: var(--space-2);
   padding: var(--space-3);
-  background: var(--bg-tertiary);
+  background: var(--bg-secondary);
   border-radius: var(--border-radius);
   border: 1px solid var(--glass-border);
   animation: slideDown 0.2s ease-out;
@@ -75,8 +76,15 @@
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-0.625rem); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-0.625rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .moves-stats-list {
@@ -116,7 +124,8 @@
   transition: background-color 0.2s ease;
 }
 
-.move-stat-row:hover, .move-stat-row.hovered {
+.move-stat-row:hover,
+.move-stat-row.hovered {
   background-color: var(--accent-glow);
 }
 

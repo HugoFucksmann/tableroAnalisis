@@ -78,13 +78,20 @@
 .panel-container {
   display: flex;
   flex-direction: column;
-  padding: var(--panel-padding);
-  gap: var(--space-1);
+  padding: 0;
+  /* Eliminamos el padding para ganar espacio */
+  gap: 0;
   overflow: hidden;
   border: 1px solid var(--glass-border);
-  background: var(--glass);
+  background: var(--bg-tertiary);
+  /* Fondo más claro para mejor contraste */
   border-radius: var(--border-radius);
   transition: var(--transition);
+}
+
+.import-panel {
+  background: var(--bg-secondary);
+  /* El panel de importar se mantiene oscuro */
 }
 
 .panel-header {
@@ -94,7 +101,8 @@
   cursor: pointer;
   user-select: none;
   flex-shrink: 0;
-  padding-bottom: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  /* Recuperamos el padding aquí */
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 

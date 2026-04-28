@@ -97,7 +97,7 @@ export const EvaluationGraph = () => {
 
   if (total === 0) {
     return (
-      <div className="evaluation-graph-container glass-panel">
+      <div className="evaluation-graph-container">
         <div className="graph-placeholder">
           {isAnalyzing ? 'Analizando partida...' : 'Cargá una partida para ver el gráfico'}
         </div>
@@ -106,7 +106,7 @@ export const EvaluationGraph = () => {
   }
 
   return (
-    <div className="evaluation-graph-container glass-panel">
+    <div className="evaluation-graph-container">
       <div className="graph-header">
         <div className="graph-title-group">
           <span className="graph-title">Evaluación</span>

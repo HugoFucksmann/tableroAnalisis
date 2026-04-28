@@ -37,7 +37,7 @@ export const BoardControls = () => {
 
 
   return (
-    <div className="board-controls-container glass-panel">
+    <div className="board-controls-container">
       {/* ── Row 1: standard navigation ─────────────────────────────── */}
       <div className="navigation-group">
         <button className="control-btn" title="Inicio" disabled={isAtStart} onClick={() => goToMove(-1)}>

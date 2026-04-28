@@ -4,17 +4,17 @@ import { ArrowEvalOverlay } from './ArrowEvalOverlay';
 import { useBoardArrows } from './hooks';
 import { getActiveColor } from '../../utils/boardUtils';
 import { useArrows } from '../../store/selectors/gameSelectors';
-import { 
-  useCurrentMoveLines, useCurrentBestMove, useCurrentEval 
+import {
+    useCurrentMoveLines, useCurrentBestMove, useCurrentEval
 } from '../../store/selectors/analysisSelectors';
 
-export const ConnectedChessboard = React.memo(({ 
-    fen, 
-    boardOrientation, 
-    squareStyles, 
-    promotionMove, 
-    onDrop, 
-    onPromotionPieceSelect 
+export const ConnectedChessboard = React.memo(({
+    fen,
+    boardOrientation,
+    squareStyles,
+    promotionMove,
+    onDrop,
+    onPromotionPieceSelect
 }) => {
     const currentLines = useCurrentMoveLines();
     const currentBestMove = useCurrentBestMove();
@@ -23,12 +23,14 @@ export const ConnectedChessboard = React.memo(({
     const activeColor = React.useMemo(() => getActiveColor(fen), [fen]);
 
     const { combinedArrows, arrowsWithDelta } = useBoardArrows(
-        currentLines, 
-        currentBestMove, 
-        currentEval, 
-        arrows, 
+        currentLines,
+        currentBestMove,
+        currentEval,
+        arrows,
         activeColor
     );
+
+    console.log('[ConnectedChessboard] Render - lines:', currentLines?.length, 'arrows:', combinedArrows?.length);
 
     return (
         <>

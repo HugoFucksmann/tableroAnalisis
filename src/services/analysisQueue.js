@@ -10,12 +10,12 @@ class AnalysisQueue {
     isRunning = false;
 
     cancel() {
+        this.isRunning = false; // Always reset BEFORE abort fires to unblock useLiveAnalysis guard
         if (this.#abortController) {
             this.#abortController.abort();
             this.#abortController = null;
         }
         stockfishService.stop();
-        this.isRunning = false;
     }
 
     async analyzeGame(history, currentIndex, callbacks = {}) {
@@ -188,10 +188,8 @@ class AnalysisQueue {
         } catch (e) {
             if (e.name !== 'AbortError') console.warn('analyzeCurrentPosition fallback:', e);
         } finally {
-            if (!signal.aborted) {
-                onStatus?.(false);
-                this.isRunning = false;
-            }
+            onStatus?.(false);
+            this.isRunning = false; // Always reset, regardless of abort
         }
     }
 

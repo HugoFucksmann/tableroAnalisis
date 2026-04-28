@@ -1,15 +1,13 @@
 /* EvaluationGraph */
 
 .evaluation-graph-container {
-  padding: var(--space-3) var(--space-4) var(--space-2);
-  border-radius: var(--border-radius);
-  background: var(--bg-secondary);
+  padding: var(--space-1) var(--space-4) var(--space-3);
+  /* Sin fondo ni borde, usa el del padre */
 }
 
 /* Evitar que el gráfico se ilumine al pasar el mouse */
-.evaluation-graph-container.glass-panel:hover {
-  background: var(--bg-secondary);
-  border-color: var(--glass-border);
+.evaluation-graph-container:hover {
+  background: transparent;
 }
 
 /* Estado vacío */
@@ -223,6 +221,13 @@
 }
 
 @keyframes pulse-text {
-  0%, 100% { opacity: 0.5; }
-  50% { opacity: 1; }
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
 }

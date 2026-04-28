@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { analysisQueue } from '../services/analysisQueue';
 
@@ -11,8 +11,6 @@ export const useLiveAnalysis = () => {
     const setBestMoveForIndex = useGameStore(state => state.setBestMoveForIndex);
     const setAlternativeLinesForIndex = useGameStore(state => state.setAlternativeLinesForIndex);
 
-    const lastAnalyzedFen = useRef(null);
-
     useEffect(() => {
         const state = useGameStore.getState();
         const hasEval = !!state.evaluationHistory[currentMoveIndex];
@@ -20,9 +18,8 @@ export const useLiveAnalysis = () => {
         const targetMultiPv = state.engineConfig?.liveMultiPv || 3;
         const needsLiveAnalysis = !hasEval || cachedLinesCount < targetMultiPv;
 
-        if (!needsLiveAnalysis || state.isAnalyzing || analysisQueue.isRunning || currentMoveIndex < -1 || lastAnalyzedFen.current === fen) return;
+        if (!needsLiveAnalysis || currentMoveIndex < -1) return;
 
-        lastAnalyzedFen.current = fen;
         let isActive = true;
 
         analysisQueue.analyzeCurrentPosition(fen, currentMoveIndex, {
@@ -41,3 +38,4 @@ export const useLiveAnalysis = () => {
         };
     }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing]);
 };
+

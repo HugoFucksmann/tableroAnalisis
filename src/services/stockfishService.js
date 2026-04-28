@@ -89,9 +89,13 @@ class StockfishService {
             return Promise.reject(new Error('FEN inválido'));
         }
 
+        const t0 = performance.now();
         await this._idlePromise;
+        const tIdle = performance.now() - t0;
 
         const effectiveMultiPv = multiPv ?? this._config.multiPv;
+
+        const tStart = performance.now();
 
         return new Promise((resolve, reject) => {
             if (!this.ready) {
@@ -107,6 +111,10 @@ class StockfishService {
                     isFinished = true;
                     this.isSearching = false;
                     this._activeHandler = null;
+
+                    const tTotal = performance.now() - tStart;
+                    const memInfo = performance.memory ? ` | JS Heap: ${Math.round(performance.memory.usedJSHeapSize / 1024 / 1024)}MB` : '';
+                    console.log(`[Engine] Analizado en ${Math.round(tTotal)}ms | Espera _idlePromise: ${Math.round(tIdle)}ms${memInfo}`);
 
                     if (this._currentReject === reject) {
                         this._currentReject = null;
@@ -135,7 +143,7 @@ class StockfishService {
             const onAbort = () => {
                 if (!isFinished) {
                     this.worker?.postMessage('stop');
-                    cleanup();
+                    cleanup(); // MUST release _idlePromise so the queue doesn't deadlock
                     reject(new DOMException('Aborted', 'AbortError'));
                 }
             };
@@ -162,11 +170,11 @@ class StockfishService {
                         lines[mvIdx].move = pv.split(' ')[0];
                     }
 
-                    if (onProgress && mvIdx === 1) {
+                    if (onProgress) {
                         onProgress({ 
-                            score: lines[1].score, 
-                            mate: lines[1].mate, 
-                            bestMove: lines[1].move,
+                            score: lines[1]?.score ?? 0, 
+                            mate: lines[1]?.mate ?? null, 
+                            bestMove: lines[1]?.move ?? '',
                             lines: Object.values(lines).sort((a, b) => a.multipv - b.multipv)
                         });
                     }
