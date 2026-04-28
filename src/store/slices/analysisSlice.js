@@ -13,6 +13,8 @@ export const createAnalysisSlice = (set, get) => ({
   openingDetected: false,
 
   engineConfig: {
+    engineMode: 'local', // 'local' (WASM) o 'remote' (Node.js)
+    backendUrl: 'ws://localhost:9001',
     depth: 18,
     multiPv: 1,
     liveDepth: 16,

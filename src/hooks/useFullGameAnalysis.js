@@ -43,10 +43,12 @@ export const useFullGameAnalysis = () => {
             onStatus: setAnalyzing,
             onProgress: setAnalysisProgress,
             onOpeningDetected: ({ openingName, ecoCode, openingPly, bookPlies }) => {
-                const currentEvals = useGameStore.getState().moveEvaluations;
-                const batchEvals = { ...currentEvals };
-                bookPlies.forEach(ply => { batchEvals[ply] = 'Libro'; });
-                useGameStore.setState({ moveEvaluations: batchEvals });
+
+                // CORRECCIÓN: Usar la función de Zustand para evitar sobrescribir datos de Stockfish
+                bookPlies.forEach(ply => {
+                    setMoveEvaluation(ply, 'Libro');
+                });
+
                 if (openingName) setOpeningName(openingName);
                 if (ecoCode) setEcoCode(ecoCode);
                 setOpeningPly(openingPly);

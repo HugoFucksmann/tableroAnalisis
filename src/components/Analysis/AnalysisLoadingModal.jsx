@@ -1,19 +1,3 @@
-/**
- * AnalysisLoadingModal.jsx
- *
- * Modal bloqueante que cubre la UI mientras corre el análisis completo.
- * Se muestra cuando:
- *   - hay una partida cargada (history.length > 0)
- *   - analysisReady === false
- *
- * Desaparece automáticamente cuando analysisQueue llama onComplete()
- * y el store setea analysisReady = true.
- *
- * Muestra:
- *   - Nombre de apertura detectado (actualizado en tiempo real)
- *   - Barra de progreso animada
- *   - Porcentaje de análisis de Stockfish
- */
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -45,7 +29,6 @@ export const AnalysisLoadingModal = () => {
         setAnalyzing: state.setAnalyzing,
     })));
 
-    // No mostrar si no hay partida, si ya terminó el análisis completo, o si es juego libre (sin gameId)
     if (history.length === 0 || analysisReady || !gameId || !wantsFullAnalysis) return null;
 
     const handleCancel = () => {
@@ -54,12 +37,15 @@ export const AnalysisLoadingModal = () => {
         setAnalyzing(false);
     };
 
-    // Fase actual basada en el progreso
-    const phase = !openingDetected
-        ? 'Detectando apertura…'
-        : analysisProgress < 100
-            ? `Analizando con Stockfish… ${analysisProgress}%`
-            : 'Finalizando…';
+    // 💡 NUEVA LÓGICA DE FASES (Prioriza mostrar el progreso)
+    let phase = '';
+    if (analysisProgress < 100) {
+        phase = `Analizando posiciones… ${analysisProgress}%`;
+    } else if (!openingDetected) {
+        phase = 'Consultando teoría de aperturas…';
+    } else {
+        phase = 'Generando reporte final…';
+    }
 
     return (
         <div className="analysis-modal-overlay">
@@ -99,7 +85,6 @@ export const AnalysisLoadingModal = () => {
     );
 };
 
-// Spinner circular simple
 const SimpleSpinner = () => (
     <svg
         className="simple-spinner"

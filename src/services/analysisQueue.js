@@ -4,27 +4,78 @@ import { useGameStore } from '../store/useGameStore';
 import { ChessMath } from '../utils/chessMath';
 import { EvaluationEngine } from '../analysis/evaluationRules';
 import { OpeningService, MAX_BOOK_PLY } from '../analysis/openingService';
+import { backendService } from './backendService';
 
 class AnalysisQueue {
     #abortController = null;
     isRunning = false;
 
     cancel() {
-        this.isRunning = false; // Always reset BEFORE abort fires to unblock useLiveAnalysis guard
+        this.isRunning = false;
         if (this.#abortController) {
             this.#abortController.abort();
             this.#abortController = null;
         }
         stockfishService.stop();
+        if (backendService.isConnected) {
+            backendService.cancel();
+        }
     }
 
     async analyzeGame(history, currentIndex, callbacks = {}) {
         const { onMoveResult, onProgress, onStatus, onComplete, onOpeningDetected, gameId = Date.now(), lichessToken } = callbacks;
 
+        const storeState = useGameStore.getState();
+        const engineConfig = {
+            ...storeState.engineConfig,
+            lichessToken: storeState.lichessToken
+        };
+
+        // Decisión de estrategia (Remote vs Local)
+        const useRemote = engineConfig.engineMode === 'remote' && backendService.isConnected;
+
+        if (useRemote) {
+            this.cancel();
+            if (!history || history.length === 0) return;
+
+            this.#abortController = new AbortController();
+            this.isRunning = true;
+            onStatus?.(true);
+
+            const removeHandler = backendService.addHandler((msg) => {
+                switch (msg.type) {
+                    case 'status': onStatus?.(msg.running); break;
+                    case 'progress': onProgress?.(msg.pct, msg.label); break;
+                    case 'move_result': onMoveResult?.(msg); break;
+                    case 'opening_detected': onOpeningDetected?.(msg); break;
+                    case 'complete':
+                        onComplete?.(msg.accuracy);
+                        this.isRunning = false;
+                        onStatus?.(false);
+                        removeHandler();
+                        break;
+                    case 'error':
+                        console.error('[Backend] Game analysis error:', msg.message);
+                        this.isRunning = false;
+                        onStatus?.(false);
+                        removeHandler();
+                        break;
+                }
+            });
+
+            this.#abortController.signal.addEventListener('abort', () => {
+                backendService.cancel();
+                removeHandler();
+            });
+
+            backendService.analyzeGame(history, currentIndex, gameId, engineConfig);
+            return;
+        }
+
+        // --- FALLBACK / LOCAL WASM ---
         this.cancel();
         if (!history || history.length === 0) return;
 
-        const engineConfig = useGameStore.getState().engineConfig ?? {};
         stockfishService.destroy();
 
         this.#abortController = new AbortController();
@@ -139,13 +190,45 @@ class AnalysisQueue {
 
     async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
         const { onResult, onStatus } = callbacks;
+
+        const engineConfig = useGameStore.getState().engineConfig ?? {};
+        const useRemote = engineConfig.engineMode === 'remote' && backendService.isConnected;
+
+        if (useRemote) {
+            this.cancel();
+            onStatus?.(true);
+            this.isRunning = true;
+
+            const removeHandler = backendService.addHandler((msg) => {
+                if (msg.type === 'position_progress' || msg.type === 'position_result') {
+                    onResult?.(msg);
+                }
+                if (msg.type === 'error') {
+                    console.error('[Backend] Error:', msg.message);
+                    onStatus?.(false);
+                    this.isRunning = false;
+                }
+            });
+
+            this.#abortController = new AbortController();
+            this.#abortController.signal.addEventListener('abort', () => {
+                backendService.cancel();
+                removeHandler();
+            });
+
+            backendService.analyzePosition(fen, moveIndex, {
+                depth: engineConfig.liveDepth ?? engineConfig.depth ?? 18,
+                multiPv: engineConfig.liveMultiPv ?? engineConfig.multiPv ?? 1
+            });
+            return;
+        }
+
+        // --- FALLBACK / LOCAL WASM ---
         this.cancel();
 
         this.#abortController = new AbortController();
         const { signal } = this.#abortController;
         this.isRunning = true;
-
-        const engineConfig = useGameStore.getState().engineConfig ?? {};
 
         try {
             await stockfishService.init(engineConfig);
@@ -162,7 +245,7 @@ class AnalysisQueue {
                     onResult?.({
                         score: ChessMath.cpToVisualScore(score, mate, isBlackTurn),
                         mate,
-                        bestMove, 
+                        bestMove,
                         moveIndex,
                         lines: lines?.map(line => ({
                             ...line,
@@ -177,8 +260,8 @@ class AnalysisQueue {
                 onResult?.({
                     score: ChessMath.cpToVisualScore(result.score, result.mate, isBlackTurn),
                     mate: result.mate,
-                    bestMove: result.bestMove, 
-                    moveIndex, 
+                    bestMove: result.bestMove,
+                    moveIndex,
                     lines: result.lines?.map(line => ({
                         ...line,
                         score: ChessMath.cpToVisualScore(line.score, line.mate ?? null, isBlackTurn),
@@ -189,7 +272,7 @@ class AnalysisQueue {
             if (e.name !== 'AbortError') console.warn('analyzeCurrentPosition fallback:', e);
         } finally {
             onStatus?.(false);
-            this.isRunning = false; // Always reset, regardless of abort
+            this.isRunning = false;
         }
     }
 
