@@ -198,11 +198,15 @@ class StockfishService {
                 }
             };
 
-            this._activeHandler = messageHandler;
+            this._activeHandler = (line) => {
+                if (line === 'readyok') {
+                    this.worker.postMessage(`position fen ${fen}`);
+                    this.worker.postMessage(`go depth ${depth}`);
+                    this._activeHandler = messageHandler;
+                }
+            };
             this.worker.postMessage(`setoption name MultiPV value ${effectiveMultiPv}`);
             this.worker.postMessage('isready');
-            this.worker.postMessage(`position fen ${fen}`);
-            this.worker.postMessage(`go depth ${depth}`);
         });
     }
 

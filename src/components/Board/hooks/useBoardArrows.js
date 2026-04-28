@@ -17,9 +17,7 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
 
         // 1. Líneas MultiPV del motor (con delta de evaluación)
         lines.forEach((line) => {
-            const opacities = { 1: '0.9', 2: '0.7', 3: '0.5', 4: '0.3', 5: '0.15' };
-            const opacity = opacities[line.multipv] || '0.1';
-            const color = `rgba(217, 119, 6, ${opacity})`;
+            const color = `var(--arrow-engine-${Math.min(line.multipv, 5)})`;
 
             const arrow = uciToArrow(line.move, color);
             if (!arrow) return;
@@ -34,7 +32,7 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
 
         // 2. Fallback: single bestMove (Si el motor solo dio la jugada principal)
         if (arrowMap.size === 0 && currentBestMove) {
-            const arrow = uciToArrow(currentBestMove, 'rgba(217, 119, 6, 0.8)');
+            const arrow = uciToArrow(currentBestMove, 'var(--arrow-engine-fallback)');
             if (arrow) {
                 const key = `${arrow.startSquare}-${arrow.endSquare}`;
                 arrowMap.set(key, { arrow, delta: 0, mate: baselineMate, isEngineArrow: true });

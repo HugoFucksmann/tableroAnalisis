@@ -39,6 +39,17 @@
   --glass: rgba(255, 255, 255, 0.03);
   --glass-border: rgba(217, 119, 6, 0.1);
 
+  /* ── Colors: Chess Arrows ───────────────────────────────────── */
+  --arrow-engine-1: rgba(217, 119, 6, 0.9);
+  --arrow-engine-2: rgba(217, 119, 6, 0.7);
+  --arrow-engine-3: rgba(217, 119, 6, 0.5);
+  --arrow-engine-4: rgba(217, 119, 6, 0.3);
+  --arrow-engine-5: rgba(217, 119, 6, 0.15);
+  --arrow-engine-fallback: rgba(217, 119, 6, 0.8);
+
+  --arrow-explorer-base: rgba(59, 130, 246, 0.45);
+  --arrow-explorer-hover: rgba(59, 130, 246, 0.85);
+
   /* ── Typography ─────────────────────────────────────────────── */
   --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
 
