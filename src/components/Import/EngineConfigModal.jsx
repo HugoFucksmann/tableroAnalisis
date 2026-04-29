@@ -114,8 +114,8 @@ export const EngineConfigModal = ({ onClose }) => {
           </div>
 
           <div className="ecm-section">
-            <h4 className="ecm-section-title">Hardware y Recursos {isRemote && '(Ignorados en Remoto)'}</h4>
-            <div style={{ opacity: isRemote ? 0.5 : 1, pointerEvents: isRemote ? 'none' : 'auto' }}>
+            <h4 className="ecm-section-title">Hardware y Recursos</h4>
+            <div>
               <ConfigRow
                 icon={<Cpu size={14} />}
                 label="Hilos CPU"

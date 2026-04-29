@@ -216,7 +216,9 @@ class AnalysisQueue {
                 removeHandler();
             });
 
+            console.log('Sending to backend:', { ...engineConfig, depth: engineConfig.liveDepth ?? engineConfig.depth ?? 18, multiPv: engineConfig.liveMultiPv ?? engineConfig.multiPv ?? 1 });
             backendService.analyzePosition(fen, moveIndex, {
+                ...engineConfig,
                 depth: engineConfig.liveDepth ?? engineConfig.depth ?? 18,
                 multiPv: engineConfig.liveMultiPv ?? engineConfig.multiPv ?? 1
             });

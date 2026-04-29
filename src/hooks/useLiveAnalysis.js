@@ -18,6 +18,7 @@ export const useLiveAnalysis = () => {
         const targetMultiPv = state.engineConfig?.liveMultiPv || 3;
         const needsLiveAnalysis = !hasEval || cachedLinesCount < targetMultiPv;
 
+        console.log('needsLiveAnalysis:', needsLiveAnalysis, 'cached:', cachedLinesCount, 'target:', targetMultiPv);
         if (!needsLiveAnalysis || currentMoveIndex < -1) return;
 
         let isActive = true;
@@ -28,6 +29,7 @@ export const useLiveAnalysis = () => {
                 if (!isActive) return;
                 if (result.score !== undefined) setEvaluation({ score: result.score, mate: result.mate }, result.moveIndex);
                 if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
+                console.log('Received lines from backend:', result.lines?.length);
                 if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
             },
         });
