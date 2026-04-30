@@ -189,7 +189,13 @@ class AnalysisQueue {
     async analyzeCurrentPosition(fen, moveIndex, callbacks = {}) {
         const { onResult, onStatus } = callbacks;
 
-        const engineConfig = useGameStore.getState().engineConfig ?? {};
+        const state = useGameStore.getState();
+        const engineConfig = state.engineConfig ?? {};
+        const appMode = state.appMode;
+
+        // Si estamos en modo puzzle, no enviamos análisis en vivo
+        if (appMode === 'puzzle') return;
+
         const useRemote = engineConfig.engineMode === 'remote' && backendService.isConnected;
 
         if (useRemote) {

@@ -19,6 +19,8 @@ import { useClockSync } from '../../hooks/useClockSync';
 import { useEvaluationNavigation } from '../../hooks/useEvaluationNavigation';
 
 import { useBoardInteraction, useBoardNavigation } from './hooks';
+import { useGameStore } from '../../store/useGameStore';
+import { playChessSound } from '../../utils/soundUtils';
 
 export const Board = () => {
   useFullGameAnalysis();
@@ -27,7 +29,7 @@ export const Board = () => {
   useEvaluationNavigation();
 
   const fen = useFen();
-  const makeMove = useMakeMove();
+  const makeMoveNormal = useMakeMove();
   const clocks = useClocks();
   const players = usePlayers();
   const playerElos = usePlayerElos();
@@ -35,6 +37,8 @@ export const Board = () => {
   const currentMoveIndex = useCurrentMoveIndex();
   const boardOrientation = useBoardOrientation();
   const goToMove = useGoToMove();
+
+  const { appMode, puzzleState, setPuzzleState } = useGameStore();
 
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
 
@@ -47,6 +51,28 @@ export const Board = () => {
   const boardRef = useRef(null);
 
   useBoardNavigation(boardRef, currentMoveIndex, history.length, goToMove);
+
+  const makeMove = React.useCallback((move) => {
+    if (appMode === 'puzzle' && puzzleState && !puzzleState.isSolved) {
+      // Puzzle logic interception
+      const expectedMove = puzzleState.sequence[puzzleState.currentStep];
+      const isPromotionExpected = expectedMove && expectedMove.length === 5;
+      const uciMove = move.from + move.to + (isPromotionExpected ? (move.promotion || 'q') : '');
+
+      if (uciMove === expectedMove) {
+        // Correct move
+        setPuzzleState(prev => ({ ...prev, isWrong: false, currentStep: prev.currentStep + 1, isSolved: prev.currentStep + 1 >= prev.sequence.length }));
+        return makeMoveNormal(move);
+      } else {
+        // Wrong move
+        setPuzzleState(prev => ({ ...prev, isWrong: true }));
+        playChessSound('illegal'); // Feedback sonoro de error
+        return null; // Reject move
+      }
+    }
+    return makeMoveNormal(move);
+  }, [appMode, puzzleState, makeMoveNormal, setPuzzleState]);
+
   const { onDrop, onPromotionPieceSelect, promotionMove } = useBoardInteraction(makeMove);
   
   const material = React.useMemo(() => calculateMaterial(fen), [fen]);

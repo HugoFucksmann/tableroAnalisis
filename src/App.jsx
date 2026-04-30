@@ -7,10 +7,8 @@ import { backendService } from './services/backendService';
 function App() {
 
   useEffect(() => {
-    const config = useGameStore.getState().engineConfig;
-    if (config?.engineMode === 'remote') {
-      backendService.connect();
-    }
+    // El backend es necesario tanto para el motor remoto como para la API de Puzzles
+    backendService.connect();
   }, []);
 
 

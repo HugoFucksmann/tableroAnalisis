@@ -1,8 +1,8 @@
 import { Chess } from 'chess.js';
 import { PIECE_ICONS, MOVE_LABELS } from '../constants/chessConstants';
 
-export function replayTo(history, index) {
-  const g = new Chess();
+export function replayTo(history, index, startFen = null) {
+  const g = startFen ? new Chess(startFen) : new Chess();
   const moves = index < 0 ? [] : history.slice(0, index + 1);
   for (const m of moves) {
     try {

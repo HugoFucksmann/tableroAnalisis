@@ -13,6 +13,8 @@ import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
 import { EngineConfigModal } from '../Import/EngineConfigModal';
+import { ModeSelector } from './ModeSelector';
+import { PuzzleDashboard } from '../Puzzle/PuzzleDashboard';
 import './Dashboard.css';
 
 const usePanelManagement = () => {
@@ -55,7 +57,7 @@ export const Dashboard = () => {
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, isAnalyzeFromPgn, startFullAnalysis,
-    analysisReady,
+    analysisReady, appMode
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -66,6 +68,7 @@ export const Dashboard = () => {
     isAnalyzeFromPgn: state.isAnalyzeFromPgn,
     startFullAnalysis: state.startFullAnalysis,
     analysisReady: state.analysisReady,
+    appMode: state.appMode
   })));
 
   const handleDownloadPgn = () => {
@@ -92,82 +95,90 @@ export const Dashboard = () => {
         </section>
 
         <aside className="side-panels">
-          <div className="panel-container glass-panel controls-panel">
-            <div className="panel-header">
-              <h3>Análisis</h3>
-            </div>
-            <div className="controls-content">
-              <EvaluationGraph />
-              <BoardControls />
-            </div>
-          </div>
+          <ModeSelector />
 
-          <div className={`panel-container glass-panel move-history-panel ${isHistoryCollapsed ? 'collapsed' : ''}`}>
-            <div className="panel-header" onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}>
-              <h3>Historial</h3>
-              <span className="collapse-toggle">{isHistoryCollapsed ? '+' : '−'}</span>
-            </div>
-            {!isHistoryCollapsed && <MoveList />}
-          </div>
+          {appMode === 'analysis' ? (
+            <>
+              <div className="panel-container glass-panel controls-panel">
+                <div className="panel-header">
+                  <h3>Análisis</h3>
+                </div>
+                <div className="controls-content">
+                  <EvaluationGraph />
+                  <BoardControls />
+                </div>
+              </div>
 
-          <div className={`panel-container glass-panel explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
-            <div className="panel-header" onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}>
-              <div className="panel-title-group">
-                {ecoCode && !isExplorerCollapsed && <span className="panel-eco-badge">{ecoCode}</span>}
-                <h3>{explorerTitle}</h3>
+              <div className={`panel-container glass-panel move-history-panel ${isHistoryCollapsed ? 'collapsed' : ''}`}>
+                <div className="panel-header" onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}>
+                  <h3>Historial</h3>
+                  <span className="collapse-toggle">{isHistoryCollapsed ? '+' : '−'}</span>
+                </div>
+                {!isHistoryCollapsed && <MoveList />}
               </div>
-              <div className="panel-actions">
-                {!isExplorerCollapsed && (
-                  <button
-                    className={`panel-action-btn ${lichessToken ? 'has-token' : ''} ${showTokenInput ? 'active' : ''}`}
-                    onClick={(e) => { e.stopPropagation(); setShowTokenInput(!showTokenInput); }}
-                    title="Configurar Token Lichess"
-                  >
-                    <Key size={14} />
-                  </button>
-                )}
-                <span className="collapse-toggle">{isExplorerCollapsed ? '+' : '−'}</span>
-              </div>
-            </div>
-            {!isExplorerCollapsed && <OpeningExplorer />}
-          </div>
 
-          <div className={`panel-container glass-panel import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
-            <div className="panel-header" onClick={() => setIsImportCollapsed(!isImportCollapsed)}>
-              <div className="panel-title-group">
-                <h3>Importar</h3>
+              <div className={`panel-container glass-panel explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
+                <div className="panel-header" onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}>
+                  <div className="panel-title-group">
+                    {ecoCode && !isExplorerCollapsed && <span className="panel-eco-badge">{ecoCode}</span>}
+                    <h3>{explorerTitle}</h3>
+                  </div>
+                  <div className="panel-actions">
+                    {!isExplorerCollapsed && (
+                      <button
+                        className={`panel-action-btn ${lichessToken ? 'has-token' : ''} ${showTokenInput ? 'active' : ''}`}
+                        onClick={(e) => { e.stopPropagation(); setShowTokenInput(!showTokenInput); }}
+                        title="Configurar Token Lichess"
+                      >
+                        <Key size={14} />
+                      </button>
+                    )}
+                    <span className="collapse-toggle">{isExplorerCollapsed ? '+' : '−'}</span>
+                  </div>
+                </div>
+                {!isExplorerCollapsed && <OpeningExplorer />}
               </div>
-              <div className="panel-actions">
-                {(!analysisReady || isAnalyzeFromPgn) && (
-                  <button
-                    className="panel-action-btn"
-                    title="Analizar Partida con Stockfish"
-                    onClick={(e) => { e.stopPropagation(); startFullAnalysis(); }}
-                  >
-                    <Cpu size={14} />
-                  </button>
-                )}
-                {analysisReady && (
-                  <button
-                    className="panel-action-btn"
-                    title="Descargar PGN"
-                    onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
-                  >
-                    <Download size={14} />
-                  </button>
-                )}
-                <button
-                  className="panel-action-btn"
-                  title="Configurar motor de análisis"
-                  onClick={(e) => { e.stopPropagation(); setShowEngineConfig(true); }}
-                >
-                  <Settings size={14} />
-                </button>
-                <span className="collapse-toggle">{isImportCollapsed ? '+' : '−'}</span>
+
+              <div className={`panel-container glass-panel import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
+                <div className="panel-header" onClick={() => setIsImportCollapsed(!isImportCollapsed)}>
+                  <div className="panel-title-group">
+                    <h3>Importar</h3>
+                  </div>
+                  <div className="panel-actions">
+                    {(!analysisReady || isAnalyzeFromPgn) && (
+                      <button
+                        className="panel-action-btn"
+                        title="Analizar Partida con Stockfish"
+                        onClick={(e) => { e.stopPropagation(); startFullAnalysis(); }}
+                      >
+                        <Cpu size={14} />
+                      </button>
+                    )}
+                    {analysisReady && (
+                      <button
+                        className="panel-action-btn"
+                        title="Descargar PGN"
+                        onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
+                      >
+                        <Download size={14} />
+                      </button>
+                    )}
+                    <button
+                      className="panel-action-btn"
+                      title="Configurar motor de análisis"
+                      onClick={(e) => { e.stopPropagation(); setShowEngineConfig(true); }}
+                    >
+                      <Settings size={14} />
+                    </button>
+                    <span className="collapse-toggle">{isImportCollapsed ? '+' : '−'}</span>
+                  </div>
+                </div>
+                {!isImportCollapsed && <GameImport onGameSelect={() => setIsImportCollapsed(true)} />}
               </div>
-            </div>
-            {!isImportCollapsed && <GameImport onGameSelect={() => setIsImportCollapsed(true)} />}
-          </div>
+            </>
+          ) : (
+            <PuzzleDashboard />
+          )}
         </aside>
       </main>
 

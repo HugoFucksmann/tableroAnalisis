@@ -91,6 +91,30 @@ class BackendService {
     clearCache(gameId) {
         return this.send('clear_cache', { gameId });
     }
+
+    extractPuzzles(games, engineConfig) {
+        return this.send('extract_puzzles', { games, engineConfig });
+    }
+
+    cancelExtraction() {
+        return this.send('cancel_extraction', {});
+    }
+
+    getPuzzles() {
+        return this.send('get_puzzles', {});
+    }
+
+    deletePuzzle(id) {
+        return this.send('delete_puzzle', { id });
+    }
+
+    clearPuzzles() {
+        return this.send('clear_puzzles', {});
+    }
+
+    puzzleSolved(id) {
+        return this.send('puzzle_solved', { id });
+    }
 }
 
 export const backendService = new BackendService();

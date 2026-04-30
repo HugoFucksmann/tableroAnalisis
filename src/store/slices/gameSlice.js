@@ -15,6 +15,7 @@ const GAME_RESET = {
   mainLineData: null,
   isAnalyzeFromPgn: false,
   wantsFullAnalysis: false,
+  startFen: null,
 };
 
 export const createGameSlice = (set, get) => ({
@@ -33,22 +34,32 @@ export const createGameSlice = (set, get) => ({
     const headers = newGame.header();
     const verboseHistory = newGame.history({ verbose: true });
     const targetIdx = verboseHistory.length > 0 ? 0 : -1;
-    const gameCopy = replayTo(verboseHistory, targetIdx);
-    if (headers.FEN && targetIdx === -1) gameCopy.load(headers.FEN);
+    const startFen = headers.FEN || null;
+    const gameCopy = replayTo(verboseHistory, targetIdx, startFen);
+    if (startFen && targetIdx === -1) gameCopy.load(startFen);
 
     set({
       game: gameCopy,
       fen: gameCopy.fen(),
       history: verboseHistory,
       currentMoveIndex: targetIdx,
+      startFen,
     });
   },
 
   makeMove: (move) => {
     const state = get();
     try {
-      const gameCopy = replayTo(state.history, state.currentMoveIndex);
+      const gameCopy = replayTo(state.history, state.currentMoveIndex, state.startFen);
+      console.log('[makeMove Debug] move passed:', move);
+      console.log('[makeMove Debug] current history:', state.history.length, 'currentMoveIndex:', state.currentMoveIndex);
+      console.log('[makeMove Debug] startFen:', state.startFen);
+      console.log('[makeMove Debug] gameCopy FEN before move:', gameCopy.fen());
+
       const result = gameCopy.move(move);
+      
+      console.log('[makeMove Debug] gameCopy.move() result:', result);
+      
       if (!result) return null;
 
       const nextMove = state.history[state.currentMoveIndex + 1];
@@ -107,7 +118,7 @@ export const createGameSlice = (set, get) => ({
     if (!state.isExploreMode || !state.mainLineData) return;
 
     const targetIndex = state.mainLineData.branchIndex;
-    const gameCopy = replayTo(state.mainLineData.history, targetIndex);
+    const gameCopy = replayTo(state.mainLineData.history, targetIndex, state.startFen);
     const evalObj = state.mainLineData.evaluationHistory[targetIndex];
 
     set({
@@ -131,7 +142,7 @@ export const createGameSlice = (set, get) => ({
     const state = get();
     const safeIndex = Math.max(-1, Math.min(index, state.history.length - 1));
     try {
-      const gameCopy = replayTo(state.history, safeIndex);
+      const gameCopy = replayTo(state.history, safeIndex, state.startFen);
       const evalObj = state.evaluationHistory[safeIndex];
       set({
         game: gameCopy,
@@ -160,6 +171,34 @@ export const createGameSlice = (set, get) => ({
       ...GAME_RESET
     });
     playChessSound('notify');
+  },
+
+  loadFen: (fenStr) => {
+    try {
+      const state = get();
+      const newGame = new Chess(fenStr);
+      
+      if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+      get().resetAnalysisState();
+
+      set({
+        game: newGame,
+        fen: newGame.fen(),
+        history: [],
+        currentMoveIndex: -1,
+        ...GAME_RESET,
+        startFen: fenStr,
+        gameId: Date.now(),
+        gameHeaders: {},
+        pgnCommentsByIndex: {},
+        isAnalyzeFromPgn: false,
+      });
+      playChessSound('notify');
+      return true;
+    } catch (e) {
+      console.error('loadFen error:', e);
+      return false;
+    }
   },
 
   loadPgn: (pgn) => {
@@ -200,8 +239,9 @@ export const createGameSlice = (set, get) => ({
         : evaluationHistory;
 
       const targetIdx = verboseHistory.length > 0 ? 0 : -1;
-      const gameCopy = replayTo(verboseHistory, targetIdx);
-      if (headers.FEN && targetIdx === -1) gameCopy.load(headers.FEN);
+      const startFen = headers.FEN || null;
+      const gameCopy = replayTo(verboseHistory, targetIdx, startFen);
+      if (startFen && targetIdx === -1) gameCopy.load(startFen);
 
       const evalObj = evalHistoryDict[targetIdx];
 
@@ -216,6 +256,7 @@ export const createGameSlice = (set, get) => ({
         isAnalyzeFromPgn: hasEvaluations,
         gameHeaders: headers,
         pgnCommentsByIndex,
+        startFen,
       });
 
       get().setEvaluationHistory(evalHistoryDict);

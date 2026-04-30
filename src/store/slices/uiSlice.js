@@ -30,4 +30,12 @@ export const createUISlice = (set, get) => ({
   setSearchUsername: (username) => set({ searchUsername: username }),
   setSearchPlatform: (platform) => set({ searchPlatform: platform }),
   setLichessToken: (token) => set({ lichessToken: token }),
+  
+  appMode: 'analysis',
+  setAppMode: (mode) => set({ appMode: mode }),
+  
+  puzzleState: null,
+  setPuzzleState: (updater) => set((state) => ({ 
+    puzzleState: typeof updater === 'function' ? updater(state.puzzleState) : updater 
+  })),
 });
