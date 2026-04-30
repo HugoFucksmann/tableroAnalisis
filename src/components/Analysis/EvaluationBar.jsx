@@ -6,13 +6,10 @@ import './EvaluationBar.css';
 const MAX_EVAL_DISPLAY = 5;
 
 export const EvaluationBar = ({ orientation = 'vertical' }) => {
-  // Select primitives individually — avoids re-render when setEvaluationDirect
-  // creates a new {score, mate} object with identical values (object identity change).
   const evaluationValue = useGameStore(state => state.evaluation?.score ?? 0);
   const mate = useGameStore(state => state.evaluation?.mate ?? null);
 
   const clampedEval = Math.max(-MAX_EVAL_DISPLAY, Math.min(MAX_EVAL_DISPLAY, evaluationValue));
-  // percentage: 100% = fully white side, 0% = fully black side
   const percentage = ((clampedEval + MAX_EVAL_DISPLAY) / (MAX_EVAL_DISPLAY * 2)) * 100;
 
   const displayValue = evaluationValue > 0

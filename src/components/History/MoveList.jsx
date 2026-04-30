@@ -25,7 +25,6 @@ export const MoveList = () => {
 
   const scrollRef = useRef(null);
 
-  // Auto-scroll al movimiento activo
   useEffect(() => {
     if (!scrollRef.current) return;
     const activeItem = scrollRef.current.querySelector('.move-item.active');
@@ -82,7 +81,6 @@ export const MoveList = () => {
 
   return (
     <div className="move-list-container premium-scroll">
-      {/* Header with optional explore-mode restore button */}
       <div className="move-list-header">
         <span>#</span>
         <span>Blancas</span>

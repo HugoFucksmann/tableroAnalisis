@@ -1,8 +1,3 @@
-/**
- * BackendService
- * ────────────────
- * Cliente WebSocket para conectar con el motor nativo de Node.js.
- */
 class BackendService {
     constructor() {
         this.ws = null;
@@ -10,7 +5,7 @@ class BackendService {
         this.isConnected = false;
         this.handlers = new Set();
         this._reconnectTimer = null;
-        this.shouldBeConnected = false; // Control explícito del usuario
+        this.shouldBeConnected = false;
     }
 
     connect() {
@@ -45,7 +40,6 @@ class BackendService {
             this.isConnected = false;
             this.ws = null;
 
-            // Solo reconecta si el usuario sigue queriendo usar el modo 'remote'
             if (this.shouldBeConnected && !this._reconnectTimer) {
                 console.log('[BackendService] Intentando reconectar en 5s...');
                 this._reconnectTimer = setInterval(() => this.connect(), 5000);
@@ -82,7 +76,6 @@ class BackendService {
         return () => this.handlers.delete(handler);
     }
 
-    // ── Interfaz idéntica a AnalysisQueue ──
     analyzePosition(fen, moveIndex, config) {
         return this.send('analyze_position', { fen, moveIndex, ...config });
     }

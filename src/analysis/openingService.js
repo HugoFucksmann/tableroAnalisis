@@ -83,22 +83,19 @@ export const OpeningService = {
                         if (games >= MIN_THEORY_GAMES) {
                             bookPlies.add(ply);
                             lastTheoryPly = ply;
-                            consecutiveNonBook = 0; // resetear contador al encontrar libro
+                            consecutiveNonBook = 0;
                             onPlyResolved(ply, true);
                         } else {
-                            // El movimiento existe pero tiene muy pocas partidas
                             consecutiveNonBook++;
                             onPlyResolved(ply, false);
                         }
                     } else {
-                        // Movimiento no encontrado en el explorer o rank demasiado bajo
                         consecutiveNonBook++;
                         onPlyResolved(ply, false);
                     }
 
                     success = true;
 
-                    // Delay entre requests para no saturar la API de Lichess
                     if (consecutiveNonBook < MAX_CONSECUTIVE_NON_BOOK && ply < maxPly - 1) {
                         await new Promise(r => setTimeout(r, LICHESS_DELAY_MS));
                     }
@@ -106,11 +103,10 @@ export const OpeningService = {
                 } catch (err) {
                     if (err.name === 'AbortError') break;
 
-                    // Error de red: marcar el resto como no-libro y salir
                     console.warn(`[OpeningService] Error en ply ${ply}:`, err.message);
                     for (let i = ply; i < maxPly; i++) onPlyResolved(i, false);
-                    success = true; // salir del while
-                    consecutiveNonBook = MAX_CONSECUTIVE_NON_BOOK; // forzar corte
+                    success = true;
+                    consecutiveNonBook = MAX_CONSECUTIVE_NON_BOOK;
                     break;
                 }
             }

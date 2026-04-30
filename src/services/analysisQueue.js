@@ -31,7 +31,6 @@ class AnalysisQueue {
             lichessToken: storeState.lichessToken
         };
 
-        // Decisión de estrategia (Remote vs Local)
         const useRemote = engineConfig.engineMode === 'remote' && backendService.isConnected;
 
         if (useRemote) {
@@ -72,7 +71,6 @@ class AnalysisQueue {
             return;
         }
 
-        // --- FALLBACK / LOCAL WASM ---
         this.cancel();
         if (!history || history.length === 0) return;
 
@@ -225,7 +223,6 @@ class AnalysisQueue {
             return;
         }
 
-        // --- FALLBACK / LOCAL WASM ---
         this.cancel();
 
         this.#abortController = new AbortController();

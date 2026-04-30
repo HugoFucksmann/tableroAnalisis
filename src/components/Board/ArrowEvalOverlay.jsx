@@ -10,12 +10,10 @@ export const ArrowEvalOverlay = React.memo(({ arrowsWithDelta, orientation }) =>
     return (
         <div
             className="arrow-eval-overlay"
-            // Ocupamos el 100% del padre. ¡Sin calcular píxeles!
             style={{ width: '100%', height: '100%' }}
             aria-hidden="true"
         >
             {arrowsWithDelta.map((item, i) => {
-                // Validación para evitar errores si no hay delta
                 if (!item.isEngineArrow || item.delta == null) return null;
 
                 const coords = squareToPct(item.arrow.endSquare, orientation);
@@ -39,7 +37,6 @@ export const ArrowEvalOverlay = React.memo(({ arrowsWithDelta, orientation }) =>
                         key={`${item.arrow.endSquare}-${i}`}
                         className={className}
                         style={{
-                            // Posicionamiento perfecto con porcentajes
                             left: `calc(${coords.x}% + 6px)`,
                             top: `calc(${coords.y}% - 14px)`,
                         }}

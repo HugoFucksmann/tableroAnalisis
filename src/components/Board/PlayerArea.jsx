@@ -2,15 +2,8 @@ import React from 'react';
 import './PlayerArea.css';
 import { getPieceIcon } from '../../utils/chessUtils';
 
-// ── Helpers ───────────────────────────────────────────────────────
-
-/**
- * Strips milliseconds and formats as MM:SS (< 1 h) or H:MM:SS (≥ 1 h).
- * Accepts "HH:MM:SS", "HH:MM:SS.mmm", "MM:SS", "MM:SS.m", etc.
- */
 function formatClock(raw) {
     if (!raw) return null;
-    // Remove fractional seconds
     const clean = raw.replace(/\.\d+$/, '');
     const parts = clean.split(':');
 
@@ -20,13 +13,9 @@ function formatClock(raw) {
         const ss = parts[2].padStart(2, '0');
         return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
     }
-    // Already MM:SS or similar
     return parts.map(p => p.padStart(2, '0')).join(':');
 }
 
-// ── Sub-components ────────────────────────────────────────────────
-
-/** Static clock display — no colon animation. */
 const ClockDisplay = ({ time, isActive }) => {
     const formatted = formatClock(time);
     if (!formatted) return null;
@@ -40,7 +29,6 @@ const ClockDisplay = ({ time, isActive }) => {
     );
 };
 
-/** Captured pieces as unicode chess symbols. */
 const CapturedPieces = ({ pieces }) => {
     if (!pieces?.length) return null;
     return (
@@ -56,8 +44,6 @@ const CapturedPieces = ({ pieces }) => {
         </div>
     );
 };
-
-// ── Main component ────────────────────────────────────────────────
 
 export const PlayerArea = React.memo(({ side, name, elo, clock, material, isActive }) => {
     const initial = name?.[0]?.toUpperCase() ?? '?';

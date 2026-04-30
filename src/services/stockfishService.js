@@ -77,7 +77,6 @@ class StockfishService {
         return this._initPromise;
     }
 
-    /** Envía ucinewgame para limpiar hash tables. Llamar una vez por partida, no por posición. */
     newGame() {
         if (this.worker && this.ready) {
             this.worker.postMessage('ucinewgame');
@@ -143,7 +142,7 @@ class StockfishService {
             const onAbort = () => {
                 if (!isFinished) {
                     this.worker?.postMessage('stop');
-                    cleanup(); // MUST release _idlePromise so the queue doesn't deadlock
+                    cleanup();
                     reject(new DOMException('Aborted', 'AbortError'));
                 }
             };

@@ -37,7 +37,7 @@ export const AnalysisLoadingModal = () => {
         setAnalyzing(false);
     };
 
-    // 💡 NUEVA LÓGICA DE FASES (Prioriza mostrar el progreso)
+    // ---
     let phase = '';
     if (analysisProgress < 100) {
         phase = `Analizando posiciones… ${analysisProgress}%`;

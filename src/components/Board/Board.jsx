@@ -8,31 +8,24 @@ import { EvalBadgeOverlay } from './EvalBadge';
 import { ConnectedChessboard } from './ConnectedChessboard';
 import './Board.css';
 
-// Selectors
 import { 
   useFen, useMakeMove, useClocks, usePlayers, usePlayerElos, 
   useHistory, useCurrentMoveIndex, useBoardOrientation, useGoToMove
 } from '../../store/selectors/gameSelectors';
 
-// Analysis Hooks
 import { useFullGameAnalysis } from '../../hooks/useFullGameAnalysis';
 import { useLiveAnalysis } from '../../hooks/useLiveAnalysis';
 import { useClockSync } from '../../hooks/useClockSync';
 import { useEvaluationNavigation } from '../../hooks/useEvaluationNavigation';
 
-// Board Hooks
 import { useBoardInteraction, useBoardNavigation } from './hooks';
 
-// ── Component ────────────────────────────────────────────────────────────────
-
 export const Board = () => {
-  // Sync Hooks
   useFullGameAnalysis();
   useLiveAnalysis();
   useClockSync();
   useEvaluationNavigation();
 
-  // Selectors
   const fen = useFen();
   const makeMove = useMakeMove();
   const clocks = useClocks();
@@ -53,11 +46,9 @@ export const Board = () => {
 
   const boardRef = useRef(null);
 
-  // Board Hooks
   useBoardNavigation(boardRef, currentMoveIndex, history.length, goToMove);
   const { onDrop, onPromotionPieceSelect, promotionMove } = useBoardInteraction(makeMove);
   
-  // ── Derived state ────────────────────────────────────────────────────────
   const material = React.useMemo(() => calculateMaterial(fen), [fen]);
   const activeColor = React.useMemo(() => getActiveColor(fen), [fen]);
 
@@ -71,7 +62,6 @@ export const Board = () => {
     return highlights;
   }, [currentMoveIndex, history]);
 
-  // ── Layout helpers ────────────────────────────────────────────────────────
   const topSide = boardOrientation === 'white' ? 'black' : 'white';
   const bottomSide = boardOrientation === 'white' ? 'white' : 'black';
 
@@ -85,7 +75,6 @@ export const Board = () => {
     isTop,
   });
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="board-container">
       <PlayerArea {...playerAreaProps(topSide, true)} />

@@ -45,7 +45,6 @@ export const EvaluationGraph = () => {
   const midY = getY(0);
 
   const { sorted, areaPath, linePoints } = useMemo(() => {
-    // FIX: Convertir el diccionario en array antes de ordenar
     const sortedData = Object.values(evaluationHistory || {}).sort((a, b) => a.moveIndex - b.moveIndex);
     const linePts = sortedData.map(d => `${getX(d.moveIndex, total)},${getY(d.score)}`);
 
@@ -64,7 +63,6 @@ export const EvaluationGraph = () => {
     return { sorted: sortedData, areaPath: areaP, linePoints: linePts };
   }, [evaluationHistory, total, midY]);
 
-  // FIX: Acceso O(1) al diccionario
   const currentEval = evaluationHistory?.[currentMoveIndex];
 
   const mistakeMarkers = useMemo(() => {
@@ -73,7 +71,6 @@ export const EvaluationGraph = () => {
       .filter(([, type]) => MISTAKE_TYPES.includes(type))
       .map(([idxStr, type]) => {
         const idx = parseInt(idxStr);
-        // FIX: Acceso O(1) al diccionario
         const evalObj = evaluationHistory?.[idx];
         const score = evalObj?.score ?? 0;
         return { idx, type, x: getX(idx, total), y: getY(score), style: MISTAKE_STYLES[type] };

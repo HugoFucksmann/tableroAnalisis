@@ -4,15 +4,6 @@ import './EvalBadge.css';
 
 const BADGE_SIZE = 26;
 
-/**
- * EvalBadgeOverlay — renders the move-quality badge on top of the board.
- *
- * Props:
- *  currentMoveIndex  number
- *  history           Move[]
- *  moveEvaluations   string[]
- *  orientation       'white' | 'black'
- */
 import { useCurrentMoveIndex, useHistory, useBoardOrientation } from '../../store/selectors/gameSelectors';
 import { useMoveEvaluations } from '../../store/selectors/analysisSelectors';
 
@@ -28,7 +19,6 @@ export const EvalBadgeOverlay = () => {
     const evalData = EVAL_CONFIG[evalKey];
     if (!evalData) return null;
 
-    // Board coordinate → CSS percentage
     let file = currentMove.to.charCodeAt(0) - 'a'.charCodeAt(0);
     let rank = parseInt(currentMove.to[1], 10) - 1;
 
@@ -43,7 +33,7 @@ export const EvalBadgeOverlay = () => {
     return (
         <div className="eval-badge-overlay" aria-hidden="true">
             <div
-                key={`${currentMoveIndex}-${evalKey}`}   // forces re-animation on change
+                key={`${currentMoveIndex}-${evalKey}`}
                 className="eval-badge"
                 title={evalKey}
                 style={{

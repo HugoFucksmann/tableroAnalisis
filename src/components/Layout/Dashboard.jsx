@@ -15,7 +15,6 @@ import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
 import { EngineConfigModal } from '../Import/EngineConfigModal';
 import './Dashboard.css';
 
-// FIX: Hook personalizado extraído para limpiar el Dashboard
 const usePanelManagement = () => {
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 1100 : false
@@ -93,7 +92,6 @@ export const Dashboard = () => {
         </section>
 
         <aside className="side-panels">
-          {/* Controls + Graph */}
           <div className="panel-container glass-panel controls-panel">
             <div className="panel-header">
               <h3>Análisis</h3>
@@ -104,7 +102,6 @@ export const Dashboard = () => {
             </div>
           </div>
 
-          {/* Move history */}
           <div className={`panel-container glass-panel move-history-panel ${isHistoryCollapsed ? 'collapsed' : ''}`}>
             <div className="panel-header" onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}>
               <h3>Historial</h3>
@@ -113,7 +110,6 @@ export const Dashboard = () => {
             {!isHistoryCollapsed && <MoveList />}
           </div>
 
-          {/* Explorer */}
           <div className={`panel-container glass-panel explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
             <div className="panel-header" onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}>
               <div className="panel-title-group">
@@ -136,7 +132,6 @@ export const Dashboard = () => {
             {!isExplorerCollapsed && <OpeningExplorer />}
           </div>
 
-          {/* Import */}
           <div className={`panel-container glass-panel import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
             <div className="panel-header" onClick={() => setIsImportCollapsed(!isImportCollapsed)}>
               <div className="panel-title-group">

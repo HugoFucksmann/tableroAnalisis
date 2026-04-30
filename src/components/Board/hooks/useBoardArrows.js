@@ -6,16 +6,14 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
     return useMemo(() => {
         const storeArrows = arrows ?? [];
         const lines = currentLines ?? [];
-        const arrowMap = new Map(); // key → { arrow, delta, mate, isEngineArrow }
+        const arrowMap = new Map();
 
         const isBlackTurn = activeColor === 'black';
 
-        // Opción B: Usar la mejor jugada del motor como base comparativa
         const bestLine = lines.find(l => l.multipv === 1);
         const baselineScore = bestLine?.score ?? currentEval?.score ?? null;
         const baselineMate = bestLine?.mate ?? currentEval?.mate ?? null;
 
-        // 1. Líneas MultiPV del motor (con delta de evaluación)
         lines.forEach((line) => {
             const color = `var(--arrow-engine-${Math.min(line.multipv, 5)})`;
 
@@ -30,7 +28,6 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
             arrowMap.set(key, { arrow, delta, mate, isEngineArrow: true });
         });
 
-        // 2. Fallback: single bestMove (Si el motor solo dio la jugada principal)
         if (arrowMap.size === 0 && currentBestMove) {
             const arrow = uciToArrow(currentBestMove, 'var(--arrow-engine-fallback)');
             if (arrow) {
@@ -39,7 +36,6 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
             }
         }
 
-        // 3. Flechas del store (Aperturas o pintadas manualmente)
         for (const storeArrow of storeArrows) {
             const key = `${storeArrow.startSquare}-${storeArrow.endSquare}`;
             if (storeArrows.length === 1) {

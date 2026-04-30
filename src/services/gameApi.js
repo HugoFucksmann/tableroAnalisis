@@ -12,7 +12,6 @@ export async function fetchLichessGames(username, max = 15, until = null, token 
     const text = await res.text();
     const lines = text.split('\n').filter(line => line.trim().length > 0);
 
-    // Fix NDJSON Crashing: Si la API corta el string a la mitad, no rompemos toda la ejecución
     const games = lines.reduce((acc, line) => {
       try {
         const game = JSON.parse(line);

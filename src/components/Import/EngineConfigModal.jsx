@@ -22,11 +22,9 @@ export const EngineConfigModal = ({ onClose }) => {
     setEngineConfig: state.setEngineConfig,
   })));
 
-  // Merge con defaults y forzar refresh de UI de estado de red
   const config = { ...DEFAULT_CONFIG, ...engineConfig };
   const [isConnected, setIsConnected] = useState(backendService.isConnected);
 
-  // Efecto para escuchar si el WebSocket cambia de estado mientras el modal está abierto
   useEffect(() => {
     const interval = setInterval(() => {
       if (isConnected !== backendService.isConnected) {
@@ -45,7 +43,7 @@ export const EngineConfigModal = ({ onClose }) => {
   };
 
   const handleReset = () => {
-    backendService.disconnect(); // Default es local
+    backendService.disconnect();
     setEngineConfig(DEFAULT_CONFIG);
   };
 
@@ -79,7 +77,6 @@ export const EngineConfigModal = ({ onClose }) => {
 
         <div className="ecm-body">
 
-          {/* SELECCIÓN DE MOTOR */}
           <div className="ecm-section">
             <h4 className="ecm-section-title">Origen de Procesamiento</h4>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
