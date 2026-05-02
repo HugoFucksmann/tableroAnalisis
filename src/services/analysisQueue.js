@@ -10,16 +10,43 @@ class AnalysisQueue {
     #abortController = null;
     isRunning = false;
 
-    cancel() {
+    constructor() {
+        backendService.addHandler((msg) => {
+            if (msg.type === 'cancelled') {
+                const state = useGameStore.getState();
+                if (state.setCanceling) state.setCanceling(false);
+                
+                // Solo si no se inició un nuevo análisis mientras esperábamos el ACK
+                if (!this.isRunning) {
+                    if (state.setAnalyzing) state.setAnalyzing(false);
+                    if (state.wantsFullAnalysis && state.setAnalysisReady) {
+                        state.setAnalysisReady(true);
+                    }
+                }
+            }
+        });
+    }
+
+    cancel(isUserAction = true) {
+        const state = useGameStore.getState();
+        const useRemote = state.engineConfig?.engineMode === 'remote' && backendService.isConnected;
+
+        if (useRemote) {
+            if (isUserAction && state.setCanceling) state.setCanceling(true);
+            backendService.cancel();
+        } else {
+            if (state.setAnalyzing) state.setAnalyzing(false);
+            if (state.wantsFullAnalysis && state.setAnalysisReady) {
+                state.setAnalysisReady(true);
+            }
+        }
+
         this.isRunning = false;
         if (this.#abortController) {
             this.#abortController.abort();
             this.#abortController = null;
         }
         stockfishService.stop();
-        if (backendService.isConnected) {
-            backendService.cancel();
-        }
     }
 
     async analyzeGame(history, currentIndex, callbacks = {}) {
@@ -34,7 +61,7 @@ class AnalysisQueue {
         const useRemote = engineConfig.engineMode === 'remote' && backendService.isConnected;
 
         if (useRemote) {
-            this.cancel();
+            this.cancel(false);
             if (!history || history.length === 0) return;
 
             this.#abortController = new AbortController();
@@ -63,7 +90,6 @@ class AnalysisQueue {
             });
 
             this.#abortController.signal.addEventListener('abort', () => {
-                backendService.cancel();
                 removeHandler();
             });
 
@@ -71,7 +97,7 @@ class AnalysisQueue {
             return;
         }
 
-        this.cancel();
+        this.cancel(false);
         if (!history || history.length === 0) return;
 
         stockfishService.destroy();
@@ -199,7 +225,7 @@ class AnalysisQueue {
         const useRemote = engineConfig.engineMode === 'remote' && backendService.isConnected;
 
         if (useRemote) {
-            this.cancel();
+            this.cancel(false);
             onStatus?.(true);
             this.isRunning = true;
 
@@ -216,7 +242,6 @@ class AnalysisQueue {
 
             this.#abortController = new AbortController();
             this.#abortController.signal.addEventListener('abort', () => {
-                backendService.cancel();
                 removeHandler();
             });
 
@@ -229,7 +254,7 @@ class AnalysisQueue {
             return;
         }
 
-        this.cancel();
+        this.cancel(false);
 
         this.#abortController = new AbortController();
         const { signal } = this.#abortController;

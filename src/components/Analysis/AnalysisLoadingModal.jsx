@@ -14,6 +14,7 @@ export const AnalysisLoadingModal = () => {
         openingDetected,
         gameId,
         wantsFullAnalysis,
+        isCanceling,
         setAnalysisReady,
         setAnalyzing,
     } = useGameStore(useShallow(state => ({
@@ -25,6 +26,7 @@ export const AnalysisLoadingModal = () => {
         openingDetected: state.openingDetected,
         gameId: state.gameId,
         wantsFullAnalysis: state.wantsFullAnalysis,
+        isCanceling: state.isCanceling,
         setAnalysisReady: state.setAnalysisReady,
         setAnalyzing: state.setAnalyzing,
     })));
@@ -33,8 +35,6 @@ export const AnalysisLoadingModal = () => {
 
     const handleCancel = () => {
         analysisQueue.cancel();
-        setAnalysisReady(true);
-        setAnalyzing(false);
     };
 
     // ---
@@ -77,8 +77,8 @@ export const AnalysisLoadingModal = () => {
                     El análisis corre una sola vez por partida
                 </p>
 
-                <button className="analysis-modal-cancel-btn" onClick={handleCancel}>
-                    Interrumpir Análisis
+                <button className="analysis-modal-cancel-btn" onClick={handleCancel} disabled={isCanceling}>
+                    {isCanceling ? 'Cancelando...' : 'Interrumpir Análisis'}
                 </button>
             </div>
         </div>

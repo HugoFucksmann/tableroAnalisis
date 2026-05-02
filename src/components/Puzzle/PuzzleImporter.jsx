@@ -29,6 +29,13 @@ export const PuzzleImporter = ({ onBack }) => {
         alert(`¡Extracción completada! Se han añadido ${msg.totalExtracted} puzzles.`);
         setExtractionStatus(null);
         setSelectedIds(new Set());
+      } else if (msg.type === 'extraction_cancelled') {
+        alert(`Extracción cancelada. Puzzles extraídos: ${msg.totalExtracted}`);
+        setExtractionStatus(null);
+        setSelectedIds(new Set());
+      } else if (msg.type === 'error') {
+        alert(`Error en la extracción: ${msg.message}`);
+        setExtractionStatus(null);
       }
     });
     return () => removeHandler();
@@ -146,8 +153,15 @@ export const PuzzleImporter = ({ onBack }) => {
           <div className="pi-stats">
             <span>Puzzles encontrados: <strong>{extractionStatus.extracted}</strong></span>
           </div>
-          <button className="pi-cancel-btn" onClick={() => backendService.cancelExtraction()}>
-            Cancelar
+          <button 
+            className="pi-cancel-btn" 
+            onClick={() => {
+              setExtractionStatus(prev => ({ ...prev, canceling: true }));
+              backendService.cancelExtraction();
+            }}
+            disabled={extractionStatus.canceling}
+          >
+            {extractionStatus.canceling ? 'Cancelando...' : 'Cancelar'}
           </button>
         </div>
       )}

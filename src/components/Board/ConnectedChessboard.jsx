@@ -30,7 +30,7 @@ export const ConnectedChessboard = React.memo(({
         activeColor
     );
 
-    console.log('[ConnectedChessboard] Render - lines:', currentLines?.length, 'arrows:', combinedArrows?.length);
+
 
     return (
         <>

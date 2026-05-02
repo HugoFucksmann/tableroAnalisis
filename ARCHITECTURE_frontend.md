@@ -5,8 +5,8 @@
 
 ## ⚠️ Reglas Críticas Antes de Tocar Cualquier Cosa
 
-1. **`evaluationRules.js` está DUPLICADO** — existe en frontend (`src/analysis/evaluationRules.js`) y backend. Cualquier cambio en fórmulas o umbrales **debe aplicarse en ambos simultáneamente**.
-2. **`analysisUtils.js` también está DUPLICADO** — existe en ambos proyectos. Cambios en `buildPositions`, `buildAnalysisOrder` o `mapLines` deben replicarse.
+1. **`evaluationRules.js` está DUPLICADO** — existe en frontend (`src/analysis/evaluationRules.js`) y backend. Cualquier cambio en clasificación de jugadas o cálculo de precisión **debe aplicarse en ambos simultáneamente**.
+2. **`chessMath.js` también está DUPLICADO** — existe en ambos proyectos (`src/utils/chessMath.js`). Cambios en conversiones de CP a WP o Visual Score deben replicarse.
 3. **Siempre llamar `AnalysisQueue.cancel()` antes de iniciar análisis** — es el patrón Mutex. Omitirlo inunda el engine con comandos concurrentes y corrompe la salida.
 4. **Puzzle Mode deshabilita el análisis del engine** — no lo rehabilites en `Board.jsx` sin entender la lógica de prevención de spoilers.
 5. **`buildSmartAnalysisOrder()` prioriza la vista actual** — no lo reemplaces con un loop secuencial o la UI perderá responsividad.
@@ -32,7 +32,7 @@ graph TD
     AQ --> BS[backendService.js]
     AQ --> OS[openingService.js]
     AQ --> ER[evaluationRules.js]
-    AQ --> AU[analysisUtils.js]
+    AQ --> CM[chessMath.js]
 
     AQ --> Store[Zustand Store]
     Store --> GS[gameSlice.js]
@@ -220,8 +220,8 @@ Usuario hace clic en "Analizar Partida"
 
   [Camino Local / WASM]
     → AnalysisQueue.cancel()
-    → buildPositions(history)         // genera array de FENs
-    → buildAnalysisOrder(total, currentIndex)
+    → #buildPositions(history)        // genera array de FENs
+    → #buildSmartAnalysisOrder(total, currentIndex)
         // orden: [currentIndex, currentIndex+1, currentIndex-1, ...resto 0..N]
         │
         ├── [Paralelo] OpeningService.detectOpenings(history)
@@ -230,8 +230,8 @@ Usuario hace clic en "Analizar Partida"
         │
         └── [Loop sobre posiciones priorizadas]
               → stockfishService.analyzePosition(fen, depth, multiPv)
-              → mapLines(lines, isBlackTurn)
-              → tryClassifyMove(prev_eval, curr_eval, opening_data)
+              → ChessMath.cpToVisualScore(...) y cpToWhiteWinProb(...)
+              → #tryClassifyMove(...)
                   └── espera resolución apertura si ply <= 30
               → guarda en analysisSlice
               → actualiza EvaluationGraph en tiempo real
@@ -295,16 +295,23 @@ backendService recibe { type: 'status', running: false }
 
 ---
 
-## 🛡️ Patrón Mutex
+## 🛡️ Patrón Mutex y Cancelación Asíncrona
 
-Solo una tarea de análisis puede correr por vez. `AnalysisQueue.cancel()` garantiza:
+Solo una tarea de análisis puede correr por vez. `AnalysisQueue.cancel(isUserAction)` garantiza la finalización limpia:
 
-1. **`AbortController.abort()`** — interrumpe loops async internos en curso.
-2. **`stockfishService.stop()`** — envía `stop` al Web Worker WASM.
-3. **`backendService.cancel()`** — envía mensaje `cancel` al backend remoto si está conectado.
-4. **`isAnalyzing = false`** en Zustand — la UI refleja el estado inmediatamente.
+1. **`AbortController.abort()`** — interrumpe loops async internos en curso en el frontend.
+2. **`stockfishService.stop()`** — envía `stop` al Web Worker WASM local.
+3. **`backendService.cancel()`** — envía el mensaje `{"type":"cancel"}` al backend remoto.
+4. **Estado UI (`isCanceling`)** — Si es una acción del usuario (`isUserAction = true`), la UI muestra "Cancelando..." e ignora nuevos clics hasta que el backend confirme.
 
-Previene que resultados "fantasma" de análisis anteriores sobreescriban el estado actual del store.
+### ACK de Cancelación (Evitando Race Conditions)
+El frontend NO cierra el modal ni desactiva `isAnalyzing` inmediatamente al mandar el comando. En su lugar, existe un *listener global* en `AnalysisQueue` que espera el mensaje `{"type": "cancelled"}` del backend.
+Solo cuando el backend confirma que el engine se ha detenido y los bucles han hecho `break` de forma segura, el frontend:
+- Resetea `isCanceling = false`
+- Setea `isAnalyzing = false`
+- Oculta el modal de carga.
+
+Esto evita que el frontend inicie un nuevo estado asíncrono mientras el backend todavía está cerrando promesas activas de Lichess o Stockfish.
 
 ---
 
@@ -341,21 +348,21 @@ Definidas en `src/analysis/evaluationRules.js`. **No hardcodear en otros archivo
 WP = 1 / (1 + e^(-0.00368208 * cp))
 ```
 
-### WP → Visual Score
+### CP → Visual Score
 ```
-visualScore = (WP - 0.5) * 2    // rango: [-1.0, 1.0]
+visualScore = cp / 100    // limitado al rango: [-10.0, 10.0], ajustado por turno de negras
 ```
 
 ### Umbrales de Clasificación
 
 | Label | Condición |
 | :--- | :--- |
-| Brillante | Ganancia WP > 0.05 AND único movimiento ganador |
-| Excelente | Pérdida WP ≤ 0 |
-| Bueno | Pérdida WP ≤ 0.02 |
-| Imprecisión | Pérdida WP ≤ 0.05 |
-| Error | Pérdida WP ≤ 0.10 |
-| Error grave | Pérdida WP > 0.10 |
+| Brillante | Ganancia WP ≥ 0.05 AND es el mejor movimiento sugerido |
+| Excelente | Pérdida WP ≤ 0.02 |
+| Bueno | Pérdida WP ≤ 0.05 |
+| Imprecisión | Pérdida WP ≤ 0.10 |
+| Error | Pérdida WP ≤ 0.20 |
+| Error grave | Pérdida WP > 0.20 |
 | Libro | Movimiento dentro de la apertura conocida |
 
 ---
@@ -373,15 +380,14 @@ Suite completa para revisión de partidas. El engine corre automáticamente en c
 
 ---
 
-## 🛠️ Utilidades: `analysisUtils.js` (DUPLICADO)
+## 🛠️ Utilidades: `chessMath.js` (DUPLICADO)
 
 > ⚠️ Este archivo existe en frontend y backend. Cambios deben replicarse en ambos.
 
 | Función | Descripción |
 | :--- | :--- |
-| `buildPositions(history)` | Repite los movimientos para generar el array de FENs de toda la partida. |
-| `buildAnalysisOrder(total, currentIndex)` | Devuelve índices priorizados: `[currentIndex, currentIndex+1, currentIndex-1, ...resto 0..N]`. |
-| `mapLines(lines, isBlackTurn)` | Normaliza líneas del engine de centipeones a Visual Score (−10 a 10). |
+| `cpToWhiteWinProb(cp, mate, isBlackTurn)` | Convierte centipeones a probabilidad de victoria para blancas (WP). |
+| `cpToVisualScore(cp, mate, isBlackTurn)` | Convierte centipeones a Visual Score (−10 a 10) ajustado por color. |
 
 ---
 
@@ -397,7 +403,7 @@ Suite completa para revisión de partidas. El engine corre automáticamente en c
 | `src/services/backendService.js` | Cliente WebSocket al backend Node.js | Conexión de red |
 | `src/analysis/openingService.js` | Detección de aperturas (TSV local + fallback Lichess) | Llamadas de red en fallback |
 | `src/analysis/evaluationRules.js` | ⚠️ DUPLICADO — umbrales matemáticos | **Debe mantenerse en sync con backend** |
-| `src/analysis/analysisUtils.js` | ⚠️ DUPLICADO — utilidades de posiciones y líneas | **Debe mantenerse en sync con backend** |
+| `src/utils/chessMath.js` | ⚠️ DUPLICADO — utilidades matemáticas (CP a WP, Score) | **Debe mantenerse en sync con backend** |
 | `Board.jsx` | Área de interacción, orquesta hooks, intercepta en Puzzle Mode | Llama a cancel() en cada cambio de posición |
 | `EvaluationGraph.jsx` | Visualizador SVG de tendencia y marcadores de errores | Solo lectura del store |
 | `MoveList.jsx` | Historial de movimientos con símbolos y evaluaciones | Solo lectura del store |
