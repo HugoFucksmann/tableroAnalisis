@@ -11,13 +11,13 @@ Una plataforma de análisis de ajedrez de **alto rendimiento**, diseñada para o
 
 ## ✨ Características Premium
 
-*   **🚀 Motor Stockfish 18 (WASM)**: Análisis local ultra-rápido con soporte multihilo (SIMD).
+*   **🚀 Motor Dual**: Alterna entre **Stockfish 18 WASM** (local) y un **Motor Nativo** remoto para máxima potencia de CPU.
+*   **🧩 Entrenamiento con Puzzles**: Generador de tácticas personalizadas a partir de tus propios errores en partidas importadas.
 *   **📥 Importación Inteligente**: Sincronización instantánea con perfiles de **Lichess** y **Chess.com**.
 *   **📊 Gráfica de Tendencia**: Visualiza la ventaja a lo largo de la partida con navegación interactiva.
 *   **🎯 Clasificación Inteligente**: Algoritmos de precisión que detectan jugadas *Brillantes*, *Mejores* y *Errores* basados en Win Probability.
-*   **📖 Explorador de Teoría**: Integración profunda con la base de datos de Lichess (Master & Community).
-*   **📱 PWA Ready**: Experiencia nativa instalable con soporte offline y notificaciones.
-*   **📤 Exportación Enriquecida**: Genera PGNs anotados con evaluaciones del motor y comentarios.
+*   **📖 Explorador de Teoría**: Integración profunda con la base de datos de Lichess y libro local de aperturas.
+*   **📤 Exportación Enriquecida**: Genera PGNs anotados con evaluaciones del motor y comentarios de precisión.
 
 ## 🛠️ Stack Tecnológico
 
