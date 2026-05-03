@@ -128,13 +128,13 @@ export const EngineConfigModal = ({ onClose }) => {
               <ConfigRow
                 icon={<Hash size={14} />}
                 label="Memoria Hash"
-                description="Tabla de transposición del motor"
+                description={isRemote ? "Memoria total repartida entre instancias" : "Memoria asignada al navegador"}
                 value={config.hash}
                 min={16}
-                max={256}
-                step={16}
+                max={isRemote ? 8192 : 1024}
+                step={isRemote ? 256 : 32}
                 onChange={(v) => handleChange('hash', v)}
-                formatValue={(v) => `${v} MB`}
+                formatValue={(v) => v >= 1024 ? `${(v / 1024).toFixed(1)} GB` : `${v} MB`}
                 colorClass="accent-orange"
               />
             </div>
