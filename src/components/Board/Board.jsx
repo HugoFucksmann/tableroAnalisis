@@ -54,6 +54,8 @@ export const Board = () => {
 
   const makeMove = React.useCallback((move) => {
     if (appMode === 'puzzle' && puzzleState && !puzzleState.isSolved) {
+      if (puzzleState.isAnimating) return null; // Reject silently during animation
+
       // Puzzle logic interception
       const expectedMove = puzzleState.sequence[puzzleState.currentStep];
       const isPromotionExpected = expectedMove && expectedMove.length === 5;

@@ -10,13 +10,14 @@ export const PuzzleSession = ({ onBack }) => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [status, setStatus] = useState('loading'); // loading, empty, active, finished
   const [showSolution, setShowSolution] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
   const [isWrong, setIsWrong] = useState(false);
   const [isSolved, setIsSolved] = useState(false);
   const opponentTimerRef = useRef(null);
 
   const {
     loadFen, setBoardOrientation, setPuzzleState, puzzleState,
-    makeMove, goToMove, history, currentMoveIndex
+    makeMove, goToMove, history, currentMoveIndex, setArrows
   } = useGameStore();
 
   // ── Load puzzle list ──────────────────────────────────────────
@@ -47,31 +48,81 @@ export const PuzzleSession = ({ onBack }) => {
       if (retryInterval) clearInterval(retryInterval);
       if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
       setPuzzleState(null);
+      setArrows([]);
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Initialize puzzle when index changes ─────────────────────
-  useEffect(() => {
-    if (puzzles.length === 0 || currentIndex >= puzzles.length) return;
-
-    const p = puzzles[currentIndex];
-
+  // ── Initialize puzzle logic ──────────────────────────────────
+  const initPuzzle = (p) => {
     if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
 
-    // FEN is already post-blunder — board starts in the correct position.
-    loadFen(p.fen);
-    setBoardOrientation(p.playerColor);
     setShowSolution(false);
+    setShowOriginal(false);
     setIsWrong(false);
     setIsSolved(false);
+    setArrows([]);
 
-    // Expose the solution sequence to Board.jsx validator
-    setPuzzleState({
-      sequence: p.solutionSequence,
-      currentStep: 0,
-      isWrong: false,
-      isSolved: false
-    });
+    if (p.baseFen) {
+      loadFen(p.baseFen);
+      setBoardOrientation(p.playerColor);
+      
+      if (p.contextMoves) {
+        p.contextMoves.forEach(m => makeMove(m));
+      }
+
+      setPuzzleState({
+        sequence: ['__animating__'],
+        currentStep: 0,
+        isWrong: false,
+        isSolved: false,
+        isAnimating: true
+      });
+
+      opponentTimerRef.current = setTimeout(() => {
+        makeMove(p.playedMove);
+        setPuzzleState({
+          sequence: p.solutionSequence,
+          currentStep: 0,
+          isWrong: false,
+          isSolved: false
+        });
+      }, 1000);
+    } else if (p.preBlunderFen) {
+      loadFen(p.preBlunderFen);
+      setBoardOrientation(p.playerColor);
+      
+      setPuzzleState({
+        sequence: ['__animating__'],
+        currentStep: 0,
+        isWrong: false,
+        isSolved: false,
+        isAnimating: true
+      });
+
+      opponentTimerRef.current = setTimeout(() => {
+        makeMove(p.playedMove);
+        setPuzzleState({
+          sequence: p.solutionSequence,
+          currentStep: 0,
+          isWrong: false,
+          isSolved: false
+        });
+      }, 1000);
+    } else {
+      loadFen(p.fen);
+      setBoardOrientation(p.playerColor);
+      setPuzzleState({
+        sequence: p.solutionSequence,
+        currentStep: 0,
+        isWrong: false,
+        isSolved: false
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (puzzles.length === 0 || currentIndex >= puzzles.length) return;
+    initPuzzle(puzzles[currentIndex]);
   }, [currentIndex, puzzles]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── React to Board.jsx updating puzzleState ──────────────────
@@ -120,7 +171,64 @@ export const PuzzleSession = ({ onBack }) => {
     }
   }, [puzzleState?.currentStep, puzzleState?.isWrong]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Draw arrow for the current move ───────────────────────────
+  useEffect(() => {
+    if (status === 'active' && currentMoveIndex >= 0 && history[currentMoveIndex]) {
+      const move = history[currentMoveIndex];
+      const p = puzzles[currentIndex];
+      const isSolver = move.color === (p?.playerColor === 'white' ? 'w' : 'b');
+      const color = isSolver ? 'rgba(16, 185, 129, 0.8)' : 'rgba(239, 68, 68, 0.8)';
+      setArrows([ { startSquare: move.from, endSquare: move.to, color } ]);
+    } else {
+      setArrows([]);
+    }
+  }, [currentMoveIndex, history, status, setArrows, currentIndex, puzzles]);
+
   // ── Handlers ─────────────────────────────────────────────────
+  const applySequence = (sequenceToPlay) => {
+    const p = puzzles[currentIndex];
+    
+    setPuzzleState(prev => ({ ...prev, isSolved: true }));
+    
+    if (p.baseFen) {
+      loadFen(p.baseFen);
+      setBoardOrientation(p.playerColor);
+      if (p.contextMoves) p.contextMoves.forEach(m => makeMove(m));
+      makeMove(p.playedMove);
+    } else if (p.preBlunderFen) {
+      loadFen(p.preBlunderFen);
+      setBoardOrientation(p.playerColor);
+      makeMove(p.playedMove);
+    } else {
+      loadFen(p.fen);
+      setBoardOrientation(p.playerColor);
+    }
+    
+    sequenceToPlay.forEach(m => {
+       // If m is UCI (solutionSequence), convert to object. If SAN (originalContinuation), pass as is.
+       if (m.length >= 4 && m[0] >= 'a' && m[0] <= 'h' && m[1] >= '1' && m[1] <= '8' && m[2] >= 'a' && m[2] <= 'h' && m[3] >= '1' && m[3] <= '8') {
+         makeMove({
+           from: m.slice(0, 2),
+           to: m.slice(2, 4),
+           ...(m.length === 5 ? { promotion: m[4] } : {})
+         });
+       } else {
+         makeMove(m);
+       }
+    });
+  };
+
+  const handleToggleOriginal = () => {
+    const nextVal = !showOriginal;
+    setShowOriginal(nextVal);
+    const p = puzzles[currentIndex];
+    if (nextVal) {
+      applySequence(p.originalContinuation || []);
+    } else {
+      applySequence(p.solutionSequence);
+    }
+  };
+
   const handleNext = () => {
     if (currentIndex < puzzles.length - 1) {
       setCurrentIndex(prev => prev + 1);
@@ -131,18 +239,7 @@ export const PuzzleSession = ({ onBack }) => {
   };
 
   const handleRestart = () => {
-    const p = puzzles[currentIndex];
-    if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
-    loadFen(p.fen);
-    setShowSolution(false);
-    setIsWrong(false);
-    setIsSolved(false);
-    setPuzzleState({
-      sequence: p.solutionSequence,
-      currentStep: 0,
-      isWrong: false,
-      isSolved: false
-    });
+    initPuzzle(puzzles[currentIndex]);
   };
 
   const handleStepBack = () => {
@@ -226,8 +323,16 @@ export const PuzzleSession = ({ onBack }) => {
           </div>
         )}
         {isSolved && (
-          <div className="ps-feedback solved">
-            <CheckCircle2 size={16} /> ¡Excelente! Puzzle resuelto.
+          <div className="ps-feedback solved" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <CheckCircle2 size={16} style={{ verticalAlign: 'middle', marginRight: '4px' }} />
+              ¡Excelente! Puzzle resuelto.
+            </div>
+            {puzzle.originalContinuation && puzzle.originalContinuation.length > 0 && (
+              <button className="ps-btn-small" onClick={handleToggleOriginal}>
+                {showOriginal ? 'Ver Solución' : 'Ver Partida Real'}
+              </button>
+            )}
           </div>
         )}
 
@@ -265,18 +370,20 @@ export const PuzzleSession = ({ onBack }) => {
         </div>
 
         {/* Solution */}
-        {showSolution && (
-          <div className="ps-solution">
-            <span className="sol-label">Solución:</span>
+        {(showSolution || isSolved) && (
+          <div className={`ps-solution ${showOriginal ? 'original-mode' : ''}`}>
+            <span className="sol-label">
+              {showOriginal ? 'Jugadas de la partida real:' : 'Solución:'}
+            </span>
             <div className="sol-moves">
-              {puzzle.solutionSequence.map((m, i) => {
+              {(showOriginal ? puzzle.originalContinuation : puzzle.solutionSequence).map((m, i) => {
                 const isDone = puzzleState ? puzzleState.currentStep > i : false;
-                const isNext = puzzleState ? i === puzzleState.currentStep && !isSolved : false;
+                const isNext = puzzleState ? i === puzzleState.currentStep && !isSolved && !showOriginal : false;
                 return (
                   <span
                     key={i}
-                    className={`sol-move ${isDone ? 'done' : ''} ${isNext ? 'clickable' : ''}`}
-                    onClick={() => handleSolutionClick(m, i)}
+                    className={`sol-move ${(isDone || showOriginal) ? 'done' : ''} ${isNext ? 'clickable' : ''}`}
+                    onClick={() => !showOriginal ? handleSolutionClick(m, i) : null}
                     title={isNext ? 'Clic para reproducir' : ''}
                   >
                     {m}
