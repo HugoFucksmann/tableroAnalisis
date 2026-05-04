@@ -7,7 +7,6 @@ import { OpeningExplorer } from '../Analysis/OpeningExplorer';
 import { BoardControls } from '../Board/BoardControls';
 import { EvaluationGraph } from '../Analysis/EvaluationGraph';
 import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
-import { stockfishService } from '../../services/stockfishService';
 import { Key, Settings, Cpu, Download } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -56,7 +55,7 @@ export const Dashboard = () => {
 
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
-    lichessToken, history, isAnalyzeFromPgn, startFullAnalysis,
+    lichessToken, history, hasPgnEvaluations, startFullAnalysis,
     analysisReady, appMode
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
@@ -65,7 +64,7 @@ export const Dashboard = () => {
     setShowTokenInput: state.setShowTokenInput,
     lichessToken: state.lichessToken,
     history: state.history,
-    isAnalyzeFromPgn: state.isAnalyzeFromPgn,
+    hasPgnEvaluations: state.hasPgnEvaluations,
     startFullAnalysis: state.startFullAnalysis,
     analysisReady: state.analysisReady,
     appMode: state.appMode
@@ -76,10 +75,6 @@ export const Dashboard = () => {
     const pgn = generateAnnotatedPgn(history, moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex);
     downloadPgn(pgn, 'analisis_partida.pgn');
   };
-
-  useEffect(() => {
-    return () => stockfishService.destroy();
-  }, []);
 
   const explorerTitle = (openingName && openingName !== 'Initial Position') ? openingName : 'Explorador';
 
@@ -145,7 +140,7 @@ export const Dashboard = () => {
                     <h3>Importar</h3>
                   </div>
                   <div className="panel-actions">
-                    {(!analysisReady || isAnalyzeFromPgn) && (
+                    {(!analysisReady || hasPgnEvaluations) && (
                       <button
                         className="panel-action-btn"
                         title="Analizar Partida con Stockfish"

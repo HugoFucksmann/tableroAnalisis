@@ -14,7 +14,7 @@ import {
 } from '../../store/selectors/gameSelectors';
 
 import { useFullGameAnalysis } from '../../hooks/useFullGameAnalysis';
-import { useLiveAnalysis } from '../../hooks/useLiveAnalysis';
+import { useLiveEvaluation } from '../../hooks/useLiveEvaluation';
 import { useClockSync } from '../../hooks/useClockSync';
 import { useEvaluationNavigation } from '../../hooks/useEvaluationNavigation';
 
@@ -24,7 +24,7 @@ import { playChessSound } from '../../utils/soundUtils';
 
 export const Board = () => {
   useFullGameAnalysis();
-  useLiveAnalysis();
+  useLiveEvaluation();
   useClockSync();
   useEvaluationNavigation();
 

@@ -12,22 +12,18 @@ import { BookOpen, Star, ThumbsUp, Check, X, Zap } from 'lucide-react';
 
 export const EVAL_CONFIG = {
   'Brillante': { icon: '!!', color: '#fff', bg: '#1baca6', label: 'Brillante' },
-  'Genial': { icon: '!', color: '#fff', bg: '#5c92ba', label: 'Genial' },
   'Libro': { icon: <BookOpen size={12} />, color: '#fff', bg: '#a88865', label: 'Libro' },
   'Mejor': { icon: <Star size={12} fill="white" />, color: '#fff', bg: '#81b64c', label: 'Mejor' },
   'Excelente': { icon: <ThumbsUp size={12} fill="white" />, color: '#fff', bg: '#96bc4b', label: 'Excelente' },
   'Bueno': { icon: <Check size={12} />, color: '#fff', bg: '#96b566', label: 'Bueno' },
   'Imprecisión': { icon: '?!', color: '#fff', bg: '#f0c15c', label: 'Imprecisión' },
   'Error': { icon: '?', color: '#fff', bg: '#e58f39', label: 'Error' },
-  'Omisión': { icon: <X size={12} strokeWidth={4} />, color: '#fff', bg: '#ff7769', label: 'Omisión' },
   'Error grave': { icon: '??', color: '#fff', bg: '#b33430', label: 'Error grave' },
 };
 
 /**
  * Fuente de verdad única de labels de evaluación.
  * Deben coincidir exactamente con los que produce evaluationRules.js.
- * Ordenados de mayor a menor severidad para que el parser
- * encuentre primero el más específico (ej: 'Error grave' antes de 'Error').
  */
 export const MOVE_LABELS = [
   'Error grave',

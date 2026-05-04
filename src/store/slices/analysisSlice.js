@@ -7,15 +7,15 @@ export const createAnalysisSlice = (set, get) => ({
   isAnalyzing: false,
   isCanceling: false,
   analysisProgress: 0,
+  analysisLabel: '',
   analysisReady: false,
-  gameScore: null,
+  accuracy: null,
   ecoCode: '',
+  openingName: 'Initial Position',
   openingPly: -1,
   openingDetected: false,
 
   engineConfig: {
-    engineMode: 'local', // 'local' (WASM) o 'remote' (Node.js)
-    backendUrl: 'ws://localhost:9001',
     depth: 18,
     multiPv: 1,
     liveDepth: 16,
@@ -33,9 +33,11 @@ export const createAnalysisSlice = (set, get) => ({
     isAnalyzing: false,
     isCanceling: false,
     analysisProgress: 0,
+    analysisLabel: '',
     analysisReady: false,
-    gameScore: null,
+    accuracy: null,
     ecoCode: '',
+    openingName: 'Initial Position',
     openingPly: -1,
     openingDetected: false,
   }),
@@ -68,15 +70,14 @@ export const createAnalysisSlice = (set, get) => ({
       isAnalyzing: false,
       isCanceling: false,
       analysisReady: true,
+      analysisLabel: '',
     };
   }),
 
   setEvaluation: (evalData, moveIndex) => {
     const state = get();
     const idx = moveIndex !== undefined ? moveIndex : state.currentMoveIndex;
-    const normalized = typeof evalData === 'number'
-      ? { score: evalData, mate: null }
-      : evalData;
+    const normalized = typeof evalData === 'number' ? { score: evalData, mate: null } : evalData;
 
     set((state) => ({
       evaluation: idx === state.currentMoveIndex ? normalized : state.evaluation,
@@ -88,16 +89,14 @@ export const createAnalysisSlice = (set, get) => ({
   },
 
   setEvaluationDirect: (evalData) => {
-    const normalized = typeof evalData === 'number'
-      ? { score: evalData, mate: null }
-      : evalData;
+    const normalized = typeof evalData === 'number' ? { score: evalData, mate: null } : evalData;
     set({ evaluation: normalized });
   },
 
   setMoveEvaluation: (index, type) => set((state) => {
     const current = state.moveEvaluations[index];
     if (current === 'Libro') {
-      const isError = ['Error', 'Error grave', 'Omisión'].includes(type);
+      const isError = ['Error', 'Error grave'].includes(type);
       if (!isError) return state;
     }
     return { moveEvaluations: { ...state.moveEvaluations, [index]: type } };
@@ -107,10 +106,15 @@ export const createAnalysisSlice = (set, get) => ({
   setAlternativeLinesForIndex: (index, lines) => set((state) => ({ alternativeLines: { ...state.alternativeLines, [index]: lines } })),
   setAnalyzing: (v) => set({ isAnalyzing: v }),
   setCanceling: (v) => set({ isCanceling: v }),
-  setAnalysisProgress: (v) => set({ analysisProgress: v }),
+  setAnalysisProgress: (pct, label) => set((state) => ({ 
+    analysisProgress: pct,
+    analysisLabel: label !== undefined ? label : state.analysisLabel
+  })),
+  setAnalysisLabel: (v) => set({ analysisLabel: v }),
   setAnalysisReady: (v) => set({ analysisReady: v }),
-  setGameScore: (v) => set({ gameScore: v }),
+  setAccuracy: (v) => set({ accuracy: v }),
   setEcoCode: (v) => set({ ecoCode: v }),
+  setOpeningName: (v) => set({ openingName: v }),
   setOpeningPly: (v) => set({ openingPly: v }),
   setOpeningDetected: (v) => set({ openingDetected: v }),
   setEvaluationHistory: (v) => set({ evaluationHistory: v }),

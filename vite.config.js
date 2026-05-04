@@ -1,10 +1,6 @@
-import crossOriginIsolation from 'vite-plugin-cross-origin-isolation'
+import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
 
-export default {
-  plugins: [
-    crossOriginIsolation()
-  ],
-  optimizeDeps: {
-    exclude: ['stockfish']
-  }
-}
+export default defineConfig({
+  plugins: [react()],
+})

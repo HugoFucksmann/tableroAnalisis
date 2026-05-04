@@ -1,7 +1,6 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
-import { fetchOpeningExplorer } from '../../services/gameApi';
 import { Loader, AlertCircle } from 'lucide-react';
 import './OpeningExplorer.css';
 
@@ -23,8 +22,7 @@ export const OpeningExplorer = () => {
     fen,
     lichessToken,
     showTokenInput,
-    openingName,
-    ecoCode,
+    setLichessToken,
     makeMove,
   } = useGameStore(useShallow(state => ({
     setArrows: state.setArrows,
@@ -33,8 +31,6 @@ export const OpeningExplorer = () => {
     lichessToken: state.lichessToken,
     showTokenInput: state.showTokenInput,
     setLichessToken: state.setLichessToken,
-    openingName: state.openingName,
-    ecoCode: state.ecoCode,
     makeMove: state.makeMove,
   })));
 
@@ -48,25 +44,69 @@ export const OpeningExplorer = () => {
     setLoading(true);
     setError(null);
 
-    fetchOpeningExplorer(fen, lichessToken)
-      .then(explorerData => {
-        if (!active) return;
-        setData(explorerData);
+    const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
+    
+    const fetchExplorer = async (url) => {
+        const headers = { 'Accept': 'application/json' };
+        if (lichessToken) headers['Authorization'] = `Bearer ${lichessToken}`;
+        
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`Lichess error: ${res.status}`);
+        return res.json();
+    };
 
-        const bookArrows = (explorerData.moves ?? [])
-          .slice(0, 2)
-          .map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)'))
-          .filter(Boolean);
-        setArrows(bookArrows);
-      })
-      .catch(err => {
-        console.warn('OpeningExplorer fetch failed:', err);
-        if (active) setError('No se pudo conectar con Lichess.');
-      })
-      .finally(() => { if (active) setLoading(false); });
+    const loadData = async () => {
+        try {
+            // Intento 1: Base de datos de Maestros
+            const mastersUrl = `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`;
+            let explorerData = await fetchExplorer(mastersUrl);
+
+            // Fallback: Si no hay jugadas en maestros, probamos base de datos de jugadores
+            if (!explorerData.moves || explorerData.moves.length === 0) {
+                const playerUrl = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(cleanFen)}&ratings=1800,2000,2200,2500`;
+                explorerData = await fetchExplorer(playerUrl);
+            }
+
+            if (!active) return;
+            
+            // Formatear datos para la UI
+            const formattedData = {
+                opening: explorerData.opening?.name || 'Teoría de Aperturas',
+                moves: (explorerData.moves || []).slice(0, 12).map(m => {
+                    const w = m.white || 0;
+                    const d = m.draws || m.draw || 0;
+                    const b = m.black || 0;
+                    const total = w + d + b;
+                    return {
+                        san: m.san,
+                        white: total > 0 ? Math.round((w / total) * 100) : 0,
+                        draw: total > 0 ? Math.round((d / total) * 100) : 0,
+                        black: total > 0 ? Math.round((b / total) * 100) : 0,
+                        games: total
+                    };
+                })
+            };
+
+            setData(formattedData);
+
+            const bookArrows = formattedData.moves
+              .slice(0, 2)
+              .map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)'))
+              .filter(Boolean);
+            setArrows(bookArrows);
+
+        } catch (err) {
+            console.warn('OpeningExplorer fetch failed:', err);
+            if (active) setError('No se pudo conectar con Lichess.');
+        } finally {
+            if (active) setLoading(false);
+        }
+    };
+
+    loadData();
 
     return () => { active = false; };
-  }, [fen, lichessToken]);
+  }, [fen, lichessToken, game, setArrows]);
 
   const handleMoveHover = React.useCallback((san) => {
     setHovered(san);

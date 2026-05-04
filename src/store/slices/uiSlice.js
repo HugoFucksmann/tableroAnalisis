@@ -3,7 +3,6 @@ export const createUISlice = (set, get) => ({
   players: { white: 'Blancas', black: 'Negras' },
   playerElos: { white: null, black: null },
   gamePhase: 'Opening',
-  openingName: 'Initial Position',
   importedGames: [],
   searchUsername: 'elcolof',
   searchPlatform: 'lichess',
@@ -16,7 +15,6 @@ export const createUISlice = (set, get) => ({
   setGameId: (id) => set({ gameId: id }),
   setBoardOrientation: (orientation) => set({ boardOrientation: orientation }),
   setGamePhase: (phase) => set({ gamePhase: phase }),
-  setOpeningName: (name) => set({ openingName: name }),
   setClocks: (white, black) => {
     const current = get().clocks;
     if (current.white === white && current.black === black) return;

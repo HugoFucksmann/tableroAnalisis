@@ -1,5 +1,5 @@
 import { Chess } from 'chess.js';
-import { analysisQueue } from '../../services/analysisQueue';
+import { analysisBridge } from '../../services/analysisBridge';
 import { playChessSound } from '../../utils/soundUtils';
 import { replayTo, extractPgnData } from '../../utils/chessUtils';
 
@@ -13,8 +13,8 @@ const GAME_RESET = {
   highlights: {},
   isExploreMode: false,
   mainLineData: null,
-  isAnalyzeFromPgn: false,
-  wantsFullAnalysis: false,
+  hasPgnEvaluations: false,
+  isReviewRequested: false,
   startFen: null,
 };
 
@@ -51,15 +51,7 @@ export const createGameSlice = (set, get) => ({
     const state = get();
     try {
       const gameCopy = replayTo(state.history, state.currentMoveIndex, state.startFen);
-      console.log('[makeMove Debug] move passed:', move);
-      console.log('[makeMove Debug] current history:', state.history.length, 'currentMoveIndex:', state.currentMoveIndex);
-      console.log('[makeMove Debug] startFen:', state.startFen);
-      console.log('[makeMove Debug] gameCopy FEN before move:', gameCopy.fen());
-
       const result = gameCopy.move(move);
-      
-      console.log('[makeMove Debug] gameCopy.move() result:', result);
-      
       if (!result) return null;
 
       const nextMove = state.history[state.currentMoveIndex + 1];
@@ -93,7 +85,7 @@ export const createGameSlice = (set, get) => ({
         result,
       ];
 
-      analysisQueue.cancel();
+      analysisBridge.cancel();
       get().trimAnalysisState(state.currentMoveIndex);
 
       set({
@@ -159,8 +151,7 @@ export const createGameSlice = (set, get) => ({
 
   resetGame: () => {
     const state = get();
-    if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
-
+    if (state.gameId) analysisBridge.clearCache(state.gameId);
     get().resetAnalysisState();
 
     set({
@@ -177,8 +168,7 @@ export const createGameSlice = (set, get) => ({
     try {
       const state = get();
       const newGame = new Chess(fenStr);
-      
-      if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+      if (state.gameId) analysisBridge.clearCache(state.gameId);
       get().resetAnalysisState();
 
       set({
@@ -191,7 +181,7 @@ export const createGameSlice = (set, get) => ({
         gameId: Date.now(),
         gameHeaders: {},
         pgnCommentsByIndex: {},
-        isAnalyzeFromPgn: false,
+        hasPgnEvaluations: false,
       });
       playChessSound('notify');
       return true;
@@ -206,8 +196,7 @@ export const createGameSlice = (set, get) => ({
       const state = get();
       const newGame = new Chess();
       newGame.loadPgn(pgn);
-
-      if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
+      if (state.gameId) analysisBridge.clearCache(state.gameId);
 
       const headers = newGame.header();
       state.setPlayers(headers.White ?? 'Blancas', headers.Black ?? 'Negras', headers.WhiteElo ?? null, headers.BlackElo ?? null);
@@ -221,7 +210,6 @@ export const createGameSlice = (set, get) => ({
       }
 
       state.setGameId(Date.now());
-
       const verboseHistory = newGame.history({ verbose: true });
       const comments = newGame.getComments();
 
@@ -244,7 +232,6 @@ export const createGameSlice = (set, get) => ({
       if (startFen && targetIdx === -1) gameCopy.load(startFen);
 
       const evalObj = evalHistoryDict[targetIdx];
-
       get().resetAnalysisState();
 
       set({
@@ -253,7 +240,7 @@ export const createGameSlice = (set, get) => ({
         history: verboseHistory,
         currentMoveIndex: targetIdx,
         ...GAME_RESET,
-        isAnalyzeFromPgn: hasEvaluations,
+        hasPgnEvaluations: hasEvaluations,
         gameHeaders: headers,
         pgnCommentsByIndex,
         startFen,
@@ -277,13 +264,12 @@ export const createGameSlice = (set, get) => ({
 
   startFullAnalysis: () => {
     const state = get();
-    if (state.gameId) analysisQueue.clearOpeningCache(state.gameId);
-
+    if (state.gameId) analysisBridge.clearCache(state.gameId);
     get().resetAnalysisState();
 
     set({
-      isAnalyzeFromPgn: false,
-      wantsFullAnalysis: true,
+      hasPgnEvaluations: false,
+      isReviewRequested: true,
       gameId: Date.now(),
     });
   },

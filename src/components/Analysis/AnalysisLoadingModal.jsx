@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
-import { analysisQueue } from '../../services/analysisQueue';
+import { analysisBridge } from '../../services/analysisBridge';
 import './AnalysisLoadingModal.css';
 
 export const AnalysisLoadingModal = () => {
@@ -9,48 +9,46 @@ export const AnalysisLoadingModal = () => {
         history,
         analysisReady,
         analysisProgress,
+        analysisLabel,
         openingName,
         ecoCode,
         openingDetected,
         gameId,
-        wantsFullAnalysis,
+        isReviewRequested,
         isCanceling,
-        setAnalysisReady,
-        setAnalyzing,
     } = useGameStore(useShallow(state => ({
         history: state.history,
         analysisReady: state.analysisReady,
         analysisProgress: state.analysisProgress,
+        analysisLabel: state.analysisLabel,
         openingName: state.openingName,
         ecoCode: state.ecoCode,
         openingDetected: state.openingDetected,
         gameId: state.gameId,
-        wantsFullAnalysis: state.wantsFullAnalysis,
+        isReviewRequested: state.isReviewRequested,
         isCanceling: state.isCanceling,
-        setAnalysisReady: state.setAnalysisReady,
-        setAnalyzing: state.setAnalyzing,
     })));
 
-    if (history.length === 0 || analysisReady || !gameId || !wantsFullAnalysis) return null;
+    if (history.length === 0 || analysisReady || !gameId || !isReviewRequested) return null;
 
     const handleCancel = () => {
-        analysisQueue.cancel();
+        analysisBridge.cancel();
     };
 
-    // ---
-    let phase = '';
-    if (analysisProgress < 100) {
-        phase = `Analizando posiciones… ${analysisProgress}%`;
-    } else if (!openingDetected) {
-        phase = 'Consultando teoría de aperturas…';
-    } else {
-        phase = 'Generando reporte final…';
+    let phase = analysisLabel;
+    if (!phase) {
+        if (analysisProgress < 100) {
+            phase = `Analizando posiciones… ${analysisProgress}%`;
+        } else if (!openingDetected) {
+            phase = 'Consultando teoría de aperturas…';
+        } else {
+            phase = 'Generando reporte final…';
+        }
     }
 
     return (
         <div className="analysis-modal-overlay">
             <div className="analysis-modal-card">
-
                 <div className="analysis-modal-icon">
                     <SimpleSpinner />
                 </div>
@@ -73,10 +71,6 @@ export const AnalysisLoadingModal = () => {
                     />
                 </div>
 
-                <p className="analysis-modal-hint">
-                    El análisis corre una sola vez por partida
-                </p>
-
                 <button className="analysis-modal-cancel-btn" onClick={handleCancel} disabled={isCanceling}>
                     {isCanceling ? 'Cancelando...' : 'Interrumpir Análisis'}
                 </button>
@@ -86,21 +80,7 @@ export const AnalysisLoadingModal = () => {
 };
 
 const SimpleSpinner = () => (
-    <svg
-        className="simple-spinner"
-        viewBox="0 0 24 24"
-        fill="none"
-        xmlns="http://www.w3.org/2000/svg"
-    >
-        <circle
-            cx="12"
-            cy="12"
-            r="10"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeDasharray="45"
-            strokeDashoffset="0"
-            strokeLinecap="round"
-        />
+    <svg className="simple-spinner" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="45" strokeDashoffset="0" strokeLinecap="round" />
     </svg>
 );

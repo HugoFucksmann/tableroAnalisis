@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
-import { analysisQueue } from '../services/analysisQueue';
+import { analysisBridge } from '../services/analysisBridge';
 
 export const useFullGameAnalysis = () => {
     const gameId = useGameStore(state => state.gameId);
     const history = useGameStore(state => state.history);
-    const isAnalyzeFromPgn = useGameStore(state => state.isAnalyzeFromPgn);
-    const wantsFullAnalysis = useGameStore(state => state.wantsFullAnalysis);
+    const hasPgnEvaluations = useGameStore(state => state.hasPgnEvaluations);
+    const isReviewRequested = useGameStore(state => state.isReviewRequested);
     const game = useGameStore(state => state.game);
     const currentMoveIndex = useGameStore(state => state.currentMoveIndex);
     const lichessToken = useGameStore(state => state.lichessToken);
@@ -18,7 +18,7 @@ export const useFullGameAnalysis = () => {
     const setMoveEvaluation = useGameStore(state => state.setMoveEvaluation);
     const setBestMoveForIndex = useGameStore(state => state.setBestMoveForIndex);
     const setAlternativeLinesForIndex = useGameStore(state => state.setAlternativeLinesForIndex);
-    const setGameScore = useGameStore(state => state.setGameScore);
+    const setAccuracy = useGameStore(state => state.setAccuracy);
     const setEcoCode = useGameStore(state => state.setEcoCode);
     const setOpeningPly = useGameStore(state => state.setOpeningPly);
     const setOpeningDetected = useGameStore(state => state.setOpeningDetected);
@@ -30,13 +30,13 @@ export const useFullGameAnalysis = () => {
 
     useEffect(() => {
         if (!gameId || gameId === lastGameId.current) return;
-        if (history.length === 0 || isAnalyzeFromPgn || !wantsFullAnalysis) return;
+        if (history.length === 0 || hasPgnEvaluations || !isReviewRequested) return;
 
         lastGameId.current = gameId;
 
         const pgnHeaders = game?.header?.() ?? {};
 
-        analysisQueue.analyzeGame(historyRef.current, currentMoveIndex, {
+        analysisBridge.analyzeGame(historyRef.current, currentMoveIndex, {
             gameId,
             pgnHeaders,
             lichessToken,
@@ -63,10 +63,10 @@ export const useFullGameAnalysis = () => {
             onComplete: (accuracy) => {
                 setAnalysisReady(true);
                 setAnalyzing(false);
-                setGameScore(accuracy);
+                setAccuracy(accuracy);
             },
         });
 
-        return () => analysisQueue.cancel();
-    }, [gameId, isAnalyzeFromPgn, wantsFullAnalysis]);
+        return () => analysisBridge.cancel();
+    }, [gameId, hasPgnEvaluations, isReviewRequested]);
 };

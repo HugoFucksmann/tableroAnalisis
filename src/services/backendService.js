@@ -62,13 +62,54 @@ class BackendService {
             this.ws = null;
         }
         this.isConnected = false;
-        console.log('[BackendService] Desconectado manualmente (Cambiado a Local)');
+        console.log('[BackendService] Desconectado manualmente');
     }
 
     send(type, payload) {
         if (!this.isConnected) return false;
         this.ws.send(JSON.stringify({ type, ...payload }));
         return true;
+    }
+
+    async request(type, payload, resultType) {
+        if (!this.isConnected) {
+            await new Promise(resolve => {
+                let attempts = 0;
+                const check = setInterval(() => {
+                    attempts++;
+                    if (this.isConnected || attempts > 50) {
+                        clearInterval(check);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+
+        return new Promise((resolve, reject) => {
+            if (!this.isConnected) {
+                reject(new Error('Servidor no conectado'));
+                return;
+            }
+
+            const timeout = setTimeout(() => {
+                cleanup();
+                reject(new Error('Timeout esperando respuesta del servidor'));
+            }, 10000);
+
+            const cleanup = this.addHandler((msg) => {
+                if (msg.type === resultType) {
+                    clearTimeout(timeout);
+                    cleanup();
+                    resolve(msg);
+                } else if (msg.type === 'error') {
+                    clearTimeout(timeout);
+                    cleanup();
+                    reject(new Error(msg.message));
+                }
+            });
+
+            this.send(type, payload);
+        });
     }
 
     addHandler(handler) {
@@ -80,8 +121,8 @@ class BackendService {
         return this.send('analyze_position', { fen, moveIndex, ...config });
     }
 
-    analyzeGame(history, currentIndex, gameId, engineConfig) {
-        return this.send('analyze_game', { history, currentIndex, gameId, engineConfig });
+    analyzeGame(history, currentIndex, gameId, engineConfig, startFen = null) {
+        return this.send('analyze_game', { history, currentIndex, gameId, engineConfig, startFen });
     }
 
     cancel() {

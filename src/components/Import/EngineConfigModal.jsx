@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Cpu, Layers, Hash, Gauge, Server, Laptop } from 'lucide-react';
+import { X, Cpu, Layers, Hash, Gauge } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { backendService } from '../../services/backendService';
 import './EngineConfigModal.css';
 
 const DEFAULT_CONFIG = {
-  engineMode: 'local',
   depth: 18,
   multiPv: 1,
   liveDepth: 16,
@@ -35,10 +34,6 @@ export const EngineConfigModal = ({ onClose }) => {
   }, [isConnected]);
 
   const handleChange = (key, value) => {
-    if (key === 'engineMode') {
-      if (value === 'remote') backendService.connect();
-      else backendService.disconnect();
-    }
     setEngineConfig({ ...config, [key]: value });
   };
 
@@ -52,7 +47,6 @@ export const EngineConfigModal = ({ onClose }) => {
   };
 
   const maxThreads = Math.max(1, (navigator.hardwareConcurrency ?? 4) - 1);
-  const isRemote = config.engineMode === 'remote';
 
   return createPortal(
     <div className="ecm-backdrop" onClick={handleBackdrop}>
@@ -69,46 +63,23 @@ export const EngineConfigModal = ({ onClose }) => {
         </div>
 
         <div className="ecm-engine-badge">
-          <div className={`ecm-badge-dot ${isRemote ? (isConnected ? 'connected' : 'connecting') : ''}`}
-            style={{ backgroundColor: isRemote ? (isConnected ? '#10b981' : '#f59e0b') : '#3b82f6' }} />
+          <div className={`ecm-badge-dot ${isConnected ? 'connected' : 'connecting'}`}
+            style={{ backgroundColor: isConnected ? '#10b981' : '#f59e0b' }} />
           <span className="ecm-badge-name">Stockfish 18</span>
-          <span className="ecm-badge-tag">{isRemote ? (isConnected ? 'NATIVO' : 'CONECTANDO...') : 'WASM (LOCAL)'}</span>
+          <span className="ecm-badge-tag">{isConnected ? 'NATIVO' : 'CONECTANDO...'}</span>
         </div>
 
         <div className="ecm-body">
 
-          <div className="ecm-section">
-            <h4 className="ecm-section-title">Origen de Procesamiento</h4>
-            <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
-              <button
-                onClick={() => handleChange('engineMode', 'local')}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  backgroundColor: !isRemote ? 'rgba(59, 130, 246, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                  color: !isRemote ? '#60a5fa' : '#9ca3af', fontWeight: 'bold'
-                }}
-              >
-                <Laptop size={16} /> Navegador
-              </button>
-              <button
-                onClick={() => handleChange('engineMode', 'remote')}
-                style={{
-                  flex: 1, padding: '10px', borderRadius: '8px', border: 'none', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px',
-                  backgroundColor: isRemote ? 'rgba(16, 185, 129, 0.2)' : 'rgba(255, 255, 255, 0.05)',
-                  color: isRemote ? '#34d399' : '#9ca3af', fontWeight: 'bold'
-                }}
-              >
-                <Server size={16} /> Backend Nativo
-              </button>
+          {!isConnected && (
+            <div className="ecm-section" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)', marginBottom: '16px' }}>
+              <h4 className="ecm-section-title" style={{ color: '#f59e0b', marginBottom: '4px' }}>Desconectado</h4>
+              <p style={{ fontSize: '12px', color: '#fbbf24', margin: 0 }}>
+                No se pudo conectar con el backend en <code>ws://localhost:9001</code>. 
+                Asegúrate de que el servidor Node.js esté ejecutándose.
+              </p>
             </div>
-            {isRemote && !isConnected && (
-              <div style={{ fontSize: '11px', color: '#f59e0b', marginTop: '-8px', marginBottom: '10px' }}>
-                Esperando conexión a ws://localhost:9001... (Usa local como respaldo)
-              </div>
-            )}
-          </div>
+          )}
 
           <div className="ecm-section">
             <h4 className="ecm-section-title">Hardware y Recursos</h4>
@@ -128,11 +99,11 @@ export const EngineConfigModal = ({ onClose }) => {
               <ConfigRow
                 icon={<Hash size={14} />}
                 label="Memoria Hash"
-                description={isRemote ? "Memoria total repartida entre instancias" : "Memoria asignada al navegador"}
+                description="Memoria total repartida entre instancias nativas"
                 value={config.hash}
                 min={16}
-                max={isRemote ? 8192 : 1024}
-                step={isRemote ? 256 : 32}
+                max={8192}
+                step={256}
                 onChange={(v) => handleChange('hash', v)}
                 formatValue={(v) => v >= 1024 ? `${(v / 1024).toFixed(1)} GB` : `${v} MB`}
                 colorClass="accent-orange"
