@@ -6,164 +6,115 @@
     width: 100%;
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    padding: var(--space-2) var(--space-5);
-    background: var(--bg-tertiary);
-    border-radius: var(--border-radius);
-    border: 1px solid var(--glass-border);
-    border-left: 0.1875rem solid transparent;
-    transition:
-        background 0.35s ease,
-        border-left-color 0.35s ease,
-        box-shadow 0.35s ease;
+    justify-content: space-between;
+    padding: 2px var(--space-2);
+    background: transparent;
+    transition: background 0.3s ease;
     position: relative;
-    overflow: hidden;
+    min-height: 2.8rem; /* Narrower height */
 }
 
-/* Shimmer on active */
-.player-area::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(90deg, var(--accent-glow) 0%, transparent 65%);
-    opacity: 0;
-    transition: opacity 0.35s ease;
-    pointer-events: none;
-}
-
-/* ── Active state ───────────────────────────────────────────────── */
+/* Subtler Active state */
 .player-area.active {
-    box-shadow: 0 0.125rem 1.125rem rgba(0, 0, 0, 0.35);
+    background: transparent;
 }
 
-.player-area.active::before {
-    opacity: 1;
+.player-area.active .player-name,
+.player-area.active .clock-time {
+    color: var(--accent-primary);
 }
 
-.player-area.white.active {
-    border-left-color: var(--eval-white);
-    background: linear-gradient(100deg, var(--accent-glow) 0%, var(--bg-tertiary) 55%);
-}
-
-.player-area.black.active {
-    border-left-color: var(--eval-black);
-    background: linear-gradient(100deg, var(--accent-glow-muted) 0%, var(--bg-tertiary) 55%);
-}
-
-/* ── Identity ───────────────────────────────────────────────────── */
-.player-identity {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    flex: 1;
-    min-width: 0;
-}
-
-.player-avatar {
-    width: 1.5rem;
-    height: 1.5rem;
-    flex-shrink: 0;
-    border-radius: calc(var(--border-radius) * 0.5);
-    background: linear-gradient(135deg, var(--bg-tertiary), var(--bg-primary));
-    border: 1px solid var(--glass-border);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: var(--text-xs);
+.player-area.active .clock-time {
     font-weight: 800;
-    color: var(--text-muted);
-    letter-spacing: 0.02em;
-    font-family: 'Courier New', monospace;
-    user-select: none;
 }
 
-.player-name-wrap {
+.player-main {
     display: flex;
     align-items: center;
-    gap: var(--space-2);
+    flex: 1;
+}
+
+.player-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 0;
+}
+
+.player-name-row {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    line-height: 1.2;
 }
 
 .player-name {
-    font-size: var(--text-sm);
-    font-weight: 700;
-    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.01em;
 }
 
 .player-elo {
-    font-size: var(--text-xs);
-    font-weight: 600;
-    color: var(--text-muted);
+    font-size: 0.75rem;
+    color: #999;
+    font-weight: 500;
 }
 
-/* ── Right side: material + clock ───────────────────────────────── */
-.player-right {
+.player-status-row {
     display: flex;
     align-items: center;
-    gap: var(--space-3);
-    flex-shrink: 0;
+    gap: var(--space-2);
+    height: 1.1rem;
 }
 
 /* ── Captured pieces ────────────────────────────────────────────── */
 .captured-pieces {
     display: flex;
-    flex-wrap: wrap;
+    align-items: center;
     gap: 1px;
-    max-width: 6rem;
 }
 
 .captured-piece {
-    font-size: var(--text-md);
+    font-size: 1.1rem;
     line-height: 1;
-    transition: transform 0.15s ease;
-}
-
-.captured-piece:hover {
-    transform: translateY(-0.125rem) scale(1.15);
+    filter: drop-shadow(0 1px 1px rgba(0,0,0,0.5));
 }
 
 .captured-piece.white {
-    color: var(--eval-white);
+    color: #ddd;
 }
 
 .captured-piece.black {
-    color: var(--text-muted);
+    color: #666;
 }
 
-/* ── Material advantage ─────────────────────────────────────────── */
 .material-diff {
-    font-size: var(--text-xs);
-    font-weight: 800;
-    background: var(--glass);
-    border: 1px solid var(--glass-border);
-    padding: var(--space-1) var(--space-2);
-    border-radius: calc(var(--border-radius) * 0.5);
-    color: var(--text-secondary);
-    letter-spacing: 0.025em;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #808080;
+    margin-left: 2px;
 }
 
 /* ── Clock ──────────────────────────────────────────────────────── */
-/* Plain monospace display — no colon animation */
+.player-clock-area {
+    margin-left: auto;
+}
+
 .clock-time {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: var(--text-lg);
-    font-weight: 900;
-    color: var(--text-muted);
-    min-width: 3.5rem;
-    text-align: right;
-    letter-spacing: 0.0625em;
-    transition: color 0.3s ease;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: #999;
+    transition: all 0.3s ease;
 }
 
 .clock-time.ticking {
-    color: var(--accent-primary);
+    /* Color handled by .player-area.active */
 }
 
 @media (max-width: 768px) {
     .player-area {
-        display: none;
+        padding: var(--space-2);
     }
 }

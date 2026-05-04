@@ -187,7 +187,8 @@
 }
 
 .mode-selector-wrapper .mode-selector-container {
-  margin-bottom: 0; /* Override default margin from ModeSelector */
+  margin-bottom: 0;
+  /* Override default margin from ModeSelector */
   height: 100%;
 }
 
@@ -255,8 +256,15 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .collapse-toggle {

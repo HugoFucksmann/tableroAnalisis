@@ -54,19 +54,22 @@ export const PlayerArea = React.memo(({ side, name, elo, clock, material, isActi
             role="region"
             aria-label={`${name} — ${side}`}
         >
-            <div className="player-identity">
-                <div className="player-avatar" aria-hidden="true">{initial}</div>
-                <div className="player-name-wrap">
-                    <span className="player-name">{name}</span>
-                    {elo && <span className="player-elo">({elo})</span>}
+            <div className="player-main">
+                <div className="player-info">
+                    <div className="player-name-row">
+                        <span className="player-name">{name}</span>
+                        {elo && <span className="player-elo">({elo})</span>}
+                    </div>
+                    <div className="player-status-row">
+                        <CapturedPieces pieces={material?.captured} />
+                        {material?.score > 0 && (
+                            <span className="material-diff">+{material.score}</span>
+                        )}
+                    </div>
                 </div>
             </div>
 
-            <div className="player-right">
-                <CapturedPieces pieces={material?.captured} />
-                {material?.score > 0 && (
-                    <span className="material-diff">+{material.score}</span>
-                )}
+            <div className="player-clock-area">
                 <ClockDisplay time={clock} isActive={isActive} />
             </div>
         </div>
