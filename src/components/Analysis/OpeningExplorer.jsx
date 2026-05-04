@@ -41,35 +41,51 @@ export const OpeningExplorer = () => {
 
   React.useEffect(() => {
     let active = true;
-    setLoading(true);
-    setError(null);
-
-    const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
-    
-    const fetchExplorer = async (url) => {
-        const headers = { 'Accept': 'application/json' };
-        if (lichessToken) headers['Authorization'] = `Bearer ${lichessToken}`;
-        
-        const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(`Lichess error: ${res.status}`);
-        return res.json();
-    };
+    const timer = setTimeout(() => {
+      loadData();
+    }, 600); // Debounce de 600ms
 
     const loadData = async () => {
+        setLoading(true);
+        setError(null);
         try {
-            // Intento 1: Base de datos de Maestros
+            const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
             const mastersUrl = `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`;
-            let explorerData = await fetchExplorer(mastersUrl);
+            const playerUrl = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(cleanFen)}&ratings=1800,2000,2200,2500`;
 
-            // Fallback: Si no hay jugadas en maestros, probamos base de datos de jugadores
+            const headers = { 'Accept': 'application/json' };
+            // Enviar token si está configurado
+            if (lichessToken && lichessToken.trim().length > 10) {
+                headers['Authorization'] = `Bearer ${lichessToken.trim()}`;
+            }
+            
+            let res = await fetch(mastersUrl, { headers });
+            
+            let explorerData = { moves: [] };
+
+            if (res.ok) {
+                explorerData = await res.json();
+            } else if (res.status === 401 || res.status === 429) {
+                // Lichess Nginx devuelve 401 o 429 cuando superas el límite sin token
+                console.warn(`[OpeningExplorer] Masters DB rechazó la petición (${res.status}). Probando Fallback...`);
+            } else {
+                throw new Error(`Error del servidor Lichess (${res.status})`);
+            }
+
+            // Fallback a la base de datos de jugadores si la de maestros falló o no tiene jugadas
             if (!explorerData.moves || explorerData.moves.length === 0) {
-                const playerUrl = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(cleanFen)}&ratings=1800,2000,2200,2500`;
-                explorerData = await fetchExplorer(playerUrl);
+                const resPlayer = await fetch(playerUrl, { headers });
+                if (resPlayer.ok) {
+                    explorerData = await resPlayer.json();
+                } else if (resPlayer.status === 401 || resPlayer.status === 429) {
+                    throw new Error('Configura tu Token de Lichess (icono 🔑) para continuar usando el explorador.');
+                } else {
+                    throw new Error(`Error en Lichess Players DB (${resPlayer.status})`);
+                }
             }
 
             if (!active) return;
             
-            // Formatear datos para la UI
             const formattedData = {
                 opening: explorerData.opening?.name || 'Teoría de Aperturas',
                 moves: (explorerData.moves || []).slice(0, 12).map(m => {
@@ -96,16 +112,17 @@ export const OpeningExplorer = () => {
             setArrows(bookArrows);
 
         } catch (err) {
-            console.warn('OpeningExplorer fetch failed:', err);
-            if (active) setError('No se pudo conectar con Lichess.');
+            console.warn('OpeningExplorer fetch failed:', err.message);
+            if (active) setError(err.message || 'Error al conectar con Lichess.');
         } finally {
             if (active) setLoading(false);
         }
     };
 
-    loadData();
-
-    return () => { active = false; };
+    return () => { 
+        active = false;
+        clearTimeout(timer);
+    };
   }, [fen, lichessToken, game, setArrows]);
 
   const handleMoveHover = React.useCallback((san) => {
@@ -137,50 +154,35 @@ export const OpeningExplorer = () => {
     setArrows(arrows);
   }, [game, setArrows, data]);
 
-  if (loading && !data) {
-    return (
-      <div className="explorer-container loading">
-        <Loader className="gi-spin" size={24} />
-        <span>Consultando Lichess...</span>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="explorer-container error">
-        <AlertCircle size={20} />
-        <span>{error}</span>
-      </div>
-    );
-  }
-
-  if (!data || !data.moves?.length) {
-    return (
-      <div className="explorer-container empty">
-        <AlertCircle size={16} />
-        <span>No hay datos para esta posición.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="explorer-container" onMouseLeave={handleContainerLeave}>
-      {showTokenInput && (
-        <div className="explorer-token-input-wrap">
-          <input
-            className="explorer-token-input"
-            type="password"
-            placeholder="Lichess Personal Token..."
-            value={lichessToken}
-            onChange={(e) => setLichessToken(e.target.value)}
-          />
-          <p className="explorer-token-hint">
-            Mejora el límite de peticiones al Explorer.
-          </p>
+  const renderContent = () => {
+    if (loading && !data) {
+      return (
+        <div className="explorer-state-msg">
+          <Loader className="gi-spin" size={24} />
+          <span>Consultando Lichess...</span>
         </div>
-      )}
+      );
+    }
 
+    if (error) {
+      return (
+        <div className="explorer-state-msg error-msg">
+          <AlertCircle size={20} />
+          <span>{error}</span>
+        </div>
+      );
+    }
+
+    if (!data || !data.moves?.length) {
+      return (
+        <div className="explorer-state-msg empty-msg">
+          <AlertCircle size={16} />
+          <span>No hay datos para esta posición.</span>
+        </div>
+      );
+    }
+
+    return (
       <div className="moves-stats-list">
         {data.moves.slice(0, 10).map((move) => (
           <div
@@ -208,6 +210,26 @@ export const OpeningExplorer = () => {
           </div>
         ))}
       </div>
+    );
+  };
+
+  return (
+    <div className="explorer-container" onMouseLeave={handleContainerLeave}>
+      {showTokenInput && (
+        <div className="explorer-token-input-wrap">
+          <input
+            className="explorer-token-input"
+            type="password"
+            placeholder="Lichess Personal Token..."
+            value={lichessToken || ''}
+            onChange={(e) => setLichessToken(e.target.value)}
+          />
+          <p className="explorer-token-hint">
+            Ingresa tu token para evitar bloqueos por límite de peticiones.
+          </p>
+        </div>
+      )}
+      {renderContent()}
     </div>
   );
-};
+};

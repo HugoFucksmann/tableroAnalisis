@@ -179,8 +179,7 @@
 }
 
 /* ── Estados: loading / error / empty ───────────────────────────── */
-.explorer-container.loading,
-.explorer-container.error {
+.explorer-state-msg {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -196,24 +195,17 @@
   border-radius: var(--border-radius);
 }
 
-.explorer-container.empty {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  min-height: 3rem;
-  color: var(--text-muted);
-  font-size: var(--text-sm);
-  text-align: center;
-  padding: var(--space-3);
-  background: var(--accent-glow-muted);
-  border-radius: calc(var(--border-radius) * 0.75);
-  border: 1px solid var(--glass-border);
+.explorer-state-msg.error-msg {
+  color: var(--error-primary);
 }
 
-.explorer-container.error {
-  color: var(--error-primary);
+.explorer-state-msg.empty-msg {
+  flex-direction: row;
+  min-height: 3rem;
+  font-size: var(--text-sm);
+  padding: var(--space-3);
+  background: var(--accent-glow-muted);
+  border: 1px solid var(--glass-border);
 }
 
 /* ── Spinner ────────────────────────────────────────────────────── */
