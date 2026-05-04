@@ -28,13 +28,13 @@ function getX(index, total) {
 }
 
 export const EvaluationGraph = () => {
-  const { evaluationHistory, currentMoveIndex, history, goToMove, gameScore, isAnalyzing, moveEvaluations, analysisReady } =
+  const { evaluationHistory, currentMoveIndex, history, goToMove, accuracy, isAnalyzing, moveEvaluations, analysisReady } =
     useGameStore(useShallow(state => ({
       evaluationHistory: state.evaluationHistory,
       currentMoveIndex: state.currentMoveIndex,
       history: state.history,
       goToMove: state.goToMove,
-      gameScore: state.gameScore,
+      accuracy: state.accuracy,
       isAnalyzing: state.isAnalyzing,
       moveEvaluations: state.moveEvaluations,
       analysisReady: state.analysisReady,
@@ -221,15 +221,15 @@ export const EvaluationGraph = () => {
       </svg>
 
       {analysisReady && (
-        gameScore ? (
+        accuracy ? (
           <div className="accuracy-row">
             <div className="accuracy-chip white">
               <span className="chip-color-dot" style={{ background: 'var(--eval-white)' }} />
-              <span>{gameScore.white}%</span>
+              <span>{accuracy.white}%</span>
             </div>
             <span className="accuracy-label-center">precisión</span>
             <div className="accuracy-chip black">
-              <span>{gameScore.black}%</span>
+              <span>{accuracy.black}%</span>
               <span className="chip-color-dot" style={{ background: 'var(--eval-black)' }} />
             </div>
           </div>

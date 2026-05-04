@@ -19,7 +19,8 @@ export const generateAnnotatedPgn = (
     pgnCommentsByIndex = {}
 ) => {
     try {
-        const pgnGame = new Chess();
+        const startFen = originalHeaders.FEN || null;
+        const pgnGame = startFen ? new Chess(startFen) : new Chess();
 
         // Copiar encabezados originales filtrando nulos y placeholders de chess.js
         const PLACEHOLDER = ['?', '????.??.??'];
@@ -27,8 +28,11 @@ export const generateAnnotatedPgn = (
             const val = originalHeaders[key];
             if (val === null || val === undefined) continue;
             if (PLACEHOLDER.includes(String(val))) continue;
+            // No sobreescribir FEN si ya lo inicializamos en el constructor
+            if (key === 'FEN' && startFen) continue;
             pgnGame.header(key, String(val));
         }
+        if (startFen) pgnGame.header('FEN', startFen);
 
         if (engineConfig?.depth) {
             pgnGame.header('Annotator', `Tablero Análisis (Stockfish Profundidad ${engineConfig.depth})`);
