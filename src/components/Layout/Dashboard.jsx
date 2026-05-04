@@ -90,7 +90,42 @@ export const Dashboard = () => {
         </section>
 
         <aside className="side-panels">
-          <ModeSelector />
+          <div className="top-global-bar">
+            <div className="mode-selector-wrapper">
+              <ModeSelector />
+            </div>
+            
+            {appMode === 'analysis' && (
+              <div className="global-action-buttons glass-panel">
+                {(!analysisReady || hasPgnEvaluations) && (
+                  <button
+                    className={`global-action-btn analyze-btn ${history.length > 0 ? 'ready' : ''}`}
+                    title={history.length > 0 ? "Analizar Partida con Stockfish" : "Haz movimientos para analizar"}
+                    onClick={() => startFullAnalysis()}
+                    disabled={history.length === 0}
+                  >
+                    <Cpu size={15} />
+                  </button>
+                )}
+                {analysisReady && (
+                  <button
+                    className="global-action-btn"
+                    title="Descargar PGN"
+                    onClick={() => handleDownloadPgn()}
+                  >
+                    <Download size={15} />
+                  </button>
+                )}
+                <button
+                  className="global-action-btn"
+                  title="Configurar motor de análisis"
+                  onClick={() => setShowEngineConfig(true)}
+                >
+                  <Settings size={15} />
+                </button>
+              </div>
+            )}
+          </div>
 
           {appMode === 'analysis' ? (
             <>
@@ -140,31 +175,6 @@ export const Dashboard = () => {
                     <h3>Importar</h3>
                   </div>
                   <div className="panel-actions">
-                    {(!analysisReady || hasPgnEvaluations) && (
-                      <button
-                        className="panel-action-btn"
-                        title="Analizar Partida con Stockfish"
-                        onClick={(e) => { e.stopPropagation(); startFullAnalysis(); }}
-                      >
-                        <Cpu size={14} />
-                      </button>
-                    )}
-                    {analysisReady && (
-                      <button
-                        className="panel-action-btn"
-                        title="Descargar PGN"
-                        onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
-                      >
-                        <Download size={14} />
-                      </button>
-                    )}
-                    <button
-                      className="panel-action-btn"
-                      title="Configurar motor de análisis"
-                      onClick={(e) => { e.stopPropagation(); setShowEngineConfig(true); }}
-                    >
-                      <Settings size={14} />
-                    </button>
                     <span className="collapse-toggle">{isImportCollapsed ? '+' : '−'}</span>
                   </div>
                 </div>
