@@ -38,18 +38,65 @@ const usePanelManagement = () => {
   }, [isMobile]);
 
   return {
+    isMobile,
     isImportCollapsed, setIsImportCollapsed,
     isExplorerCollapsed, setIsExplorerCollapsed,
     isHistoryCollapsed, setIsHistoryCollapsed
   };
 };
 
+const useSidebarResize = (isMobile) => {
+  const [width, setWidth] = useState(() => {
+    const saved = localStorage.getItem('sidebarWidth');
+    return saved ? parseInt(saved) : 400;
+  });
+  const [isResizing, setIsResizing] = useState(false);
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isResizing || isMobile) return;
+      // Calculamos el ancho desde la derecha
+      const newWidth = window.innerWidth - e.clientX;
+      if (newWidth > 320 && newWidth < 800) {
+        setWidth(newWidth);
+        localStorage.setItem('sidebarWidth', newWidth);
+      }
+    };
+
+    const stopResizing = () => {
+      setIsResizing(false);
+      document.body.classList.remove('is-resizing');
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', stopResizing);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', stopResizing);
+    };
+  }, [isResizing, isMobile]);
+
+  const startResizing = (e) => {
+    e.preventDefault();
+    setIsResizing(true);
+    document.body.classList.add('is-resizing');
+  };
+
+  return { width, isResizing, startResizing };
+};
+
 export const Dashboard = () => {
   const {
+    isMobile,
     isImportCollapsed, setIsImportCollapsed,
     isExplorerCollapsed, setIsExplorerCollapsed,
     isHistoryCollapsed, setIsHistoryCollapsed
   } = usePanelManagement();
+
+  const { width: sidePanelWidth, isResizing, startResizing } = useSidebarResize(isMobile);
 
   const [showEngineConfig, setShowEngineConfig] = useState(false);
 
@@ -82,12 +129,25 @@ export const Dashboard = () => {
     <div className="dashboard-container">
       <AnalysisLoadingModal />
 
-      <main className="dashboard-content">
+      <main 
+        className="dashboard-content"
+        style={{ 
+          gridTemplateColumns: isMobile ? '1fr' : `1fr auto ${sidePanelWidth}px`,
+          '--side-panel-width': `${sidePanelWidth}px`
+        }}
+      >
         <section className="board-section glass-panel">
           <div className="board-wrapper">
             <Board />
           </div>
         </section>
+
+        {!isMobile && (
+          <div 
+            className={`resizer-handle ${isResizing ? 'active' : ''}`}
+            onMouseDown={startResizing}
+          />
+        )}
 
         <aside className="side-panels">
           <div className="top-global-bar">

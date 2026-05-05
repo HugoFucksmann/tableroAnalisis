@@ -10,7 +10,7 @@
 .mode-selector-track {
   position: relative;
   display: flex;
-  height: 30px;
+  height: clamp(32px, 8cqw, 42px);
   background: rgba(0, 0, 0, 0.3);
   border-radius: calc(var(--border-radius) - 2px);
   overflow: hidden;

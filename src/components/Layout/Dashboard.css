@@ -26,9 +26,31 @@
 .dashboard-content {
   display: grid;
   grid-template-columns: 1fr var(--side-panel-width);
-  gap: var(--dashboard-gap);
+  gap: 0;
   flex: 1;
   min-height: 0;
+}
+
+body.is-resizing {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.resizer-handle {
+  width: 10px;
+  height: 100%;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.2s ease;
+  z-index: 100;
+  margin: 0 -5px; /* Se solapa un poco para que sea más fácil de agarrar */
+  position: relative;
+}
+
+.resizer-handle:hover,
+.resizer-handle.active {
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-glow);
 }
 
 .board-section {
@@ -68,6 +90,33 @@
   gap: var(--dashboard-gap);
   height: 100%;
   overflow: hidden;
+  container-type: inline-size;
+  container-name: sidebar;
+  padding-left: var(--space-3); /* Más espacio para que el resizer no tape nada */
+  overflow-y: auto; /* Permitir scroll si las letras grandes empujan todo hacia abajo */
+  scrollbar-width: none; /* Ocultar scrollbar para un look más limpio */
+}
+
+.side-panels::-webkit-scrollbar {
+  display: none;
+}
+
+@container sidebar (min-width: 0px) {
+  /* Aplicamos las variables a los hijos directos para que se hereden */
+  .side-panels > * {
+    --text-2xs: clamp(0.55rem, 2cqw, 0.75rem);
+    --text-xs: clamp(0.65rem, 2.5cqw, 0.8rem);
+    --text-sm: clamp(0.75rem, 3cqw, 1.0rem);
+    --text-md: clamp(0.875rem, 3.5cqw, 1.1rem);
+    --text-lg: clamp(1rem, 4cqw, 1.3rem);
+    --space-2: clamp(0.375rem, 1cqw, 0.625rem);
+    --space-3: clamp(0.5rem, 1.5cqw, 0.875rem);
+    --space-4: clamp(0.625rem, 2cqw, 1.1rem);
+  }
+
+  .panel-header h3 {
+    font-size: var(--text-sm);
+  }
 }
 
 /*
@@ -324,10 +373,10 @@
 }
 
 .import-panel:not(.collapsed) {
-  /* Dejamos que el contenido maneje su propio scroll si es necesario, 
-     o que el flexbox lo contenga. */
   display: flex;
   flex-direction: column;
+  flex-shrink: 1; /* Permitir que se encoja si el historial o el explorador crecen mucho */
+  min-height: 0;
 }
 
 @media (max-width: 1440px) {

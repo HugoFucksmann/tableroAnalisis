@@ -22,7 +22,7 @@ export const ModeSelector = () => {
           className={`mode-btn ${appMode === 'analysis' ? 'active' : ''}`}
           onClick={() => setAppMode('analysis')}
         >
-          <Search size={14} />
+          <Search size={16} />
           <span>Análisis</span>
         </button>
         
@@ -30,7 +30,7 @@ export const ModeSelector = () => {
           className={`mode-btn ${appMode === 'puzzle' ? 'active' : ''}`}
           onClick={() => setAppMode('puzzle')}
         >
-          <BrainCircuit size={14} />
+          <BrainCircuit size={16} />
           <span>Puzzles</span>
         </button>
       </div>
