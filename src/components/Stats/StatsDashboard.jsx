@@ -280,15 +280,20 @@ export const StatsDashboard = () => {
                   onClick={() => toggleSelection(item.id)}
                 >
                   <div className="hi-check"><div className="hi-check-inner"></div></div>
+                  <div className={`hi-color-dot ${item.color === 'black' ? 'black' : 'white'}`} title={item.color === 'black' ? 'Negras' : 'Blancas'} />
                   <div className="hi-main">
                     <div className="hi-opening">{item.opening || 'Unknown Opening'}</div>
                     <div className="hi-meta">
                       <span>{new Date(item.date).toLocaleDateString()}</span>
                       <span>{item.moveCount} jugadas</span>
+                      <span className={`hi-result-badge ${item.win ? 'win' : 'loss'}`}>{item.win ? 'Victoria' : 'Derrota'}</span>
                     </div>
                   </div>
                   <div className="hi-acc">
-                    <div className="hi-acc-val">{item.white?.accuracy}% / {item.black?.accuracy}%</div>
+                    <div className="hi-acc-val">
+                      {item.color === 'white' ? item.white?.accuracy : item.black?.accuracy}%
+                    </div>
+                    <div className="hi-acc-label">mi precisión</div>
                   </div>
                   <div className="hi-actions">
                     <button className="hi-delete" onClick={(e) => handleSingleDelete(item.id, e)} title="Borrar">

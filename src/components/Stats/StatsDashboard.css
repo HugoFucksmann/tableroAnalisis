@@ -449,3 +449,43 @@
   color: #444;
   font-weight: 700;
 }
+
+/* Color dot & result badge */
+.hi-color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.hi-color-dot.white {
+  background: #e0e0e0;
+  border: 1px solid #888;
+}
+.hi-color-dot.black {
+  background: #333;
+  border: 1px solid #666;
+}
+
+.hi-result-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.hi-result-badge.win {
+  background: rgba(76, 175, 80, 0.15);
+  color: #4caf50;
+}
+.hi-result-badge.loss {
+  background: rgba(244, 67, 54, 0.15);
+  color: #f44336;
+}
+
+.hi-acc-label {
+  font-size: 0.65rem;
+  color: #555;
+  text-align: right;
+  margin-top: 2px;
+}

@@ -202,12 +202,18 @@ export const createGameSlice = (set, get) => ({
       state.setPlayers(headers.White ?? 'Blancas', headers.Black ?? 'Negras', headers.WhiteElo ?? null, headers.BlackElo ?? null);
 
       const blackPlayer = (headers.Black ?? '').toLowerCase();
+      const whitePlayer = (headers.White ?? '').toLowerCase();
       const currentUser = state.searchUsername?.toLowerCase() ?? '';
-      if (blackPlayer === currentUser && currentUser !== '') {
-        state.setBoardOrientation('black');
-      } else {
-        state.setBoardOrientation('white');
+
+      let detectedColor = 'white';
+      if (currentUser !== '') {
+        if (blackPlayer === currentUser) detectedColor = 'black';
+        else if (whitePlayer === currentUser) detectedColor = 'white';
+        // If neither matches (e.g. PGN manual sin username), keep 'white'
       }
+
+      state.setBoardOrientation(detectedColor);
+      state.setPlayerColor(detectedColor);
 
       let gameId = providedId;
       if (!gameId && headers.Site && headers.Site.includes('lichess.org/')) {

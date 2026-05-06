@@ -11,6 +11,7 @@ export const useFullGameAnalysis = () => {
     const game = useGameStore(state => state.game);
     const currentMoveIndex = useGameStore(state => state.currentMoveIndex);
     const lichessToken = useGameStore(state => state.lichessToken);
+    const playerColor = useGameStore(state => state.playerColor);
 
     const setAnalyzing = useGameStore(state => state.setAnalyzing);
     const setAnalysisProgress = useGameStore(state => state.setAnalysisProgress);
@@ -40,6 +41,7 @@ export const useFullGameAnalysis = () => {
         analysisBridge.analyzeGame(historyRef.current, currentMoveIndex, {
             gameId,
             pgnHeaders,
+            playerColor,
             lichessToken,
             onStatus: setAnalyzing,
             onProgress: setAnalysisProgress,

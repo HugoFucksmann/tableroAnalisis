@@ -9,11 +9,13 @@ export const createUISlice = (set, get) => ({
   lichessToken: import.meta.env.VITE_TOKEN_LICHESS || '',
   showTokenInput: false,
   boardOrientation: 'white',
+  playerColor: 'white',
   gameId: 0,
 
   setShowTokenInput: (v) => set({ showTokenInput: v }),
   setGameId: (id) => set({ gameId: id }),
   setBoardOrientation: (orientation) => set({ boardOrientation: orientation }),
+  setPlayerColor: (color) => set({ playerColor: color }),
   setGamePhase: (phase) => set({ gamePhase: phase }),
   setClocks: (white, black) => {
     const current = get().clocks;
