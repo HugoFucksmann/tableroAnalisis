@@ -14,6 +14,7 @@ import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
 import { EngineConfigModal } from '../Import/EngineConfigModal';
 import { ModeSelector } from './ModeSelector';
 import { PuzzleDashboard } from '../Puzzle/PuzzleDashboard';
+import { StatsDashboard } from '../Stats/StatsDashboard';
 import './Dashboard.css';
 
 const usePanelManagement = () => {
@@ -187,7 +188,7 @@ export const Dashboard = () => {
             )}
           </div>
 
-          {appMode === 'analysis' ? (
+          {appMode === 'analysis' && (
             <>
               <div className="panel-container glass-panel controls-panel">
                 <div className="panel-header">
@@ -241,9 +242,10 @@ export const Dashboard = () => {
                 {!isImportCollapsed && <GameImport onGameSelect={() => setIsImportCollapsed(true)} />}
               </div>
             </>
-          ) : (
-            <PuzzleDashboard />
           )}
+
+          {appMode === 'puzzle' && <PuzzleDashboard />}
+          {appMode === 'stats' && <StatsDashboard />}
         </aside>
       </main>
 

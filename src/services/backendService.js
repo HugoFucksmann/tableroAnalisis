@@ -156,6 +156,10 @@ class BackendService {
     puzzleSolved(id) {
         return this.send('puzzle_solved', { id });
     }
+
+    getStats() {
+        return this.send('get_stats', {});
+    }
 }
 
 export const backendService = new BackendService();
