@@ -2,7 +2,8 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, FileText } from 'lucide-react';
+import { Search, ExternalLink, Loader, AlertCircle, FileText, Zap } from 'lucide-react';
+import { backendService } from '../../services/backendService';
 import './GameImport.css';
 
 export const GameImport = ({ onGameSelect }) => {
@@ -18,6 +19,8 @@ export const GameImport = ({ onGameSelect }) => {
     setImportedGames: setGames,
     lichessToken,
     setLichessToken,
+    analyses,
+    setAnalyses,
   } = useGameStore(useShallow(state => ({
     loadPgn: state.loadPgn,
     isAnalyzing: state.isAnalyzing,
@@ -30,7 +33,21 @@ export const GameImport = ({ onGameSelect }) => {
     setImportedGames: state.setImportedGames,
     lichessToken: state.lichessToken,
     setLichessToken: state.setLichessToken,
+    analyses: state.analyses,
+    setAnalyses: state.setAnalyses,
   })));
+
+  // ... (keeping other states)
+
+  React.useEffect(() => {
+    const cleanup = backendService.addHandler((msg) => {
+      if (msg.type === 'analyses_list') {
+        setAnalyses(msg.analyses);
+      }
+    });
+    backendService.getAnalyses();
+    return () => cleanup();
+  }, [setAnalyses]);
 
   const [loadingId, setLoadingId] = React.useState(null);
   const [isFetching, setIsFetching] = React.useState(false);
@@ -149,7 +166,7 @@ export const GameImport = ({ onGameSelect }) => {
 
   const handleLoadGame = async (pgn, gameId) => {
     setLoadingId(gameId);
-    const ok = loadPgn(pgn);
+    const ok = loadPgn(pgn, gameId);
     if (!ok) { setLoadingId(null); return; }
     if (onGameSelect) onGameSelect();
     setLoadingId(null);
@@ -256,26 +273,32 @@ export const GameImport = ({ onGameSelect }) => {
               <div className="gi-list premium-scroll">
                 {games.length > 0 ? (
                   <>
-                    {games.map((game) => (
-                      <button
-                        key={game.id}
-                        className={`gi-card ${loadingId === game.id ? 'loading' : ''}`}
-                        onClick={() => handleLoadGame(game.pgn, game.id)}
-                        disabled={!!loadingId}
-                      >
-                        <div className="gi-card-players">
-                          <span className="gi-player white" title={game.white}>{game.white}</span>
-                          <span className="gi-result">{game.result}</span>
-                          <span className="gi-player black" title={game.black}>{game.black}</span>
-                        </div>
-                        <div className="gi-card-meta">
-                          <span className="gi-date">{game.date}</span>
-                          {loadingId === game.id
-                            ? <Loader size={13} className="gi-spin" />
-                            : <ExternalLink size={13} className="gi-ext-icon" />}
-                        </div>
-                      </button>
-                    ))}
+                    {games.map((game) => {
+                      const isAnalyzed = analyses.some(a => String(a.gameId) === String(game.id));
+                      return (
+                        <button
+                          key={game.id}
+                          className={`gi-card ${loadingId === game.id ? 'loading' : ''} ${isAnalyzed ? 'analyzed' : ''}`}
+                          onClick={() => handleLoadGame(game.pgn, game.id)}
+                          disabled={!!loadingId}
+                        >
+                          <div className="gi-card-players">
+                            <span className="gi-player white" title={game.white}>{game.white}</span>
+                            <span className="gi-result">{game.result}</span>
+                            <span className="gi-player black" title={game.black}>{game.black}</span>
+                          </div>
+                          <div className="gi-card-meta">
+                            <span className="gi-date">{game.date}</span>
+                            <div className="gi-card-status">
+                              {isAnalyzed && <span className="gi-analyzed-badge"><Zap size={10} fill="currentColor" /> Analizada</span>}
+                              {loadingId === game.id
+                                ? <Loader size={13} className="gi-spin" />
+                                : <ExternalLink size={13} className="gi-ext-icon" />}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
                     {/* Sentinel para infinite scroll */}
                     <div ref={sentinelRef} className="gi-sentinel">
                       {isFetchingMore && (

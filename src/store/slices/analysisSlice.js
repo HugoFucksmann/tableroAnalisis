@@ -14,6 +14,7 @@ export const createAnalysisSlice = (set, get) => ({
   openingName: 'Initial Position',
   openingPly: -1,
   openingDetected: false,
+  analyses: [],
 
   engineConfig: {
     depth: 18,
@@ -122,4 +123,35 @@ export const createAnalysisSlice = (set, get) => ({
   setBestMoves: (v) => set({ bestMoves: v }),
   setAlternativeLines: (v) => set({ alternativeLines: v }),
   setEngineConfig: (config) => set({ engineConfig: config }),
+  setAnalyses: (v) => set({ analyses: v }),
+  applyFullAnalysis: (data) => {
+    if (!data) return;
+
+    // evalResults is position-indexed (posIdx), evaluationHistory is move-indexed.
+    // posIdx 0 = initial pos (moveIndex -1), posIdx N = after move N (moveIndex N-1).
+    const evaluationHistory = {};
+    if (data.evaluations) {
+      Object.entries(data.evaluations).forEach(([posIdxStr, evalObj]) => {
+        if (!evalObj) return;
+        const posIdx = parseInt(posIdxStr);
+        const moveIndex = posIdx - 1; // posIdx 0 → moveIndex -1 (initial)
+        evaluationHistory[moveIndex] = {
+          moveIndex,
+          score: evalObj.score ?? 0,
+          mate: evalObj.mate ?? null,
+        };
+      });
+    }
+
+    set({
+      accuracy: data.accuracy,
+      openingName: data.opening?.name || 'Unknown',
+      evaluationHistory,
+      moveEvaluations: data.moveEvaluations || {},
+      bestMoves: data.bestMoves || {},
+      alternativeLines: data.alternativeLines || {},
+      analysisReady: true,
+      openingDetected: true,
+    });
+  },
 });

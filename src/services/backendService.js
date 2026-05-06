@@ -121,8 +121,12 @@ class BackendService {
         return this.send('analyze_position', { fen, moveIndex, ...config });
     }
 
-    analyzeGame(history, currentIndex, gameId, engineConfig, startFen = null) {
-        return this.send('analyze_game', { history, currentIndex, gameId, engineConfig, startFen });
+    analyzeGame(history, currentIndex, gameId, engineConfig, startFen = null, extraInfo = {}) {
+        return this.send('analyze_game', { 
+            history, currentIndex, gameId, engineConfig, startFen,
+            playerColor: extraInfo.playerColor,
+            win: extraInfo.win
+        });
     }
 
     cancel() {
@@ -159,6 +163,18 @@ class BackendService {
 
     getStats() {
         return this.send('get_stats', {});
+    }
+    
+    getAnalyses() {
+        return this.send('get_analyses', {});
+    }
+
+    deleteAnalyses(ids) {
+        return this.send('delete_analyses', { ids });
+    }
+
+    getFullAnalysis(gameId) {
+        return this.send('get_full_analysis', { gameId });
     }
 }
 

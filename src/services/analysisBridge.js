@@ -73,7 +73,22 @@ class AnalysisBridge {
         });
 
         this.#abortController.signal.addEventListener('abort', () => removeHandler());
-        backendService.analyzeGame(history, currentIndex, gameId, engineConfig, startFen);
+
+        // Extraer metadatos si vienen de PGN Headers
+        const pgnHeaders = callbacks.pgnHeaders || {};
+        const playerColor = callbacks.playerColor || 'white'; // Por defecto asumimos blanca si no se indica
+        
+        // Determinar si ganó el jugador (asumiendo que el usuario es White si no se especifica)
+        const result = pgnHeaders.Result || '*';
+        let win = true;
+        if (playerColor === 'white' && result === '0-1') win = false;
+        if (playerColor === 'black' && result === '1-0') win = false;
+        if (result === '1/2-1/2') win = false; // Empate no cuenta como victoria estricta
+
+        backendService.analyzeGame(history, currentIndex, gameId, engineConfig, startFen, {
+            playerColor,
+            win
+        });
     }
 
     async analyzePosition(fen, moveIndex, callbacks = {}) {

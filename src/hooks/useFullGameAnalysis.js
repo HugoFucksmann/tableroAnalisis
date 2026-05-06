@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { analysisBridge } from '../services/analysisBridge';
+import { backendService } from '../services/backendService';
 
 export const useFullGameAnalysis = () => {
     const gameId = useGameStore(state => state.gameId);
@@ -64,6 +65,8 @@ export const useFullGameAnalysis = () => {
                 setAnalysisReady(true);
                 setAnalyzing(false);
                 setAccuracy(accuracy);
+                // Refrescar lista de análisis para que aparezca en el historial y se marque en la importación
+                backendService.getAnalyses();
             },
         });
 

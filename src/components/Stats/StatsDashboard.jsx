@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import { useShallow } from 'zustand/react/shallow';
+import {
   History,
   User,
   Zap,
@@ -14,6 +15,7 @@ import {
   AlertTriangle
 } from 'lucide-react';
 import { backendService } from '../../services/backendService';
+import { useGameStore } from '../../store/useGameStore';
 import './StatsDashboard.css';
 
 const AccuracyLineChart = ({ data }) => {
@@ -24,18 +26,18 @@ const AccuracyLineChart = ({ data }) => {
   const width = 1000;
   const height = 220;
   const padding = 40;
-  
+
   const accuracies = data.map(d => d.accuracy);
   const minAcc = Math.min(...accuracies) - 5;
   const maxAcc = 100;
-  
+
   const points = data.map((d, i) => {
     const x = padding + (i * (width - 2 * padding) / Math.max(1, data.length - 1));
     const y = height - padding - ((d.accuracy - minAcc) * (height - 2 * padding) / (maxAcc - minAcc));
     return { x, y, ...d };
   });
 
-  const pathD = points.length > 1 
+  const pathD = points.length > 1
     ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
     : '';
 
@@ -48,7 +50,7 @@ const AccuracyLineChart = ({ data }) => {
             <stop offset="100%" stopColor="#ff9800" stopOpacity="0" />
           </linearGradient>
         </defs>
-        
+
         {/* Grid lines */}
         {[70, 80, 90, 100].map(val => {
           const y = height - padding - ((val - minAcc) * (height - 2 * padding) / (maxAcc - minAcc));
@@ -58,27 +60,30 @@ const AccuracyLineChart = ({ data }) => {
           );
         })}
 
-        <motion.path 
-          d={`${pathD} L ${points[points.length-1].x} ${height-padding} L ${points[0].x} ${height-padding} Z`} 
-          fill="url(#lineGradient)" 
-          initial={{ opacity: 0 }} 
-          animate={{ opacity: 1 }} 
-        />
-        
-        <motion.path 
-          d={pathD} 
-          fill="none" 
-          stroke="#ff9800" 
-          strokeWidth="3" 
-          strokeLinecap="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.5, ease: "easeInOut" }}
-        />
-        
+        {points.length > 1 && (
+          <>
+            <motion.path
+              d={`${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`}
+              fill="url(#lineGradient)"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            />
+            <motion.path
+              d={pathD}
+              fill="none"
+              stroke="#ff9800"
+              strokeWidth="3"
+              strokeLinecap="round"
+              initial={{ pathLength: 0 }}
+              animate={{ pathLength: 1 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+            />
+          </>
+        )}
+
         {points.map((p, i) => (
           <g key={i} className="point-group">
-            <motion.circle 
+            <motion.circle
               cx={p.x} cy={p.y} r="4" fill="#121212" stroke="#ff9800" strokeWidth="2"
               initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1 + i * 0.05 }}
             />
@@ -93,7 +98,15 @@ const AccuracyLineChart = ({ data }) => {
 export const StatsDashboard = () => {
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
-  
+  const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'history'
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
+  const { analyses, setAnalyses, loadPgn } = useGameStore(useShallow(state => ({
+    analyses: state.analyses,
+    setAnalyses: state.setAnalyses,
+    loadPgn: state.loadPgn
+  })));
+
   // Filtros
   const [timeFilter, setTimeFilter] = useState('all');
   const [durationFilter, setDurationFilter] = useState('all');
@@ -105,10 +118,14 @@ export const StatsDashboard = () => {
         setRawData(msg.stats);
         setLoading(false);
       }
+      if (msg.type === 'analyses_list') {
+        setAnalyses(msg.analyses);
+      }
     });
     backendService.getStats();
+    backendService.getAnalyses();
     return () => cleanup();
-  }, []);
+  }, [setAnalyses]);
 
   const filteredStats = useMemo(() => {
     if (!rawData) return null;
@@ -139,7 +156,7 @@ export const StatsDashboard = () => {
     const total = games.length;
     const wins = games.filter(g => g.win).length;
     const avgAcc = Math.round(games.reduce((acc, g) => acc + g.accuracy, 0) / total);
-    
+
     const whiteGames = games.filter(g => g.color === 'white');
     const blackGames = games.filter(g => g.color === 'black');
 
@@ -179,6 +196,28 @@ export const StatsDashboard = () => {
     };
   }, [rawData, timeFilter, durationFilter, countFilter]);
 
+  const toggleSelection = (id) => {
+    const next = new Set(selectedIds);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelectedIds(next);
+  };
+
+  const handleBulkDelete = () => {
+    if (selectedIds.size === 0) return;
+    if (confirm(`¿Borrar ${selectedIds.size} análisis?`)) {
+      backendService.deleteAnalyses(Array.from(selectedIds));
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSingleDelete = (id, e) => {
+    e.stopPropagation();
+    if (confirm('¿Borrar este análisis?')) {
+      backendService.deleteAnalyses([id]);
+    }
+  };
+
   if (loading) return <div className="stats-loading"><div className="spinner"></div><span>Cargando perfil...</span></div>;
 
   return (
@@ -187,35 +226,81 @@ export const StatsDashboard = () => {
       <header className="stats-top-bar">
         <div className="stats-title-section">
           <div className="stats-avatar"><User size={18} /></div>
-          <div>
-            <h1>Panel de Análisis</h1>
-            <p>{filteredStats.total || 0} partidas en esta vista</p>
+          <div className="stats-header-titles">
+            <div className="stats-tabs">
+              <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Dashboard</button>
+              <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>Historial</button>
+            </div>
+            <p>{activeTab === 'stats' ? `${filteredStats.total || 0} partidas` : `${analyses.length} analizadas`}</p>
           </div>
         </div>
 
-        <div className="stats-filters-pills">
-          <div className="filter-pill-group">
-            <Calendar size={14} />
-            <button className={timeFilter === 'all' ? 'active' : ''} onClick={() => setTimeFilter('all')}>Todo</button>
-            <button className={timeFilter === '7d' ? 'active' : ''} onClick={() => setTimeFilter('7d')}>7d</button>
-            <button className={timeFilter === '30d' ? 'active' : ''} onClick={() => setTimeFilter('30d')}>30d</button>
+        {activeTab === 'stats' ? (
+          <div className="stats-filters-pills">
+            <div className="filter-pill-group">
+              <Calendar size={14} />
+              <button className={timeFilter === 'all' ? 'active' : ''} onClick={() => setTimeFilter('all')}>Todo</button>
+              <button className={timeFilter === '7d' ? 'active' : ''} onClick={() => setTimeFilter('7d')}>7d</button>
+              <button className={timeFilter === '30d' ? 'active' : ''} onClick={() => setTimeFilter('30d')}>30d</button>
+            </div>
+            <div className="filter-pill-group">
+              <Clock size={14} />
+              <button className={durationFilter === 'all' ? 'active' : ''} onClick={() => setDurationFilter('all')}>Mix</button>
+              <button className={durationFilter === '5m' ? 'active' : ''} onClick={() => setDurationFilter('5m')}>5m</button>
+              <button className={durationFilter === '10m' ? 'active' : ''} onClick={() => setDurationFilter('10m')}>10m</button>
+            </div>
+            <div className="filter-pill-group">
+              <Layers size={14} />
+              <button className={countFilter === '10' ? 'active' : ''} onClick={() => setCountFilter('10')}>10</button>
+              <button className={countFilter === '25' ? 'active' : ''} onClick={() => setCountFilter('25')}>25</button>
+              <button className={countFilter === 'all' ? 'active' : ''} onClick={() => setCountFilter('all')}>∞</button>
+            </div>
           </div>
-          <div className="filter-pill-group">
-            <Clock size={14} />
-            <button className={durationFilter === 'all' ? 'active' : ''} onClick={() => setDurationFilter('all')}>Mix</button>
-            <button className={durationFilter === '5m' ? 'active' : ''} onClick={() => setDurationFilter('5m')}>5m</button>
-            <button className={durationFilter === '10m' ? 'active' : ''} onClick={() => setDurationFilter('10m')}>10m</button>
+        ) : (
+          <div className="history-actions">
+            {selectedIds.size > 0 && (
+              <button className="bulk-delete-btn" onClick={handleBulkDelete}>
+                <AlertTriangle size={14} /> Borrar {selectedIds.size}
+              </button>
+            )}
           </div>
-          <div className="filter-pill-group">
-            <Layers size={14} />
-            <button className={countFilter === '10' ? 'active' : ''} onClick={() => setCountFilter('10')}>10</button>
-            <button className={countFilter === '25' ? 'active' : ''} onClick={() => setCountFilter('25')}>25</button>
-            <button className={countFilter === 'all' ? 'active' : ''} onClick={() => setCountFilter('all')}>∞</button>
-          </div>
-        </div>
+        )}
       </header>
 
-      {filteredStats.empty ? (
+      {activeTab === 'history' ? (
+        <div className="stats-history-view glass-panel premium-scroll">
+          <div className="history-list">
+            {analyses.length === 0 ? (
+              <div className="empty-history">No hay partidas analizadas aún</div>
+            ) : (
+              analyses.slice().reverse().map(item => (
+                <div 
+                  key={item.id} 
+                  className={`history-item ${selectedIds.has(item.id) ? 'selected' : ''}`}
+                  onClick={() => toggleSelection(item.id)}
+                >
+                  <div className="hi-check"><div className="hi-check-inner"></div></div>
+                  <div className="hi-main">
+                    <div className="hi-opening">{item.opening || 'Unknown Opening'}</div>
+                    <div className="hi-meta">
+                      <span>{new Date(item.date).toLocaleDateString()}</span>
+                      <span>{item.moveCount} jugadas</span>
+                    </div>
+                  </div>
+                  <div className="hi-acc">
+                    <div className="hi-acc-val">{item.white?.accuracy}% / {item.black?.accuracy}%</div>
+                  </div>
+                  <div className="hi-actions">
+                    <button className="hi-delete" onClick={(e) => handleSingleDelete(item.id, e)} title="Borrar">
+                      <AlertTriangle size={14} />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      ) : filteredStats.empty ? (
         <div className="empty-view">
           <Filter size={40} />
           <p>Sin datos para este filtro</p>
@@ -261,11 +346,11 @@ export const StatsDashboard = () => {
                   <div key={p.phase} className="phase-item-new">
                     <div className="pi-info"><span>{p.phase}</span><strong>{p.accuracy}%</strong></div>
                     <div className="pi-bar-bg">
-                      <motion.div 
-                        className="pi-bar-fill" 
-                        initial={{width:0}} 
-                        animate={{width:`${p.accuracy}%`}} 
-                        style={{background: p.color || (i===0?'#4caf50':i===1?'#ff9800':'#2196f3')}} 
+                      <motion.div
+                        className="pi-bar-fill"
+                        initial={{ width: 0 }}
+                        animate={{ width: `${p.accuracy}%` }}
+                        style={{ background: p.color || (i === 0 ? '#4caf50' : i === 1 ? '#ff9800' : '#2196f3') }}
                       />
                     </div>
                   </div>
@@ -296,7 +381,7 @@ export const StatsDashboard = () => {
                 {filteredStats.tactics.map((t, i) => (
                   <div key={i} className="t-row-modern">
                     <span className="t-label-m">{t.motive}</span>
-                    <div className="t-bar-m"><motion.div className="t-fill-m" initial={{width:0}} animate={{width:`${t.severity}%`}} /></div>
+                    <div className="t-bar-m"><motion.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${t.severity}%` }} /></div>
                   </div>
                 ))}
               </div>

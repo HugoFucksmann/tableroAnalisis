@@ -15,6 +15,7 @@ import { EngineConfigModal } from '../Import/EngineConfigModal';
 import { ModeSelector } from './ModeSelector';
 import { PuzzleDashboard } from '../Puzzle/PuzzleDashboard';
 import { StatsDashboard } from '../Stats/StatsDashboard';
+import { backendService } from '../../services/backendService';
 import './Dashboard.css';
 
 const usePanelManagement = () => {
@@ -104,7 +105,7 @@ export const Dashboard = () => {
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, hasPgnEvaluations, startFullAnalysis,
-    analysisReady, appMode
+    analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -115,8 +116,32 @@ export const Dashboard = () => {
     hasPgnEvaluations: state.hasPgnEvaluations,
     startFullAnalysis: state.startFullAnalysis,
     analysisReady: state.analysisReady,
-    appMode: state.appMode
+    appMode: state.appMode,
+    applyFullAnalysis: state.applyFullAnalysis,
+    setAnalyses: state.setAnalyses,
+    gameId: state.gameId
   })));
+
+  useEffect(() => {
+    const cleanup = backendService.addHandler((msg) => {
+      if (msg.type === 'full_analysis_data') {
+        applyFullAnalysis(msg.data);
+      }
+      if (msg.type === 'analyses_list') {
+        setAnalyses(msg.analyses);
+      }
+    });
+    return () => cleanup();
+  }, [applyFullAnalysis, setAnalyses]);
+
+  // Al cargar una partida, pedir análisis previo si existe
+  const lastLoadedId = React.useRef(null);
+  useEffect(() => {
+    if (gameId && gameId !== lastLoadedId.current) {
+      lastLoadedId.current = gameId;
+      backendService.getFullAnalysis(gameId);
+    }
+  }, [gameId]);
 
   const handleDownloadPgn = () => {
     const { moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex } = useGameStore.getState();
@@ -158,16 +183,14 @@ export const Dashboard = () => {
             
             {appMode === 'analysis' && (
               <div className="global-action-buttons glass-panel">
-                {(!analysisReady || hasPgnEvaluations) && (
-                  <button
-                    className={`global-action-btn analyze-btn ${history.length > 0 ? 'ready' : ''}`}
-                    title={history.length > 0 ? "Analizar Partida con Stockfish" : "Haz movimientos para analizar"}
+                <button
+                  className={`global-action-btn analyze-btn ${history.length > 0 ? 'ready' : ''} ${analysisReady ? 're-analyze' : ''}`}
+                    title={analysisReady ? "Volver a analizar (Sobrescribir)" : (history.length > 0 ? "Analizar Partida con Stockfish" : "Haz movimientos para analizar")}
                     onClick={() => startFullAnalysis()}
                     disabled={history.length === 0}
                   >
                     <Cpu size={15} />
                   </button>
-                )}
                 {analysisReady && (
                   <button
                     className="global-action-btn"

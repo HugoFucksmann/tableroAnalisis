@@ -191,7 +191,7 @@ export const createGameSlice = (set, get) => ({
     }
   },
 
-  loadPgn: (pgn) => {
+  loadPgn: (pgn, providedId = null) => {
     try {
       const state = get();
       const newGame = new Chess();
@@ -209,7 +209,11 @@ export const createGameSlice = (set, get) => ({
         state.setBoardOrientation('white');
       }
 
-      state.setGameId(Date.now());
+      let gameId = providedId;
+      if (!gameId && headers.Site && headers.Site.includes('lichess.org/')) {
+        gameId = headers.Site.split('/').pop().split(/[#?]/)[0];
+      }
+      if (!gameId) gameId = Date.now();
       const verboseHistory = newGame.history({ verbose: true });
       const comments = newGame.getComments();
 
@@ -244,6 +248,7 @@ export const createGameSlice = (set, get) => ({
         gameHeaders: headers,
         pgnCommentsByIndex,
         startFen,
+        gameId,
       });
 
       get().setEvaluationHistory(evalHistoryDict);
@@ -270,7 +275,7 @@ export const createGameSlice = (set, get) => ({
     set({
       hasPgnEvaluations: false,
       isReviewRequested: true,
-      gameId: Date.now(),
+      gameId: state.gameId || Date.now(),
     });
   },
 });
