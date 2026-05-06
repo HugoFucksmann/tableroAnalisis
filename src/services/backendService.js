@@ -125,7 +125,8 @@ class BackendService {
         return this.send('analyze_game', { 
             history, currentIndex, gameId, engineConfig, startFen,
             playerColor: extraInfo.playerColor,
-            win: extraInfo.win
+            win: extraInfo.win,
+            timeControl: extraInfo.timeControl ?? null,
         });
     }
 

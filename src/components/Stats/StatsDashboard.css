@@ -489,3 +489,54 @@
   text-align: right;
   margin-top: 2px;
 }
+
+/* Gráfico sin datos */
+.no-data-chart {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #444;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* Placeholder para cards pendientes de implementación */
+.card-placeholder {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.01);
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+}
+
+.card-placeholder span {
+  font-size: 0.72rem;
+  color: #444;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Time Control badge en historial */
+.hi-tc {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(33, 150, 243, 0.12);
+  color: #2196f3;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Conteo numérico en fila táctica */
+.t-count-m {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #888;
+  min-width: 24px;
+  text-align: right;
+}

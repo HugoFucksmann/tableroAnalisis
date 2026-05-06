@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import {
@@ -18,6 +18,9 @@ import { backendService } from '../../services/backendService';
 import { useGameStore } from '../../store/useGameStore';
 import './StatsDashboard.css';
 
+// ─── AccuracyLineChart ─────────────────────────────────────────────────────
+// Componente puro: solo recibe data y renderiza. Sin side-effects propios.
+
 const AccuracyLineChart = ({ data }) => {
   if (!data || data.length === 0) return (
     <div className="no-data-chart">No hay suficientes datos para mostrar la tendencia</div>
@@ -28,18 +31,23 @@ const AccuracyLineChart = ({ data }) => {
   const padding = 40;
 
   const accuracies = data.map(d => d.accuracy);
-  const minAcc = Math.min(...accuracies) - 5;
+  // Clampear mínimo a 50 para no distorsionar el gráfico con outliers extremos
+  const minAcc = Math.max(50, Math.min(...accuracies) - 5);
   const maxAcc = 100;
+  const range = maxAcc - minAcc;
 
   const points = data.map((d, i) => {
     const x = padding + (i * (width - 2 * padding) / Math.max(1, data.length - 1));
-    const y = height - padding - ((d.accuracy - minAcc) * (height - 2 * padding) / (maxAcc - minAcc));
+    const y = height - padding - ((d.accuracy - minAcc) * (height - 2 * padding) / range);
     return { x, y, ...d };
   });
 
   const pathD = points.length > 1
     ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
     : '';
+
+  // Grid: solo mostrar valores dentro del rango visible
+  const gridValues = [50, 60, 70, 80, 90, 100].filter(v => v >= minAcc);
 
   return (
     <div className="line-chart-wrapper">
@@ -52,11 +60,14 @@ const AccuracyLineChart = ({ data }) => {
         </defs>
 
         {/* Grid lines */}
-        {[70, 80, 90, 100].map(val => {
-          const y = height - padding - ((val - minAcc) * (height - 2 * padding) / (maxAcc - minAcc));
+        {gridValues.map(val => {
+          const y = height - padding - ((val - minAcc) * (height - 2 * padding) / range);
           if (y < padding || y > height - padding) return null;
           return (
-            <line key={val} x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(255,255,255,0.03)" strokeDasharray="4" />
+            <g key={val}>
+              <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(255,255,255,0.03)" strokeDasharray="4" />
+              <text x={padding - 4} y={y + 4} textAnchor="end" fill="#444" fontSize="10">{val}</text>
+            </g>
           );
         })}
 
@@ -95,11 +106,15 @@ const AccuracyLineChart = ({ data }) => {
   );
 };
 
+// ─── StatsDashboard ────────────────────────────────────────────────────────
+
 export const StatsDashboard = () => {
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'history'
   const [selectedIds, setSelectedIds] = useState(new Set());
+  // Lazy: historial solo se carga cuando el usuario abre ese tab
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const { analyses, setAnalyses, loadPgn } = useGameStore(useShallow(state => ({
     analyses: state.analyses,
@@ -110,8 +125,9 @@ export const StatsDashboard = () => {
   // Filtros
   const [timeFilter, setTimeFilter] = useState('all');
   const [durationFilter, setDurationFilter] = useState('all');
-  const [countFilter, setCountFilter] = useState('25'); // 10, 25, 50, all
+  const [countFilter, setCountFilter] = useState('25');
 
+  // ── Carga inicial: solo stats. El historial se pide al cambiar de tab. ──
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
       if (msg.type === 'stats_data') {
@@ -123,10 +139,19 @@ export const StatsDashboard = () => {
       }
     });
     backendService.getStats();
-    backendService.getAnalyses();
     return () => cleanup();
   }, [setAnalyses]);
 
+  // ── Lazy load del historial al cambiar de tab ──────────────────────────
+  const handleTabChange = useCallback((tab) => {
+    setActiveTab(tab);
+    if (tab === 'history' && !historyLoaded) {
+      backendService.getAnalyses();
+      setHistoryLoaded(true);
+    }
+  }, [historyLoaded]);
+
+  // ── filteredStats: cómputo local sobre rawData ─────────────────────────
   const filteredStats = useMemo(() => {
     if (!rawData) return null;
 
@@ -137,12 +162,11 @@ export const StatsDashboard = () => {
       games = games.filter(g => g.timeControl === durationFilter);
     }
 
-    // 2. Filtrar por Tiempo
+    // 2. Filtrar por Tiempo — sin mutar el objeto Date
     if (timeFilter !== 'all') {
-      const now = new Date();
       const days = timeFilter === '7d' ? 7 : 30;
-      const limit = new Date(now.setDate(now.getDate() - days));
-      games = games.filter(g => new Date(g.date) >= limit);
+      const limitMs = Date.now() - days * 86_400_000;
+      games = games.filter(g => new Date(g.date).getTime() >= limitMs);
     }
 
     // 3. Filtrar por Cantidad (Últimas X)
@@ -152,7 +176,6 @@ export const StatsDashboard = () => {
 
     if (games.length === 0) return { empty: true };
 
-    // Cálculos
     const total = games.length;
     const wins = games.filter(g => g.win).length;
     const avgAcc = Math.round(games.reduce((acc, g) => acc + g.accuracy, 0) / total);
@@ -183,6 +206,13 @@ export const StatsDashboard = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 4);
 
+    // Para fases y tácticas: usamos los datos del backend directamente.
+    // Si los filtros reducen el conjunto, mostramos los datos globales del rawData
+    // (que ya son las últimas 20 partidas). No recalculamos aquí para no duplicar
+    // la lógica de agregación que vive en GameStore.
+    const phases = rawData.accuracyByPhase || [];
+    const tactics = rawData.tacticalBreakdown || [];
+
     return {
       total,
       winRate: Math.round((wins / total) * 100),
@@ -191,32 +221,34 @@ export const StatsDashboard = () => {
       black: calcColor(blackGames),
       openingStats,
       trend: games.slice().reverse().map(g => ({ date: g.date, accuracy: g.accuracy })),
-      tactics: rawData.tacticalBreakdown || [],
-      phases: rawData.accuracyByPhase || []
+      tactics,
+      phases,
     };
   }, [rawData, timeFilter, durationFilter, countFilter]);
 
-  const toggleSelection = (id) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
+  const toggleSelection = useCallback((id) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }, []);
 
-  const handleBulkDelete = () => {
+  const handleBulkDelete = useCallback(() => {
     if (selectedIds.size === 0) return;
     if (confirm(`¿Borrar ${selectedIds.size} análisis?`)) {
       backendService.deleteAnalyses(Array.from(selectedIds));
       setSelectedIds(new Set());
     }
-  };
+  }, [selectedIds]);
 
-  const handleSingleDelete = (id, e) => {
+  const handleSingleDelete = useCallback((id, e) => {
     e.stopPropagation();
     if (confirm('¿Borrar este análisis?')) {
       backendService.deleteAnalyses([id]);
     }
-  };
+  }, []);
 
   if (loading) return <div className="stats-loading"><div className="spinner"></div><span>Cargando perfil...</span></div>;
 
@@ -228,10 +260,10 @@ export const StatsDashboard = () => {
           <div className="stats-avatar"><User size={18} /></div>
           <div className="stats-header-titles">
             <div className="stats-tabs">
-              <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => setActiveTab('stats')}>Dashboard</button>
-              <button className={activeTab === 'history' ? 'active' : ''} onClick={() => setActiveTab('history')}>Historial</button>
+              <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => handleTabChange('stats')}>Dashboard</button>
+              <button className={activeTab === 'history' ? 'active' : ''} onClick={() => handleTabChange('history')}>Historial</button>
             </div>
-            <p>{activeTab === 'stats' ? `${filteredStats.total || 0} partidas` : `${analyses.length} analizadas`}</p>
+            <p>{activeTab === 'stats' ? `${filteredStats?.total || 0} partidas` : `${analyses.length} analizadas`}</p>
           </div>
         </div>
 
@@ -274,8 +306,8 @@ export const StatsDashboard = () => {
               <div className="empty-history">No hay partidas analizadas aún</div>
             ) : (
               analyses.slice().reverse().map(item => (
-                <div 
-                  key={item.id} 
+                <div
+                  key={item.id}
                   className={`history-item ${selectedIds.has(item.id) ? 'selected' : ''}`}
                   onClick={() => toggleSelection(item.id)}
                 >
@@ -286,6 +318,7 @@ export const StatsDashboard = () => {
                     <div className="hi-meta">
                       <span>{new Date(item.date).toLocaleDateString()}</span>
                       <span>{item.moveCount} jugadas</span>
+                      {item.timeControl && <span className="hi-tc">{item.timeControl}</span>}
                       <span className={`hi-result-badge ${item.win ? 'win' : 'loss'}`}>{item.win ? 'Victoria' : 'Derrota'}</span>
                     </div>
                   </div>
@@ -305,12 +338,12 @@ export const StatsDashboard = () => {
             )}
           </div>
         </div>
-      ) : filteredStats.empty ? (
+      ) : filteredStats?.empty ? (
         <div className="empty-view">
           <Filter size={40} />
           <p>Sin datos para este filtro</p>
         </div>
-      ) : (
+      ) : filteredStats ? (
         <div className="stats-layout-grid">
           {/* Main Trend Chart */}
           <section className="stats-main-chart glass-panel">
@@ -343,24 +376,30 @@ export const StatsDashboard = () => {
               </div>
             </div>
 
-            {/* Phase Accuracy */}
+            {/* Phase Accuracy — solo si hay datos reales */}
             <div className="stats-card-modern glass-panel">
               <div className="card-title-modern"><Target size={16} /> Por Fase</div>
-              <div className="phase-minimal-list">
-                {filteredStats.phases.map((p, i) => (
-                  <div key={p.phase} className="phase-item-new">
-                    <div className="pi-info"><span>{p.phase}</span><strong>{p.accuracy}%</strong></div>
-                    <div className="pi-bar-bg">
-                      <motion.div
-                        className="pi-bar-fill"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${p.accuracy}%` }}
-                        style={{ background: p.color || (i === 0 ? '#4caf50' : i === 1 ? '#ff9800' : '#2196f3') }}
-                      />
+              {filteredStats.phases.length > 0 ? (
+                <div className="phase-minimal-list">
+                  {filteredStats.phases.map((p, i) => (
+                    <div key={p.phase} className="phase-item-new">
+                      <div className="pi-info"><span>{p.phase}</span><strong>{p.accuracy}%</strong></div>
+                      <div className="pi-bar-bg">
+                        <motion.div
+                          className="pi-bar-fill"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${p.accuracy}%` }}
+                          style={{ background: p.color || (i === 0 ? '#4caf50' : i === 1 ? '#ff9800' : '#2196f3') }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="card-placeholder">
+                  <span>Disponible tras analizar partidas</span>
+                </div>
+              )}
             </div>
 
             {/* Opening Mastery */}
@@ -379,21 +418,28 @@ export const StatsDashboard = () => {
               </div>
             </div>
 
-            {/* Tactical Weaknesses */}
+            {/* Tactical Weaknesses — solo si hay datos reales */}
             <div className="stats-card-modern glass-panel">
-              <div className="card-title-modern"><AlertTriangle size={16} /> Táctica</div>
-              <div className="tactical-modern-list">
-                {filteredStats.tactics.map((t, i) => (
-                  <div key={i} className="t-row-modern">
-                    <span className="t-label-m">{t.motive}</span>
-                    <div className="t-bar-m"><motion.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${t.severity}%` }} /></div>
-                  </div>
-                ))}
-              </div>
+              <div className="card-title-modern"><AlertTriangle size={16} /> Patrones de Error</div>
+              {filteredStats.tactics.length > 0 ? (
+                <div className="tactical-modern-list">
+                  {filteredStats.tactics.map((t, i) => (
+                    <div key={i} className="t-row-modern">
+                      <span className="t-label-m">{t.motive}</span>
+                      <span className="t-count-m">{t.count}</span>
+                      <div className="t-bar-m"><motion.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${t.severity}%` }} /></div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="card-placeholder">
+                  <span>Disponible tras analizar partidas</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+      ) : null}
     </motion.div>
   );
 };

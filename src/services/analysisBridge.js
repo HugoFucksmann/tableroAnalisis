@@ -1,6 +1,36 @@
 import { useGameStore } from '../store/useGameStore';
 import { backendService } from './backendService';
 
+/**
+ * Convierte el campo TimeControl de PGN al formato de filtro del dashboard.
+ * Formatos soportados:
+ *   - "600+0"  → '10m'  (Lichess / Chess.com: segundos base + incremento)
+ *   - "600"    → '10m'  (sin incremento)
+ *   - "-"      → null   (sin control de tiempo)
+ * Umbrales (en minutos de base):
+ *   ≤ 1   → '1m'
+ *   ≤ 3   → '3m'
+ *   ≤ 5   → '5m'
+ *   ≤ 10  → '10m'
+ *   ≤ 15  → '15m'
+ *   ≤ 30  → '30m'
+ *   > 30  → null (correspondencia: sin filtro)
+ */
+function _normalizeTimeControl(raw) {
+    if (!raw || raw === '-' || raw === '?') return null;
+    // Tomar solo la parte base (antes del '+')
+    const baseSec = parseInt(raw.split('+')[0], 10);
+    if (isNaN(baseSec)) return null;
+    const mins = baseSec / 60;
+    if (mins <= 1)  return '1m';
+    if (mins <= 3)  return '3m';
+    if (mins <= 5)  return '5m';
+    if (mins <= 10) return '10m';
+    if (mins <= 15) return '15m';
+    if (mins <= 30) return '30m';
+    return null;
+}
+
 class AnalysisBridge {
     #abortController = null;
     isRunning = false;
@@ -76,18 +106,24 @@ class AnalysisBridge {
 
         // Extraer metadatos si vienen de PGN Headers
         const pgnHeaders = callbacks.pgnHeaders || {};
-        const playerColor = callbacks.playerColor || 'white'; // Por defecto asumimos blanca si no se indica
+        const playerColor = callbacks.playerColor || 'white';
         
-        // Determinar si ganó el jugador (asumiendo que el usuario es White si no se especifica)
+        // Determinar si ganó el jugador
         const result = pgnHeaders.Result || '*';
         let win = true;
         if (playerColor === 'white' && result === '0-1') win = false;
         if (playerColor === 'black' && result === '1-0') win = false;
-        if (result === '1/2-1/2') win = false; // Empate no cuenta como victoria estricta
+        if (result === '1/2-1/2') win = false;
+
+        // Normalizar el TimeControl del PGN a un formato corto ('1m','3m','5m','10m','15m','30m')
+        // Lichess usa segundos (ej: "600+0"), Chess.com usa el mismo formato.
+        const rawTc = pgnHeaders.TimeControl || '';
+        const timeControl = _normalizeTimeControl(rawTc);
 
         backendService.analyzeGame(history, currentIndex, gameId, engineConfig, startFen, {
             playerColor,
-            win
+            win,
+            timeControl,
         });
     }
 
