@@ -185,15 +185,18 @@ export const StatsDashboard = () => {
 
     const calcColor = (gs) => ({
       acc: gs.length ? Math.round(gs.reduce((acc, g) => acc + g.accuracy, 0) / gs.length) : 0,
-      wr: gs.length ? Math.round((gs.filter(g => g.win).length / gs.length) * 100) : 0
+      wr: gs.length ? Math.round((gs.filter(g => g.win).length / gs.length) * 100) : 0,
+      count: gs.length
     });
 
     const openings = {};
     games.forEach(g => {
-      if (!openings[g.opening]) openings[g.opening] = { wins: 0, total: 0, accSum: 0 };
-      openings[g.opening].total++;
-      if (g.win) openings[g.opening].wins++;
-      openings[g.opening].accSum += g.accuracy;
+      // Group by base opening name (e.g. "Ruy Lopez: Classical" -> "Ruy Lopez")
+      const baseOpening = g.opening ? g.opening.split(':')[0].trim() : 'Unknown Opening';
+      if (!openings[baseOpening]) openings[baseOpening] = { wins: 0, total: 0, accSum: 0 };
+      openings[baseOpening].total++;
+      if (g.win) openings[baseOpening].wins++;
+      openings[baseOpening].accSum += g.accuracy;
     });
 
     const openingStats = Object.entries(openings)
@@ -206,12 +209,12 @@ export const StatsDashboard = () => {
       .sort((a, b) => b.count - a.count)
       .slice(0, 4);
 
-    // Para fases y tácticas: usamos los datos del backend directamente.
+    // Para fases y calidad de jugadas: usamos los datos del backend directamente.
     // Si los filtros reducen el conjunto, mostramos los datos globales del rawData
     // (que ya son las últimas 20 partidas). No recalculamos aquí para no duplicar
     // la lógica de agregación que vive en GameStore.
     const phases = rawData.accuracyByPhase || [];
-    const tactics = rawData.tacticalBreakdown || [];
+    const moveQuality = rawData.moveQuality || [];
 
     return {
       total,
@@ -221,7 +224,7 @@ export const StatsDashboard = () => {
       black: calcColor(blackGames),
       openingStats,
       trend: games.slice().reverse().map(g => ({ date: g.date, accuracy: g.accuracy })),
-      tactics,
+      moveQuality,
       phases,
     };
   }, [rawData, timeFilter, durationFilter, countFilter]);
@@ -269,23 +272,46 @@ export const StatsDashboard = () => {
 
         {activeTab === 'stats' ? (
           <div className="stats-filters-pills">
-            <div className="filter-pill-group">
+            <div className="filter-pill-group dropdown-group">
               <Calendar size={14} />
-              <button className={timeFilter === 'all' ? 'active' : ''} onClick={() => setTimeFilter('all')}>Todo</button>
-              <button className={timeFilter === '7d' ? 'active' : ''} onClick={() => setTimeFilter('7d')}>7d</button>
-              <button className={timeFilter === '30d' ? 'active' : ''} onClick={() => setTimeFilter('30d')}>30d</button>
+              <select 
+                value={timeFilter} 
+                onChange={(e) => setTimeFilter(e.target.value)}
+                className="stats-dropdown"
+              >
+                <option value="all">Todo</option>
+                <option value="7d">Últimos 7 días</option>
+                <option value="30d">Últimos 30 días</option>
+              </select>
             </div>
-            <div className="filter-pill-group">
+            <div className="filter-pill-group dropdown-group">
               <Clock size={14} />
-              <button className={durationFilter === 'all' ? 'active' : ''} onClick={() => setDurationFilter('all')}>Mix</button>
-              <button className={durationFilter === '5m' ? 'active' : ''} onClick={() => setDurationFilter('5m')}>5m</button>
-              <button className={durationFilter === '10m' ? 'active' : ''} onClick={() => setDurationFilter('10m')}>10m</button>
+              <select 
+                value={durationFilter} 
+                onChange={(e) => setDurationFilter(e.target.value)}
+                className="stats-dropdown"
+              >
+                <option value="all">Mix (Todos)</option>
+                <option value="1m">1m (Bala)</option>
+                <option value="3m">3m (Blitz)</option>
+                <option value="5m">5m (Blitz)</option>
+                <option value="10m">10m (Rápida)</option>
+                <option value="15m">15m (Rápida)</option>
+                <option value="30m">30m (Clásica)</option>
+              </select>
             </div>
-            <div className="filter-pill-group">
+            <div className="filter-pill-group dropdown-group">
               <Layers size={14} />
-              <button className={countFilter === '10' ? 'active' : ''} onClick={() => setCountFilter('10')}>10</button>
-              <button className={countFilter === '25' ? 'active' : ''} onClick={() => setCountFilter('25')}>25</button>
-              <button className={countFilter === 'all' ? 'active' : ''} onClick={() => setCountFilter('all')}>∞</button>
+              <select 
+                value={countFilter} 
+                onChange={(e) => setCountFilter(e.target.value)}
+                className="stats-dropdown"
+              >
+                <option value="10">Últimas 10</option>
+                <option value="25">Últimas 25</option>
+                <option value="50">Últimas 50</option>
+                <option value="all">Todas</option>
+              </select>
             </div>
           </div>
         ) : (
@@ -364,12 +390,12 @@ export const StatsDashboard = () => {
               <div className="card-title-modern"><Zap size={16} /> Por Color</div>
               <div className="color-split-view">
                 <div className="color-block white">
-                  <span className="cb-label">Blancas</span>
+                  <span className="cb-label">Blancas <span className="cb-count">({filteredStats.white.count})</span></span>
                   <div className="cb-row"><span>WR</span><strong>{filteredStats.white.wr}%</strong></div>
                   <div className="cb-row"><span>Acc</span><strong>{filteredStats.white.acc}%</strong></div>
                 </div>
                 <div className="color-block black">
-                  <span className="cb-label">Negras</span>
+                  <span className="cb-label">Negras <span className="cb-count">({filteredStats.black.count})</span></span>
                   <div className="cb-row"><span>WR</span><strong>{filteredStats.black.wr}%</strong></div>
                   <div className="cb-row"><span>Acc</span><strong>{filteredStats.black.acc}%</strong></div>
                 </div>
@@ -418,16 +444,23 @@ export const StatsDashboard = () => {
               </div>
             </div>
 
-            {/* Tactical Weaknesses — solo si hay datos reales */}
+            {/* Move Quality Distribution — solo si hay datos reales */}
             <div className="stats-card-modern glass-panel">
-              <div className="card-title-modern"><AlertTriangle size={16} /> Patrones de Error</div>
-              {filteredStats.tactics.length > 0 ? (
+              <div className="card-title-modern"><AlertTriangle size={16} /> Calidad de Jugadas</div>
+              {filteredStats.moveQuality.length > 0 ? (
                 <div className="tactical-modern-list">
-                  {filteredStats.tactics.map((t, i) => (
+                  {filteredStats.moveQuality.map((t, i) => (
                     <div key={i} className="t-row-modern">
-                      <span className="t-label-m">{t.motive}</span>
-                      <span className="t-count-m">{t.count}</span>
-                      <div className="t-bar-m"><motion.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${t.severity}%` }} /></div>
+                      <span className="t-label-m">{t.label}</span>
+                      <span className="t-count-m">{t.pct}%</span>
+                      <div className="t-bar-m">
+                        <motion.div 
+                          className="t-fill-m" 
+                          initial={{ width: 0 }} 
+                          animate={{ width: `${t.pct}%` }} 
+                          style={{ background: t.color }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>

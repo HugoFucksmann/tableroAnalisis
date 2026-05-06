@@ -6,6 +6,7 @@ import { backendService } from './backendService';
  * Formatos soportados:
  *   - "600+0"  → '10m'  (Lichess / Chess.com: segundos base + incremento)
  *   - "600"    → '10m'  (sin incremento)
+ *   - "0:10:00" → '10m' (Reloj inicial PGN: horas:minutos:segundos)
  *   - "-"      → null   (sin control de tiempo)
  * Umbrales (en minutos de base):
  *   ≤ 1   → '1m'
@@ -18,9 +19,22 @@ import { backendService } from './backendService';
  */
 function _normalizeTimeControl(raw) {
     if (!raw || raw === '-' || raw === '?') return null;
-    // Tomar solo la parte base (antes del '+')
-    const baseSec = parseInt(raw.split('+')[0], 10);
-    if (isNaN(baseSec)) return null;
+    let baseSec = 0;
+    
+    if (raw.includes(':')) {
+        // Formato HH:MM:SS
+        const parts = raw.split(':').map(Number);
+        if (parts.length === 3) {
+            baseSec = parts[0] * 3600 + parts[1] * 60 + parts[2];
+        } else if (parts.length === 2) {
+            baseSec = parts[0] * 60 + parts[1];
+        }
+    } else {
+        // Formato segundos+incremento
+        baseSec = parseInt(raw.split('+')[0], 10);
+    }
+    
+    if (isNaN(baseSec) || baseSec === 0) return null;
     const mins = baseSec / 60;
     if (mins <= 1)  return '1m';
     if (mins <= 3)  return '3m';
@@ -105,8 +119,8 @@ class AnalysisBridge {
         this.#abortController.signal.addEventListener('abort', () => removeHandler());
 
         // Extraer metadatos si vienen de PGN Headers
-        const pgnHeaders = callbacks.pgnHeaders || {};
-        const playerColor = callbacks.playerColor || 'white';
+        const pgnHeaders = callbacks.pgnHeaders || storeState.gameHeaders || {};
+        const playerColor = callbacks.playerColor || storeState.playerColor || 'white';
         
         // Determinar si ganó el jugador
         const result = pgnHeaders.Result || '*';
@@ -116,8 +130,8 @@ class AnalysisBridge {
         if (result === '1/2-1/2') win = false;
 
         // Normalizar el TimeControl del PGN a un formato corto ('1m','3m','5m','10m','15m','30m')
-        // Lichess usa segundos (ej: "600+0"), Chess.com usa el mismo formato.
-        const rawTc = pgnHeaders.TimeControl || '';
+        // Si no hay header TimeControl, intentar usar el tiempo inicial del reloj
+        const rawTc = pgnHeaders.TimeControl || storeState.clocks?.white || '';
         const timeControl = _normalizeTimeControl(rawTc);
 
         backendService.analyzeGame(history, currentIndex, gameId, engineConfig, startFen, {
