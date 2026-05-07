@@ -18,7 +18,10 @@ export const useLiveEvaluation = () => {
         const targetMultiPv = state.engineConfig?.liveMultiPv || 3;
         const needsLiveAnalysis = !hasEval || cachedLinesCount < targetMultiPv;
 
-        if (!needsLiveAnalysis || currentMoveIndex < -1) return;
+        // Evitar interrumpir un análisis de partida completa en curso
+        const isFullGameAnalysisRunning = state.isReviewRequested && !state.analysisReady;
+
+        if (!needsLiveAnalysis || currentMoveIndex < -1 || isFullGameAnalysisRunning) return;
 
         let isActive = true;
 
