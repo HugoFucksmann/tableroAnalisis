@@ -102,6 +102,14 @@ export const PuzzleLibrary = ({ onBack }) => {
                   <span>Partida: {p.gameId.slice(-6)}</span>
                   <span>Solucionado: {p.solvedCount || 0}</span>
                 </div>
+                <div className="pl-item-badges">
+                  {p.isOnlyMove && <span className="pl-badge only-move" title={`Gap Crítico: ${p.criticalityGap}`}>Only Move</span>}
+                  {p.tensionIndex > 4 && <span className="pl-badge tension" title={`${p.attackedSquares} casillas bajo ataque`}>Alta Tensión ({p.tensionIndex})</span>}
+                  {p.blunderSeverity > 0.5 && <span className="pl-badge severe">Severo ({p.blunderSeverity.toFixed(2)})</span>}
+                  {p.tacticalMotifs && p.tacticalMotifs.map(m => (
+                    <span key={m} className="pl-badge motif">{m}</span>
+                  ))}
+                </div>
               </div>
               <button className="pl-delete-btn" onClick={() => handleDelete(p.id)}>
                 <Trash2 size={14} />
