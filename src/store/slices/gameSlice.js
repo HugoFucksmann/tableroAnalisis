@@ -215,11 +215,18 @@ export const createGameSlice = (set, get) => ({
       state.setBoardOrientation(detectedColor);
       state.setPlayerColor(detectedColor);
 
+      // providedId (passed from GameImport card click) always wins.
+      // Only fall back to Site header or timestamp if no providedId.
       let gameId = providedId;
-      if (!gameId && headers.Site && headers.Site.includes('lichess.org/')) {
-        gameId = headers.Site.split('/').pop().split(/[#?]/)[0];
+      if (!gameId) {
+        if (headers.Site && headers.Site.includes('lichess.org/')) {
+          gameId = headers.Site.split('/').pop().split(/[#?]/)[0];
+        } else if (headers.Site && headers.Site.includes('chess.com/')) {
+          gameId = headers.Site.split('/').pop().split(/[#?]/)[0];
+        }
       }
       if (!gameId) gameId = Date.now();
+      console.log('[loadPgn] gameId resolved:', gameId, '| providedId was:', providedId);
       const verboseHistory = newGame.history({ verbose: true });
       const comments = newGame.getComments();
 
@@ -281,6 +288,7 @@ export const createGameSlice = (set, get) => ({
     set({
       hasPgnEvaluations: false,
       isReviewRequested: true,
+      analysisRequestId: Date.now(),
       gameId: state.gameId || Date.now(),
     });
   },

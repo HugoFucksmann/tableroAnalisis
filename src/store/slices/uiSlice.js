@@ -26,7 +26,9 @@ export const createUISlice = (set, get) => ({
     players: { white, black },
     playerElos: { white: whiteElo, black: blackElo }
   }),
-  setImportedGames: (games) => set({ importedGames: games }),
+  setImportedGames: (games) => set((state) => ({ 
+    importedGames: typeof games === 'function' ? games(state.importedGames) : games 
+  })),
   setSearchUsername: (username) => set({ searchUsername: username }),
   setSearchPlatform: (platform) => set({ searchPlatform: platform }),
   setLichessToken: (token) => set({ lichessToken: token }),

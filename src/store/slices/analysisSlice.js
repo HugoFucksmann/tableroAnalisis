@@ -9,6 +9,7 @@ export const createAnalysisSlice = (set, get) => ({
   analysisProgress: 0,
   analysisLabel: '',
   analysisReady: false,
+  analysisRequestId: null,
   accuracy: null,
   ecoCode: '',
   openingName: 'Initial Position',
@@ -36,6 +37,7 @@ export const createAnalysisSlice = (set, get) => ({
     analysisProgress: 0,
     analysisLabel: '',
     analysisReady: false,
+    analysisRequestId: null,
     accuracy: null,
     ecoCode: '',
     openingName: 'Initial Position',
@@ -123,7 +125,13 @@ export const createAnalysisSlice = (set, get) => ({
   setBestMoves: (v) => set({ bestMoves: v }),
   setAlternativeLines: (v) => set({ alternativeLines: v }),
   setEngineConfig: (config) => set({ engineConfig: config }),
-  setAnalyses: (v) => set({ analyses: v }),
+  setAnalyses: (v) => set((state) => ({ 
+    analyses: typeof v === 'function' ? v(state.analyses) : v 
+  })),
+  appendAnalyses: (v) => set((state) => ({ analyses: [...state.analyses, ...v] })),
+  removeAnalyses: (ids) => set((state) => ({ 
+    analyses: state.analyses.filter(a => !ids.includes(a.id)) 
+  })),
   applyFullAnalysis: (data) => {
     if (!data) return;
 

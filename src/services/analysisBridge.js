@@ -78,14 +78,18 @@ class AnalysisBridge {
     }
 
     async analyzeGame(history, currentIndex, callbacks = {}) {
-        const { onMoveResult, onProgress, onStatus, onComplete, onOpeningDetected, gameId = Date.now(), startFen: forcedStartFen } = callbacks;
+        const storeState = useGameStore.getState();
+        const { 
+            onMoveResult, onProgress, onStatus, onComplete, onOpeningDetected, 
+            gameId = storeState.gameId || Date.now(), 
+            startFen: forcedStartFen 
+        } = callbacks;
 
         if (!backendService.isConnected) {
             onProgress?.(0, 'Backend not connected');
             return;
         }
 
-        const storeState = useGameStore.getState();
         const engineConfig = { ...storeState.engineConfig, lichessToken: storeState.lichessToken };
         const startFen = forcedStartFen || storeState.startFen;
 

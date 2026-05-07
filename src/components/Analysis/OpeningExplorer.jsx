@@ -86,8 +86,12 @@ export const OpeningExplorer = () => {
 
             if (!active) return;
             
+            const rawOpeningName = explorerData.opening?.name || 'Teoría de Aperturas';
+            const colonIdx = rawOpeningName.indexOf(':');
+            const cleanOpeningName = colonIdx !== -1 ? rawOpeningName.slice(0, colonIdx).trim() : rawOpeningName;
+
             const formattedData = {
-                opening: explorerData.opening?.name || 'Teoría de Aperturas',
+                opening: cleanOpeningName,
                 moves: (explorerData.moves || []).slice(0, 12).map(m => {
                     const w = m.white || 0;
                     const d = m.draws || m.draw || 0;

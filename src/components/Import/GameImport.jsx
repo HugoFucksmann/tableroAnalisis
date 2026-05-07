@@ -42,10 +42,19 @@ export const GameImport = ({ onGameSelect }) => {
   React.useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
       if (msg.type === 'analyses_list') {
-        setAnalyses(msg.analyses);
+        console.log('[GameImport] analyses_list. Cantidad:', msg.analyses.length, '| gameIds:', msg.analyses.slice(0,3).map(a => a.gameId));
+        if (msg.offset === 0) {
+          setAnalyses(msg.analyses);
+        } else {
+          setAnalyses(prev => {
+            const existingIds = new Set(prev.map(a => a.id));
+            const newItems = msg.analyses.filter(a => !existingIds.has(a.id));
+            return [...prev, ...newItems];
+          });
+        }
       }
     });
-    backendService.getAnalyses();
+    backendService.getAnalyses(0, 50);
     return () => cleanup();
   }, [setAnalyses]);
 
@@ -61,6 +70,7 @@ export const GameImport = ({ onGameSelect }) => {
   const [lastTimestamp, setLastTimestamp] = React.useState(null); // Lichess
   const [chesscomPagination, setChesscomPagination] = React.useState(null); // Chess.com
 
+  const listRef = React.useRef(null);
   const sentinelRef = React.useRef(null);
 
   const handlePlatformSwitch = (p) => {
@@ -109,14 +119,12 @@ export const GameImport = ({ onGameSelect }) => {
     try {
       if (platform === 'lichess') {
         const result = await fetchLichessGames(username.trim(), 15, lastTimestamp, lichessToken);
-        const allGames = [...games, ...result.games];
-        setGames(allGames.slice(-60));
+        setGames(prev => [...prev, ...result.games]);
         setLastTimestamp(result.lastTimestamp);
         setHasMore(result.hasMore);
       } else if (platform === 'chesscom') {
         const result = await fetchChesscomGames(username.trim(), 15, chesscomPagination);
-        const allGames = [...games, ...result.games];
-        setGames(allGames.slice(-60));
+        setGames(prev => [...prev, ...result.games]);
         setChesscomPagination(result.pagination);
         setHasMore(result.hasMore);
       }
@@ -125,17 +133,21 @@ export const GameImport = ({ onGameSelect }) => {
     } finally {
       setIsFetchingMore(false);
     }
-  }, [isFetching, isFetchingMore, hasMore, username, platform, lastTimestamp, chesscomPagination, lichessToken, games, setGames]);
+  }, [isFetching, isFetchingMore, hasMore, username, platform, lastTimestamp, chesscomPagination, lichessToken]);
 
   // Observer para el sentinel
   React.useEffect(() => {
-    if (!hasMore || isFetching || isFetchingMore) return;
+    if (!hasMore || isFetching) return;
 
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting) {
+      if (entries[0].isIntersecting && !isFetchingMore) {
         loadMore();
       }
-    }, { threshold: 0.1 });
+    }, { 
+      root: listRef.current,
+      rootMargin: '200px',
+      threshold: 0.1 
+    });
 
     if (sentinelRef.current) {
       observer.observe(sentinelRef.current);
@@ -270,11 +282,15 @@ export const GameImport = ({ onGameSelect }) => {
                 <span>Buscando partidas…</span>
               </div>
             ) : (
-              <div className="gi-list premium-scroll">
+              <div ref={listRef} className="gi-list premium-scroll">
                 {games.length > 0 ? (
                   <>
                     {games.map((game) => {
-                      const isAnalyzed = analyses.some(a => String(a.gameId) === String(game.id));
+                      const isAnalyzed = analyses.some(a => {
+                        const match = String(a.gameId) === String(game.id);
+                        if (match) console.log('[Badge] Match found:', a.gameId);
+                        return match;
+                      });
                       return (
                         <button
                           key={game.id}

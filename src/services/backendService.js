@@ -65,13 +65,17 @@ class BackendService {
         console.log('[BackendService] Desconectado manualmente');
     }
 
-    send(type, payload) {
+    send(type, payload, requestId = null) {
         if (!this.isConnected) return false;
-        this.ws.send(JSON.stringify({ type, ...payload }));
+        const msg = { type, ...payload };
+        if (requestId) msg.requestId = requestId;
+        this.ws.send(JSON.stringify(msg));
         return true;
     }
 
     async request(type, payload, resultType) {
+        const requestId = Math.random().toString(36).substring(2, 15);
+        
         if (!this.isConnected) {
             await new Promise(resolve => {
                 let attempts = 0;
@@ -97,18 +101,18 @@ class BackendService {
             }, 10000);
 
             const cleanup = this.addHandler((msg) => {
-                if (msg.type === resultType) {
+                if (msg.type === resultType && msg.requestId === requestId) {
                     clearTimeout(timeout);
                     cleanup();
                     resolve(msg);
-                } else if (msg.type === 'error') {
+                } else if (msg.type === 'error' && msg.requestId === requestId) {
                     clearTimeout(timeout);
                     cleanup();
                     reject(new Error(msg.message));
                 }
             });
 
-            this.send(type, payload);
+            this.send(type, payload, requestId);
         });
     }
 
@@ -162,20 +166,20 @@ class BackendService {
         return this.send('puzzle_solved', { id });
     }
 
-    getStats() {
-        return this.send('get_stats', {});
+    getStats(filters = {}, requestId = null) {
+        return this.send('get_stats', { filters }, requestId);
     }
     
-    getAnalyses() {
-        return this.send('get_analyses', {});
+    getAnalyses(offset = 0, limit = 50, requestId = null) {
+        return this.send('get_analyses', { offset, limit }, requestId);
     }
 
-    deleteAnalyses(ids) {
-        return this.send('delete_analyses', { ids });
+    deleteAnalyses(ids, requestId = null) {
+        return this.send('delete_analyses', { ids }, requestId);
     }
 
-    getFullAnalysis(gameId) {
-        return this.send('get_full_analysis', { gameId });
+    getFullAnalysis(gameId, requestId = null) {
+        return this.send('get_full_analysis', { gameId }, requestId);
     }
 }
 

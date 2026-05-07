@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import {
   History,
-  User,
+  LayoutDashboard,
+  List,
   Zap,
-  Sword,
   Target,
   Filter,
   Clock,
@@ -18,222 +18,151 @@ import { backendService } from '../../services/backendService';
 import { useGameStore } from '../../store/useGameStore';
 import './StatsDashboard.css';
 
-// ─── AccuracyLineChart ─────────────────────────────────────────────────────
-// Componente puro: solo recibe data y renderiza. Sin side-effects propios.
+import AccuracyLineChart from './AccuracyLineChart';
 
-const AccuracyLineChart = ({ data }) => {
-  if (!data || data.length === 0) return (
-    <div className="no-data-chart">No hay suficientes datos para mostrar la tendencia</div>
-  );
+// ─── HistoryItem ────────────────────────────────────────────────────────────
 
-  const width = 1000;
-  const height = 220;
-  const padding = 40;
-
-  const accuracies = data.map(d => d.accuracy);
-  // Clampear mínimo a 50 para no distorsionar el gráfico con outliers extremos
-  const minAcc = Math.max(50, Math.min(...accuracies) - 5);
-  const maxAcc = 100;
-  const range = maxAcc - minAcc;
-
-  const points = data.map((d, i) => {
-    const x = padding + (i * (width - 2 * padding) / Math.max(1, data.length - 1));
-    const y = height - padding - ((d.accuracy - minAcc) * (height - 2 * padding) / range);
-    return { x, y, ...d };
-  });
-
-  const pathD = points.length > 1
-    ? `M ${points[0].x} ${points[0].y} ` + points.slice(1).map(p => `L ${p.x} ${p.y}`).join(' ')
-    : '';
-
-  // Grid: solo mostrar valores dentro del rango visible
-  const gridValues = [50, 60, 70, 80, 90, 100].filter(v => v >= minAcc);
-
-  return (
-    <div className="line-chart-wrapper">
-      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="xMidYMid meet">
-        <defs>
-          <linearGradient id="lineGradient" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#ff9800" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#ff9800" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-
-        {/* Grid lines */}
-        {gridValues.map(val => {
-          const y = height - padding - ((val - minAcc) * (height - 2 * padding) / range);
-          if (y < padding || y > height - padding) return null;
-          return (
-            <g key={val}>
-              <line x1={padding} y1={y} x2={width - padding} y2={y} stroke="rgba(255,255,255,0.03)" strokeDasharray="4" />
-              <text x={padding - 4} y={y + 4} textAnchor="end" fill="#444" fontSize="10">{val}</text>
-            </g>
-          );
-        })}
-
-        {points.length > 1 && (
-          <>
-            <motion.path
-              d={`${pathD} L ${points[points.length - 1].x} ${height - padding} L ${points[0].x} ${height - padding} Z`}
-              fill="url(#lineGradient)"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-            />
-            <motion.path
-              d={pathD}
-              fill="none"
-              stroke="#ff9800"
-              strokeWidth="3"
-              strokeLinecap="round"
-              initial={{ pathLength: 0 }}
-              animate={{ pathLength: 1 }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
-            />
-          </>
+const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) => (
+  <div
+    className={`history-item ${selected ? 'selected' : ''}`}
+    onClick={() => onToggle(item.id)}
+  >
+    <div className="hi-check"><div className="hi-check-inner"></div></div>
+    <div className="hi-main">
+      <div className="hi-opening">{item.opening || 'Unknown Opening'}</div>
+      <div className="hi-meta">
+        <span>{new Date(item.date).toLocaleDateString()}</span>
+        <span>{item.moveCount} jugadas</span>
+        {item.timeControl && (
+          <span className="hi-tc">{item.timeControl}</span>
         )}
-
-        {points.map((p, i) => (
-          <g key={i} className="point-group">
-            <motion.circle
-              cx={p.x} cy={p.y} r="4" fill="#121212" stroke="#ff9800" strokeWidth="2"
-              initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 1 + i * 0.05 }}
-            />
-            <text x={p.x} y={p.y - 12} textAnchor="middle" fill="#888" fontSize="11">{p.accuracy}%</text>
-          </g>
-        ))}
-      </svg>
+        <span className={`hi-result-badge ${item.win ? 'win' : 'loss'}`}>
+          {item.win ? 'Victoria' : 'Derrota'}
+        </span>
+        <span style={{ color: '#555' }}>
+          {item.color === 'white' ? '♙' : '♟'}
+        </span>
+      </div>
     </div>
-  );
-};
+    <div className="hi-acc">
+      <div className="hi-acc-val">
+        {item.color === 'white' ? item.white?.accuracy : item.black?.accuracy}%
+      </div>
+      <div className="hi-acc-label">precisión</div>
+    </div>
+    <div className="hi-actions">
+      <button
+        className="hi-delete"
+        onClick={(e) => onDelete(item.id, e)}
+        title="Borrar"
+      >
+        <AlertTriangle size={13} />
+      </button>
+    </div>
+  </div>
+));
 
 // ─── StatsDashboard ────────────────────────────────────────────────────────
 
 export const StatsDashboard = () => {
   const [rawData, setRawData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('stats'); // 'stats' | 'history'
+  const [activeTab, setActiveTab] = useState('stats');
   const [selectedIds, setSelectedIds] = useState(new Set());
-  // Lazy: historial solo se carga cuando el usuario abre ese tab
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
-  const { analyses, setAnalyses, loadPgn } = useGameStore(useShallow(state => ({
+  const { analyses, setAnalyses, appendAnalyses, removeAnalyses } = useGameStore(useShallow(state => ({
     analyses: state.analyses,
     setAnalyses: state.setAnalyses,
-    loadPgn: state.loadPgn
+    appendAnalyses: state.appendAnalyses,
+    removeAnalyses: state.removeAnalyses,
   })));
 
-  // Filtros
+  const [historyOffset, setHistoryOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const PAGE_SIZE = 50;
+
   const [timeFilter, setTimeFilter] = useState('all');
   const [durationFilter, setDurationFilter] = useState('all');
   const [countFilter, setCountFilter] = useState('25');
 
-  // ── Carga inicial: solo stats. El historial se pide al cambiar de tab. ──
+  const lastStatsRequestId = React.useRef(null);
+  const filterTimeoutRef = React.useRef(null);
+
+  // ── Carga inicial ──────────────────────────────────────────────
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
-      if (msg.type === 'stats_data') {
-        setRawData(msg.stats);
+      if (msg.type === 'stats_data') { 
+        if (lastStatsRequestId.current && msg.requestId !== lastStatsRequestId.current) {
+          return;
+        }
+        setRawData(msg.stats); 
+        setLoading(false); 
+      }
+      if (msg.type === 'error') {
+        console.error('[Stats] Error del backend:', msg.message);
         setLoading(false);
       }
-      if (msg.type === 'analyses_list') {
-        setAnalyses(msg.analyses);
+      if (msg.type === 'analyses_list') { 
+        if (msg.offset === 0) {
+          setAnalyses(msg.analyses);
+        } else {
+          appendAnalyses(msg.analyses);
+        }
+        setHasMore(msg.analyses.length === (msg.limit || 50));
       }
     });
-    backendService.getStats();
+    
+    const reqId = Math.random().toString(36).substring(7);
+    lastStatsRequestId.current = reqId;
+    backendService.getStats({}, reqId);
+    
     return () => cleanup();
-  }, [setAnalyses]);
+  }, [setAnalyses, appendAnalyses]);
 
-  // ── Lazy load del historial al cambiar de tab ──────────────────────────
+  // ── Lazy load historial ────────────────────────────────────────
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
     if (tab === 'history' && !historyLoaded) {
-      backendService.getAnalyses();
+      backendService.getAnalyses(0, PAGE_SIZE);
+      setHistoryOffset(PAGE_SIZE);
       setHistoryLoaded(true);
     }
   }, [historyLoaded]);
 
-  // ── filteredStats: cómputo local sobre rawData ─────────────────────────
+  const loadMoreHistory = useCallback(() => {
+    backendService.getAnalyses(historyOffset, PAGE_SIZE);
+    setHistoryOffset(prev => prev + PAGE_SIZE);
+  }, [historyOffset]);
+
+  // ── Actualización por filtros (Debounced) ───────────────────
+  const fetchStats = useCallback(() => {
+    const reqId = Math.random().toString(36).substring(7);
+    lastStatsRequestId.current = reqId;
+    backendService.getStats({
+      time: timeFilter,
+      duration: durationFilter,
+      count: countFilter
+    }, reqId);
+  }, [timeFilter, durationFilter, countFilter]);
+
+  useEffect(() => {
+    if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
+    filterTimeoutRef.current = setTimeout(fetchStats, 300);
+    return () => clearTimeout(filterTimeoutRef.current);
+  }, [fetchStats]);
+
+  // ── Stats (ahora vienen procesadas del backend) ────────────────
   const filteredStats = useMemo(() => {
     if (!rawData) return null;
+    return rawData;
+  }, [rawData]);
 
-    let games = [...rawData.games];
-
-    // 1. Filtrar por Duración
-    if (durationFilter !== 'all') {
-      games = games.filter(g => g.timeControl === durationFilter);
-    }
-
-    // 2. Filtrar por Tiempo — sin mutar el objeto Date
-    if (timeFilter !== 'all') {
-      const days = timeFilter === '7d' ? 7 : 30;
-      const limitMs = Date.now() - days * 86_400_000;
-      games = games.filter(g => new Date(g.date).getTime() >= limitMs);
-    }
-
-    // 3. Filtrar por Cantidad (Últimas X)
-    if (countFilter !== 'all') {
-      games = games.slice(0, parseInt(countFilter));
-    }
-
-    if (games.length === 0) return { empty: true };
-
-    const total = games.length;
-    const wins = games.filter(g => g.win).length;
-    const avgAcc = Math.round(games.reduce((acc, g) => acc + g.accuracy, 0) / total);
-
-    const whiteGames = games.filter(g => g.color === 'white');
-    const blackGames = games.filter(g => g.color === 'black');
-
-    const calcColor = (gs) => ({
-      acc: gs.length ? Math.round(gs.reduce((acc, g) => acc + g.accuracy, 0) / gs.length) : 0,
-      wr: gs.length ? Math.round((gs.filter(g => g.win).length / gs.length) * 100) : 0,
-      count: gs.length
-    });
-
-    const openings = {};
-    games.forEach(g => {
-      // Group by base opening name (e.g. "Ruy Lopez: Classical" -> "Ruy Lopez")
-      const baseOpening = g.opening ? g.opening.split(':')[0].trim() : 'Unknown Opening';
-      if (!openings[baseOpening]) openings[baseOpening] = { wins: 0, total: 0, accSum: 0 };
-      openings[baseOpening].total++;
-      if (g.win) openings[baseOpening].wins++;
-      openings[baseOpening].accSum += g.accuracy;
-    });
-
-    const openingStats = Object.entries(openings)
-      .map(([name, data]) => ({
-        name,
-        wr: Math.round((data.wins / data.total) * 100),
-        acc: Math.round(data.accSum / data.total),
-        count: data.total
-      }))
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 4);
-
-    // Para fases y calidad de jugadas: usamos los datos del backend directamente.
-    // Si los filtros reducen el conjunto, mostramos los datos globales del rawData
-    // (que ya son las últimas 20 partidas). No recalculamos aquí para no duplicar
-    // la lógica de agregación que vive en GameStore.
-    const phases = rawData.accuracyByPhase || [];
-    const moveQuality = rawData.moveQuality || [];
-
-    return {
-      total,
-      winRate: Math.round((wins / total) * 100),
-      avgAcc,
-      white: calcColor(whiteGames),
-      black: calcColor(blackGames),
-      openingStats,
-      trend: games.slice().reverse().map(g => ({ date: g.date, accuracy: g.accuracy })),
-      moveQuality,
-      phases,
-    };
-  }, [rawData, timeFilter, durationFilter, countFilter]);
-
+  // ── Selección historial ────────────────────────────────────────
   const toggleSelection = useCallback((id) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   }, []);
@@ -241,140 +170,166 @@ export const StatsDashboard = () => {
   const handleBulkDelete = useCallback(() => {
     if (selectedIds.size === 0) return;
     if (confirm(`¿Borrar ${selectedIds.size} análisis?`)) {
-      backendService.deleteAnalyses(Array.from(selectedIds));
+      const ids = Array.from(selectedIds);
+      backendService.deleteAnalyses(ids);
+      removeAnalyses(ids); 
       setSelectedIds(new Set());
+      // Forzar refresco de stats tras borrar
+      setTimeout(fetchStats, 100);
     }
-  }, [selectedIds]);
+  }, [selectedIds, removeAnalyses, fetchStats]);
 
   const handleSingleDelete = useCallback((id, e) => {
     e.stopPropagation();
     if (confirm('¿Borrar este análisis?')) {
       backendService.deleteAnalyses([id]);
+      removeAnalyses([id]); 
+      // Forzar refresco de stats tras borrar
+      setTimeout(fetchStats, 100);
     }
-  }, []);
+  }, [removeAnalyses, fetchStats]);
 
-  if (loading) return <div className="stats-loading"><div className="spinner"></div><span>Cargando perfil...</span></div>;
+  // ── Render ─────────────────────────────────────────────────────
+  if (loading) return (
+    <div className="stats-loading">
+      <div className="spinner"></div>
+      <span>Cargando perfil...</span>
+    </div>
+  );
 
   return (
     <motion.div className="stats-dashboard-new" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      {/* Header & Filtros Integrados */}
+
+      {/* ── Header ──────────────────────────────────────────────── */}
       <header className="stats-top-bar">
         <div className="stats-title-section">
-          <div className="stats-avatar"><User size={18} /></div>
-          <div className="stats-header-titles">
-            <div className="stats-tabs">
-              <button className={activeTab === 'stats' ? 'active' : ''} onClick={() => handleTabChange('stats')}>Dashboard</button>
-              <button className={activeTab === 'history' ? 'active' : ''} onClick={() => handleTabChange('history')}>Historial</button>
-            </div>
-            <p>{activeTab === 'stats' ? `${filteredStats?.total || 0} partidas` : `${analyses.length} analizadas`}</p>
-          </div>
+          <span className="stats-section-title">
+            {activeTab === 'stats' ? 'Dashboard' : 'Historial'}
+          </span>
+          <span className="stats-section-count">
+            {activeTab === 'stats'
+              ? `${filteredStats?.total || 0} partidas`
+              : `${analyses.length} analizadas`}
+          </span>
         </div>
 
-        {activeTab === 'stats' ? (
-          <div className="stats-filters-pills">
-            <div className="filter-pill-group dropdown-group">
-              <Calendar size={14} />
-              <select 
-                value={timeFilter} 
-                onChange={(e) => setTimeFilter(e.target.value)}
-                className="stats-dropdown"
-              >
-                <option value="all">Todo</option>
-                <option value="7d">Últimos 7 días</option>
-                <option value="30d">Últimos 30 días</option>
-              </select>
-            </div>
-            <div className="filter-pill-group dropdown-group">
-              <Clock size={14} />
-              <select 
-                value={durationFilter} 
-                onChange={(e) => setDurationFilter(e.target.value)}
-                className="stats-dropdown"
-              >
-                <option value="all">Mix (Todos)</option>
-                <option value="1m">1m (Bala)</option>
-                <option value="3m">3m (Blitz)</option>
-                <option value="5m">5m (Blitz)</option>
-                <option value="10m">10m (Rápida)</option>
-                <option value="15m">15m (Rápida)</option>
-                <option value="30m">30m (Clásica)</option>
-              </select>
-            </div>
-            <div className="filter-pill-group dropdown-group">
-              <Layers size={14} />
-              <select 
-                value={countFilter} 
-                onChange={(e) => setCountFilter(e.target.value)}
-                className="stats-dropdown"
-              >
-                <option value="10">Últimas 10</option>
-                <option value="25">Últimas 25</option>
-                <option value="50">Últimas 50</option>
-                <option value="all">Todas</option>
-              </select>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {activeTab === 'history' && selectedIds.size > 0 && (
+            <button className="bulk-delete-btn" onClick={handleBulkDelete}>
+              <AlertTriangle size={13} /> Borrar {selectedIds.size}
+            </button>
+          )}
+          <div className="stats-view-toggle">
+            <button
+              className={`view-btn ${activeTab === 'stats' ? 'active' : ''}`}
+              onClick={() => handleTabChange('stats')}
+              title="Dashboard"
+            >
+              <LayoutDashboard size={14} />
+            </button>
+            <button
+              className={`view-btn ${activeTab === 'history' ? 'active' : ''}`}
+              onClick={() => handleTabChange('history')}
+              title="Historial"
+            >
+              <List size={14} />
+            </button>
           </div>
-        ) : (
-          <div className="history-actions">
-            {selectedIds.size > 0 && (
-              <button className="bulk-delete-btn" onClick={handleBulkDelete}>
-                <AlertTriangle size={14} /> Borrar {selectedIds.size}
-              </button>
-            )}
-          </div>
-        )}
+        </div>
       </header>
 
+      {/* ── Filtros ─────────────────────────────────────────────── */}
+      {activeTab === 'stats' && (
+        <div className="stats-filters-bar">
+          <div className="filter-pill-group">
+            <Calendar size={13} />
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="stats-dropdown"
+              aria-label="Período"
+            >
+              <option value="all">Todo</option>
+              <option value="7d">7 días</option>
+              <option value="30d">30 días</option>
+            </select>
+          </div>
+          <div className="filter-pill-group">
+            <Clock size={13} />
+            <select
+              value={durationFilter}
+              onChange={(e) => setDurationFilter(e.target.value)}
+              className="stats-dropdown"
+              aria-label="Control de tiempo"
+            >
+              <option value="all">Mix</option>
+              <option value="1m">1m Bala</option>
+              <option value="3m">3m Blitz</option>
+              <option value="5m">5m Blitz</option>
+              <option value="10m">10m Rápida</option>
+              <option value="15m">15m Rápida</option>
+              <option value="30m">30m Clásica</option>
+            </select>
+          </div>
+          <div className="filter-pill-group">
+            <Layers size={13} />
+            <select
+              value={countFilter}
+              onChange={(e) => setCountFilter(e.target.value)}
+              className="stats-dropdown"
+              aria-label="Cantidad de partidas"
+            >
+              <option value="10">Últ. 10</option>
+              <option value="25">Últ. 25</option>
+              <option value="50">Últ. 50</option>
+              <option value="all">Todas</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      {/* ── Historial ───────────────────────────────────────────── */}
       {activeTab === 'history' ? (
-        <div className="stats-history-view glass-panel premium-scroll">
+        <div className="stats-history-view premium-scroll">
           <div className="history-list">
             {analyses.length === 0 ? (
               <div className="empty-history">No hay partidas analizadas aún</div>
             ) : (
-              analyses.slice().reverse().map(item => (
-                <div
+              analyses.map(item => (
+                <HistoryItem
                   key={item.id}
-                  className={`history-item ${selectedIds.has(item.id) ? 'selected' : ''}`}
-                  onClick={() => toggleSelection(item.id)}
-                >
-                  <div className="hi-check"><div className="hi-check-inner"></div></div>
-                  <div className={`hi-color-dot ${item.color === 'black' ? 'black' : 'white'}`} title={item.color === 'black' ? 'Negras' : 'Blancas'} />
-                  <div className="hi-main">
-                    <div className="hi-opening">{item.opening || 'Unknown Opening'}</div>
-                    <div className="hi-meta">
-                      <span>{new Date(item.date).toLocaleDateString()}</span>
-                      <span>{item.moveCount} jugadas</span>
-                      {item.timeControl && <span className="hi-tc">{item.timeControl}</span>}
-                      <span className={`hi-result-badge ${item.win ? 'win' : 'loss'}`}>{item.win ? 'Victoria' : 'Derrota'}</span>
-                    </div>
-                  </div>
-                  <div className="hi-acc">
-                    <div className="hi-acc-val">
-                      {item.color === 'white' ? item.white?.accuracy : item.black?.accuracy}%
-                    </div>
-                    <div className="hi-acc-label">mi precisión</div>
-                  </div>
-                  <div className="hi-actions">
-                    <button className="hi-delete" onClick={(e) => handleSingleDelete(item.id, e)} title="Borrar">
-                      <AlertTriangle size={14} />
-                    </button>
-                  </div>
-                </div>
+                  item={item}
+                  selected={selectedIds.has(item.id)}
+                  onToggle={toggleSelection}
+                  onDelete={handleSingleDelete}
+                />
               ))
+            )}
+            {analyses.length > 0 && hasMore && (
+              <button className="load-more-history-btn" onClick={loadMoreHistory}>
+                Cargar más partidas
+              </button>
             )}
           </div>
         </div>
+
+        /* ── Empty filter ─────────────────────────────────────────── */
       ) : filteredStats?.empty ? (
         <div className="empty-view">
-          <Filter size={40} />
+          <Filter size={36} />
           <p>Sin datos para este filtro</p>
         </div>
+
+        /* ── Dashboard ────────────────────────────────────────────── */
       ) : filteredStats ? (
         <div className="stats-layout-grid">
-          {/* Main Trend Chart */}
-          <section className="stats-main-chart glass-panel">
+
+          {/* Gráfico de tendencia */}
+          <section className="stats-main-chart">
             <div className="chart-header">
-              <div className="chart-title"><History size={16} /> Evolución de Precisión</div>
+              <div className="chart-title">
+                <History size={13} /> Evolución de precisión
+              </div>
               <div className="main-accuracy-display">
                 <span className="big-acc">{filteredStats.avgAcc}%</span>
                 <span className="acc-sub">Promedio</span>
@@ -383,33 +338,42 @@ export const StatsDashboard = () => {
             <AccuracyLineChart data={filteredStats.trend} />
           </section>
 
-          {/* Secondary Grid */}
           <div className="stats-secondary-grid">
-            {/* Color Performance */}
-            <div className="stats-card-modern glass-panel">
-              <div className="card-title-modern"><Zap size={16} /> Por Color</div>
+
+            {/* Por Color */}
+            <div className="stats-card-modern">
+              <div className="card-title-modern"><Zap size={13} /> Por color</div>
               <div className="color-split-view">
                 <div className="color-block white">
-                  <span className="cb-label">Blancas <span className="cb-count">({filteredStats.white.count})</span></span>
-                  <div className="cb-row"><span>WR</span><strong>{filteredStats.white.wr}%</strong></div>
-                  <div className="cb-row"><span>Acc</span><strong>{filteredStats.white.acc}%</strong></div>
+                  <div className="cb-header">
+                    <span className="cb-label">Blancas</span>
+                    <span className="cb-count">{filteredStats.white.count} partidas</span>
+                  </div>
+                  <div className="cb-row"><span>Win rate</span><strong>{filteredStats.white.wr}%</strong></div>
+                  <div className="cb-row"><span>Precisión</span><strong>{filteredStats.white.acc}%</strong></div>
                 </div>
                 <div className="color-block black">
-                  <span className="cb-label">Negras <span className="cb-count">({filteredStats.black.count})</span></span>
-                  <div className="cb-row"><span>WR</span><strong>{filteredStats.black.wr}%</strong></div>
-                  <div className="cb-row"><span>Acc</span><strong>{filteredStats.black.acc}%</strong></div>
+                  <div className="cb-header">
+                    <span className="cb-label">Negras</span>
+                    <span className="cb-count">{filteredStats.black.count} partidas</span>
+                  </div>
+                  <div className="cb-row"><span>Win rate</span><strong>{filteredStats.black.wr}%</strong></div>
+                  <div className="cb-row"><span>Precisión</span><strong>{filteredStats.black.acc}%</strong></div>
                 </div>
               </div>
             </div>
 
-            {/* Phase Accuracy — solo si hay datos reales */}
-            <div className="stats-card-modern glass-panel">
-              <div className="card-title-modern"><Target size={16} /> Por Fase</div>
-              {filteredStats.phases.length > 0 ? (
+            {/* Por Fase */}
+            <div className="stats-card-modern">
+              <div className="card-title-modern"><Target size={13} /> Por fase</div>
+              {filteredStats.accuracyByPhase.length > 0 ? (
                 <div className="phase-minimal-list">
-                  {filteredStats.phases.map((p, i) => (
+                  {filteredStats.accuracyByPhase.map((p, i) => (
                     <div key={p.phase} className="phase-item-new">
-                      <div className="pi-info"><span>{p.phase}</span><strong>{p.accuracy}%</strong></div>
+                      <div className="pi-info">
+                        <span>{p.phase}</span>
+                        <strong>{p.accuracy}%</strong>
+                      </div>
                       <div className="pi-bar-bg">
                         <motion.div
                           className="pi-bar-fill"
@@ -428,9 +392,9 @@ export const StatsDashboard = () => {
               )}
             </div>
 
-            {/* Opening Mastery */}
-            <div className="stats-card-modern glass-panel">
-              <div className="card-title-modern"><BookOpen size={16} /> Aperturas</div>
+            {/* Aperturas */}
+            <div className="stats-card-modern">
+              <div className="card-title-modern"><BookOpen size={13} /> Aperturas</div>
               <div className="opening-modern-list">
                 {filteredStats.openingStats.map((op, i) => (
                   <div key={i} className="op-row-modern">
@@ -438,15 +402,16 @@ export const StatsDashboard = () => {
                     <div className="op-vals-m">
                       <span title="Win Rate">W {op.wr}%</span>
                       <span title="Accuracy">A {op.acc}%</span>
+                      <span className="op-count-badge">{op.count}</span>
                     </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Move Quality Distribution — solo si hay datos reales */}
-            <div className="stats-card-modern glass-panel">
-              <div className="card-title-modern"><AlertTriangle size={16} /> Calidad de Jugadas</div>
+            {/* Calidad de Jugadas */}
+            <div className="stats-card-modern">
+              <div className="card-title-modern"><AlertTriangle size={13} /> Calidad de jugadas</div>
               {filteredStats.moveQuality.length > 0 ? (
                 <div className="tactical-modern-list">
                   {filteredStats.moveQuality.map((t, i) => (
@@ -454,10 +419,10 @@ export const StatsDashboard = () => {
                       <span className="t-label-m">{t.label}</span>
                       <span className="t-count-m">{t.pct}%</span>
                       <div className="t-bar-m">
-                        <motion.div 
-                          className="t-fill-m" 
-                          initial={{ width: 0 }} 
-                          animate={{ width: `${t.pct}%` }} 
+                        <motion.div
+                          className="t-fill-m"
+                          initial={{ width: 0 }}
+                          animate={{ width: `${t.pct}%` }}
                           style={{ background: t.color }}
                         />
                       </div>
@@ -470,6 +435,7 @@ export const StatsDashboard = () => {
                 </div>
               )}
             </div>
+
           </div>
         </div>
       ) : null}
