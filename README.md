@@ -9,9 +9,6 @@
 
 Una plataforma de análisis de ajedrez de **alto rendimiento**, diseñada para ofrecer la potencia de un software de escritorio con la elegancia y accesibilidad de la web moderna. Optimizado para el análisis masivo de datos y la mejora técnica del jugador.
 
----
-
-![Dashboard Preview](src/assets/hero.png)
 
 ## ✨ Características de Vanguardia
 
@@ -73,16 +70,6 @@ El proyecto implementa un patrón de **Análisis Mutex** gestionado por un `anal
 1. Solo una tarea de análisis (Live o Full Game) se ejecute a la vez.
 2. Las peticiones de análisis sean cancelables de forma segura (prevención de condiciones de carrera).
 3. El frontend permanezca ligero, actuando principalmente como un visualizador de los datos procesados en el backend.
-
-```mermaid
-graph LR
-    User((Usuario)) --> UI[Frontend React]
-    UI --> Bridge[Analysis Bridge]
-    Bridge --> WS{WebSocket}
-    WS --> BE[Backend Node.js]
-    BE --> SF[Stockfish Engine]
-    BE --> DB[(SQLite)]
-```
 
 ## 🛡️ Rendimiento y Seguridad (COOP/COEP)
 
