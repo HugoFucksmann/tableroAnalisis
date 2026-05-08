@@ -146,6 +146,10 @@ class BackendService {
         return this.send('extract_puzzles', { games, engineConfig });
     }
 
+    analyzeGames(games, engineConfig) {
+        return this.send('analyze_games', { games, engineConfig });
+    }
+
     cancelExtraction() {
         return this.send('cancel_extraction', {});
     }

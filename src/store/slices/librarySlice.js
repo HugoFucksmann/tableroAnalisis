@@ -67,7 +67,14 @@ export const createLibrarySlice = (set, get) => ({
     }),
 
   selectAllGames: () =>
-    set((state) => ({ selectedGameIds: state.importedGames.map((g) => g.id) })),
+    set((state) => {
+      const analysedIds = new Set(state.analyses.map((a) => String(a.gameId)));
+      const unanalysed = state.importedGames.filter((g) => !analysedIds.has(String(g.id)));
+      
+      // Priorizar partidas no analizadas. Si no hay ninguna nueva, seleccionar todas.
+      const targetGames = unanalysed.length > 0 ? unanalysed : state.importedGames;
+      return { selectedGameIds: targetGames.map((g) => g.id) };
+    }),
 
   clearSelection: () => set({ selectedGameIds: [] }),
 

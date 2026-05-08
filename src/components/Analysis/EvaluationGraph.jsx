@@ -123,10 +123,10 @@ export const EvaluationGraph = () => {
               disabled={prevMistake === null}
               onClick={() => goToMove(prevMistake)}
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={18} />
             </button>
             <div className="graph-mistake-count">
-              <AlertTriangle size={12} />
+              <AlertTriangle size={15} />
               <span>{mistakeIndices.length}</span>
             </div>
             <button
@@ -135,7 +135,7 @@ export const EvaluationGraph = () => {
               disabled={nextMistake === null}
               onClick={() => goToMove(nextMistake)}
             >
-              <ChevronRight size={14} />
+              <ChevronRight size={18} />
             </button>
           </div>
         )}

@@ -48,34 +48,34 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.75rem;
+  height: 1.75rem;
   border: none;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: 6px;
   transition: all 0.2s ease;
 }
 
 .graph-nav-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--accent-primary);
 }
 
 .graph-nav-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.2;
   cursor: default;
 }
 
 .graph-mistake-count {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 0 4px;
+  gap: 6px;
+  padding: 0 8px;
   color: var(--warning-primary);
-  font-size: 0.7rem;
-  font-weight: 700;
+  font-size: var(--text-sm);
+  font-weight: 800;
 }
 
 .graph-title {

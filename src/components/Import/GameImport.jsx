@@ -2,7 +2,7 @@ import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, FileText, Zap, CheckSquare, Square, Target, Brain } from 'lucide-react';
+import { Search, ExternalLink, Loader, AlertCircle, FileText, Zap, CheckSquare, Square, Cpu, Brain, X } from 'lucide-react';
 import { backendService } from '../../services/backendService';
 import './GameImport.css';
 
@@ -18,7 +18,7 @@ export const GameImport = ({ onGameSelect }) => {
     setSearchUsername, setSearchPlatform,
     setImportedGames, appendImportedGames, setPagination, resetGames,
     toggleGameSelection, selectAllGames, clearSelection,
-    setAnalyses, setLichessToken,
+    setAnalyses,
   } = useGameStore(useShallow(state => ({
     username: state.searchUsername,
     platform: state.searchPlatform,
@@ -39,7 +39,6 @@ export const GameImport = ({ onGameSelect }) => {
     selectAllGames: state.selectAllGames,
     clearSelection: state.clearSelection,
     setAnalyses: state.setAnalyses,
-    setLichessToken: state.setLichessToken,
   })));
 
   // ── Local UI state (transient, no need to persist) ───────────────
@@ -48,7 +47,7 @@ export const GameImport = ({ onGameSelect }) => {
   const [isFetchingMore, setIsFetchingMore] = React.useState(false);
   const [error, setError] = React.useState('');
   const [customPgn, setCustomPgn] = React.useState('');
-  const [showTokenInput, setShowTokenInput] = React.useState(false);
+  const [batchStatus, setBatchStatus] = React.useState(null);
 
   const listRef = React.useRef(null);
   const sentinelRef = React.useRef(null);
@@ -67,10 +66,31 @@ export const GameImport = ({ onGameSelect }) => {
           });
         }
       }
+
+      // Batch analysis handlers
+      if (msg.type === 'batch_analysis_started') {
+        setBatchStatus({ current: 0, total: msg.total, pct: 0, label: 'Iniciando...' });
+      } else if (msg.type === 'batch_analysis_progress') {
+        setBatchStatus(prev => ({
+          ...prev,
+          current: msg.gameIndex,
+          pct: msg.pct,
+          label: msg.label
+        }));
+      } else if (msg.type === 'batch_analysis_game_complete') {
+        setBatchStatus(prev => ({ ...prev, current: msg.gameIndex + 1, pct: 100 }));
+      } else if (msg.type === 'batch_analysis_complete') {
+        setBatchStatus(null);
+        clearSelection();
+        backendService.getAnalyses(0, 50); // Refresh list
+      } else if (msg.type === 'batch_analysis_cancelled') {
+        setBatchStatus(null);
+        backendService.getAnalyses(0, 50);
+      }
     });
     backendService.getAnalyses(0, 50);
     return () => cleanup();
-  }, [setAnalyses]);
+  }, [setAnalyses, clearSelection]);
 
   // ── Handlers ─────────────────────────────────────────────────────
   const handlePlatformSwitch = (p) => {
@@ -161,54 +181,97 @@ export const GameImport = ({ onGameSelect }) => {
     setLoadingId(null);
   };
 
-  // ── Bulk actions ─────────────────────────────────────────────────
-  const selectedCount = selectedGameIds.length;
-  const allSelected = games.length > 0 && selectedCount === games.length;
-
-  const handleExtractPuzzles = () => {
-    const selectedGames = games
-      .filter(g => selectedGameIds.includes(g.id))
-      .map(g => ({ pgn: g.pgn, gameId: g.id }));
-    if (selectedGames.length === 0) return;
-    backendService.extractPuzzles(selectedGames, useGameStore.getState().engineConfig);
-    clearSelection();
-  };
-
   // ── Derived ──────────────────────────────────────────────────────
   const analysedIds = React.useMemo(
     () => new Set(analyses.map(a => String(a.gameId))),
     [analyses]
   );
+
+  // ── Bulk actions ─────────────────────────────────────────────────
+  const unanalysedIds = React.useMemo(
+    () => games.filter(g => !analysedIds.has(String(g.id))).map(g => g.id),
+    [games, analysedIds]
+  );
+
+  const selectedCount = selectedGameIds.length;
+  // Consideramos "todo seleccionado" si están marcadas todas las no analizadas,
+  // o si absolutamente todas las partidas de la lista están marcadas.
+  const allSelected = games.length > 0 && (
+    (unanalysedIds.length > 0 && unanalysedIds.every(id => selectedGameIds.includes(id))) ||
+    (selectedCount > 0 && selectedCount === games.length)
+  );
+
+  const handleAnalyzeBatch = () => {
+    const selectedGames = games
+      .filter(g => selectedGameIds.includes(g.id))
+      .map(g => ({
+        pgn: g.pgn,
+        gameId: g.id,
+        playerColor: g.white.toLowerCase().includes(username.toLowerCase()) ? 'white' : 'black',
+        win: g.result === '1-0' ? (g.white.toLowerCase().includes(username.toLowerCase())) : (g.result === '0-1' ? g.black.toLowerCase().includes(username.toLowerCase()) : false)
+      }));
+    if (selectedGames.length === 0) return;
+    backendService.analyzeGames(selectedGames, useGameStore.getState().engineConfig);
+  };
+
+  const handleCancelBatch = () => {
+    backendService.cancel();
+  };
+
   const listTitle = username ? `Partidas de ${username}` : 'Búsqueda de partidas';
 
   return (
     <div className="gi-root">
 
-      {/* ── Platform toggle ─────────────────────────────────────── */}
-      <div className="gi-platform-toggle">
-        <button
-          className={`gi-toggle-btn ${platform === 'lichess' ? 'active' : ''}`}
-          onClick={() => handlePlatformSwitch('lichess')}
-        >
-          <img src="/lichess-favicon.png" alt="Lichess" className="gi-platform-icon"
-            onError={(e) => { e.target.style.display = 'none'; }} />
-          Lichess
-        </button>
-        <button
-          className={`gi-toggle-btn ${platform === 'chesscom' ? 'active' : ''}`}
-          onClick={() => handlePlatformSwitch('chesscom')}
-        >
-          <img src="/chesscom-favicon.ico" alt="Chess.com" className="gi-platform-icon"
-            onError={(e) => { e.target.style.display = 'none'; }} />
-          Chess.com
-        </button>
-        <button
-          className={`gi-toggle-btn ${platform === 'pgn' ? 'active' : ''}`}
-          onClick={() => handlePlatformSwitch('pgn')}
-        >
-          <FileText size={14} className="gi-platform-icon" />
-          PGN Manual
-        </button>
+      <div className="gi-header-bar">
+        {/* ── Platform selector ───────────────────────────────────── */}
+        <div className="gi-platform-toggle">
+          <button
+            className={`gi-toggle-btn ${platform === 'lichess' ? 'active' : ''}`}
+            onClick={() => handlePlatformSwitch('lichess')}
+            title="Lichess"
+          >
+            <img src="/lichess-favicon.png" alt="Lichess" className="gi-platform-icon"
+              onError={(e) => { e.target.style.display = 'none'; }} />
+          </button>
+          <button
+            className={`gi-toggle-btn ${platform === 'chesscom' ? 'active' : ''}`}
+            onClick={() => handlePlatformSwitch('chesscom')}
+            title="Chess.com"
+          >
+            <img src="/chesscom-favicon.ico" alt="Chess.com" className="gi-platform-icon"
+              onError={(e) => { e.target.style.display = 'none'; }} />
+          </button>
+          <button
+            className={`gi-toggle-btn ${platform === 'pgn' ? 'active' : ''}`}
+            onClick={() => handlePlatformSwitch('pgn')}
+            title="PGN Manual"
+          >
+            <FileText size={16} className="gi-platform-icon" />
+          </button>
+        </div>
+
+        {/* ── Search Input (if not PGN) ─────────────────────────── */}
+        {platform !== 'pgn' && (
+          <div className="gi-search-wrap">
+            <input
+              className="gi-search-input"
+              type="text"
+              placeholder={`Usuario en ${platform === 'lichess' ? 'Lichess' : 'Chess.com'}…`}
+              value={username}
+              onChange={(e) => setSearchUsername(e.target.value)}
+              onKeyDown={handleSearch}
+            />
+            <button
+              className="gi-search-btn"
+              onClick={handleSearch}
+              disabled={isFetching || !username.trim()}
+              aria-label="Buscar"
+            >
+              {isFetching ? <Loader size={15} className="gi-spin" /> : <Search size={15} />}
+            </button>
+          </div>
+        )}
       </div>
 
       {platform === 'pgn' ? (
@@ -229,26 +292,6 @@ export const GameImport = ({ onGameSelect }) => {
         </div>
       ) : (
         <>
-          {/* ── Search ────────────────────────────────────────── */}
-          <div className="gi-search-wrap">
-            <input
-              className="gi-search-input"
-              type="text"
-              placeholder={`Usuario en ${platform === 'lichess' ? 'Lichess' : 'Chess.com'}…`}
-              value={username}
-              onChange={(e) => setSearchUsername(e.target.value)}
-              onKeyDown={handleSearch}
-            />
-            <button
-              className="gi-search-btn"
-              onClick={handleSearch}
-              disabled={isFetching || !username.trim()}
-              aria-label="Buscar"
-            >
-              {isFetching ? <Loader size={15} className="gi-spin" /> : <Search size={15} />}
-            </button>
-          </div>
-
           {error && (
             <div className="gi-error">
               <AlertCircle size={13} /><span>{error}</span>
@@ -347,18 +390,49 @@ export const GameImport = ({ onGameSelect }) => {
             )}
           </div>
 
+          {/* ── Batch Progress Overlay ─────────────────────────── */}
+          {batchStatus && (
+            <div className="gi-batch-overlay">
+              <div className="gi-batch-card">
+                <div className="gi-batch-header">
+                  <Brain size={18} className="gi-brain-icon" />
+                  <div className="gi-batch-title">
+                    <h4>Analizando Partidas</h4>
+                    <span>Partida {batchStatus.current + 1} de {batchStatus.total}</span>
+                  </div>
+                  <button className="gi-batch-cancel" onClick={handleCancelBatch}>
+                    <X size={16} />
+                  </button>
+                </div>
+
+                <div className="gi-batch-progress">
+                  <div className="gi-progress-track">
+                    <div
+                      className="gi-progress-fill"
+                      style={{ width: `${batchStatus.pct}%` }}
+                    />
+                  </div>
+                  <div className="gi-progress-info">
+                    <span className="gi-progress-label">{batchStatus.label}</span>
+                    <span className="gi-progress-pct">{batchStatus.pct}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── Bulk Action Bar ────────────────────────────────── */}
-          {selectedCount > 0 && (
+          {selectedCount > 0 && !batchStatus && (
             <div className="gi-bulk-bar">
               <span className="gi-bulk-count">{selectedCount} seleccionada{selectedCount !== 1 ? 's' : ''}</span>
               <div className="gi-bulk-actions">
                 <button
-                  className="gi-bulk-btn puzzles"
-                  onClick={handleExtractPuzzles}
-                  title="Extraer puzzles de las partidas seleccionadas"
+                  className="gi-bulk-btn analyze"
+                  onClick={handleAnalyzeBatch}
+                  title="Analizar partidas seleccionadas en lote"
                 >
-                  <Target size={14} />
-                  Extraer Puzzles
+                  <Cpu size={14} />
+                  Analizar Partidas
                 </button>
               </div>
               <button className="gi-bulk-clear" onClick={clearSelection} title="Limpiar selección">✕</button>
