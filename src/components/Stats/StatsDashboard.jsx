@@ -71,12 +71,14 @@ export const StatsDashboard = () => {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [historyLoaded, setHistoryLoaded] = useState(false);
 
-  const { analyses, setAnalyses, appendAnalyses, removeAnalyses } = useGameStore(useShallow(state => ({
+  const { username, analyses, setAnalyses, appendAnalyses, removeAnalyses } = useGameStore(useShallow(state => ({
+    username: state.searchUsername,
     analyses: state.analyses,
     setAnalyses: state.setAnalyses,
     appendAnalyses: state.appendAnalyses,
     removeAnalyses: state.removeAnalyses,
   })));
+
 
   const [historyOffset, setHistoryOffset] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -89,7 +91,7 @@ export const StatsDashboard = () => {
   const lastStatsRequestId = React.useRef(null);
   const filterTimeoutRef = React.useRef(null);
 
-  // ── Carga inicial ──────────────────────────────────────────────
+  // ── Handlers de mensajes ───────────────────────────────────────
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
       if (msg.type === 'stats_data') { 
@@ -112,15 +114,25 @@ export const StatsDashboard = () => {
         setHasMore(msg.analyses.length === (msg.limit || 50));
       }
     });
-    
-    const reqId = Math.random().toString(36).substring(7);
-    lastStatsRequestId.current = reqId;
-    backendService.getStats({}, reqId);
-    
     return () => cleanup();
   }, [setAnalyses, appendAnalyses]);
 
+  // ── Carga de estadísticas y filtros ──────────────────────────────
+  useEffect(() => {
+    setLoading(true);
+    const reqId = Math.random().toString(36).substring(7);
+    lastStatsRequestId.current = reqId;
+
+    backendService.getStats({
+      time: timeFilter,
+      duration: durationFilter,
+      count: countFilter,
+      username: username
+    }, reqId);
+  }, [timeFilter, durationFilter, countFilter, username]);
+
   // ── Lazy load historial ────────────────────────────────────────
+
   const handleTabChange = useCallback((tab) => {
     setActiveTab(tab);
     if (tab === 'history' && !historyLoaded) {
@@ -435,6 +447,44 @@ export const StatsDashboard = () => {
                 </div>
               )}
             </div>
+
+            {/* Errores por Tiempo */}
+            {filteredStats.blundersByTime && filteredStats.blundersByTime.length > 0 && (
+              <div className="stats-card-modern">
+                <div className="card-title-modern"><Clock size={13} /> Blunders por tiempo</div>
+                <div className="time-blunder-grid">
+                  {filteredStats.blundersByTime.map((b, i) => (
+                    <div key={i} className="time-blunder-card" style={{ '--accent': b.color }}>
+                      <div className="tbc-value">{b.count}</div>
+                      <div className="tbc-label">{b.label}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Aperturas Peligrosas */}
+            {filteredStats.dangerousOpenings && filteredStats.dangerousOpenings.length > 0 && (
+              <div className="stats-card-modern">
+                <div className="card-title-modern"><AlertTriangle size={13} color="#f44336" /> Aperturas críticas (Err/Game)</div>
+                <div className="dangerous-list">
+                  {filteredStats.dangerousOpenings.map((op, i) => (
+                    <div key={i} className="dangerous-row">
+                      <div className="dr-main">
+                        <span className="dr-eco">{op.eco || '???'}</span>
+                        <span className="dr-name">{op.name}</span>
+                      </div>
+                      <div className="dr-stats">
+                        <span className="dr-avg">{op.errorsPerGame.toFixed(1)}</span>
+                        <span className="dr-label">err/partida</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
 
           </div>
         </div>

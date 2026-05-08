@@ -202,14 +202,29 @@ export const GameImport = ({ onGameSelect }) => {
   );
 
   const handleAnalyzeBatch = () => {
+    const userLower = username.trim().toLowerCase();
     const selectedGames = games
       .filter(g => selectedGameIds.includes(g.id))
-      .map(g => ({
-        pgn: g.pgn,
-        gameId: g.id,
-        playerColor: g.white.toLowerCase().includes(username.toLowerCase()) ? 'white' : 'black',
-        win: g.result === '1-0' ? (g.white.toLowerCase().includes(username.toLowerCase())) : (g.result === '0-1' ? g.black.toLowerCase().includes(username.toLowerCase()) : false)
-      }));
+      .map(g => {
+        const isWhite = g.white.toLowerCase() === userLower;
+        const isBlack = g.black.toLowerCase() === userLower;
+        const playerColor = isWhite ? 'white' : (isBlack ? 'black' : 'white');
+        
+        let win = false;
+        if (isWhite && g.result === '1-0') win = true;
+        if (isBlack && g.result === '0-1') win = true;
+
+        return {
+          pgn: g.pgn,
+          gameId: g.id,
+          username: username.trim(),
+          playerColor,
+          win,
+          timeControl: g.timeControl
+        };
+
+      });
+
     if (selectedGames.length === 0) return;
     backendService.analyzeGames(selectedGames, useGameStore.getState().engineConfig);
   };

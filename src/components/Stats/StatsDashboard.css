@@ -709,4 +709,111 @@
   background: rgba(255, 152, 0, 0.05);
   border-color: rgba(255, 152, 0, 0.3);
   color: #ff9800;
-}
+}
+
+/* ── Time Blunder Cards ─────────────────────────────────────────── */
+.time-blunder-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: 10px;
+}
+
+.time-blunder-card {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  padding: 12px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  transition: all 0.2s ease;
+  border-left: 3px solid var(--accent);
+}
+
+.time-blunder-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  transform: translateY(-2px);
+}
+
+.tbc-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--accent);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.tbc-label {
+  font-size: 0.6rem;
+  font-weight: 800;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: center;
+}
+
+/* ── Dangerous Openings ─────────────────────────────────────────── */
+.dangerous-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dangerous-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(244, 67, 54, 0.05);
+  border: 1px solid rgba(244, 67, 54, 0.1);
+  border-radius: 6px;
+}
+
+.dr-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.dr-eco {
+  font-size: 0.65rem;
+  font-weight: 800;
+  background: #f44336;
+  color: #fff;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.dr-name {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #eee;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dr-stats {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.dr-avg {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #f44336;
+  line-height: 1;
+}
+
+.dr-label {
+  font-size: 0.55rem;
+  color: #666;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+
