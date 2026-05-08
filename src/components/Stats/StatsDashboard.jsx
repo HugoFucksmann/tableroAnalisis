@@ -5,13 +5,10 @@ import {
   History,
   LayoutDashboard,
   List,
-  Zap,
-  Target,
   Filter,
   Clock,
   Calendar,
   Layers,
-  BookOpen,
   AlertTriangle
 } from 'lucide-react';
 import { backendService } from '../../services/backendService';
@@ -19,6 +16,14 @@ import { useGameStore } from '../../store/useGameStore';
 import './StatsDashboard.css';
 
 import AccuracyLineChart from './AccuracyLineChart';
+import { 
+  ColorStatsCard, 
+  PhaseStatsCard, 
+  OpeningStatsCard, 
+  QualityStatsCard, 
+  BlundersByTimeCard, 
+  DangerousOpeningsCard 
+} from './StatsCards';
 
 // ─── HistoryItem ────────────────────────────────────────────────────────────
 
@@ -70,6 +75,7 @@ export const StatsDashboard = () => {
   const [activeTab, setActiveTab] = useState('stats');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [isFiltering, setIsFiltering] = useState(false);
 
   const { username, analyses, setAnalyses, appendAnalyses, removeAnalyses } = useGameStore(useShallow(state => ({
     username: state.searchUsername,
@@ -100,10 +106,12 @@ export const StatsDashboard = () => {
         }
         setRawData(msg.stats); 
         setLoading(false); 
+        setIsFiltering(false);
       }
       if (msg.type === 'error') {
         console.error('[Stats] Error del backend:', msg.message);
         setLoading(false);
+        setIsFiltering(false);
       }
       if (msg.type === 'analyses_list') { 
         if (msg.offset === 0) {
@@ -117,7 +125,7 @@ export const StatsDashboard = () => {
     return () => cleanup();
   }, [setAnalyses, appendAnalyses]);
 
-  // ── Carga de estadísticas y filtros ──────────────────────────────
+  // ── Carga inicial ──────────────────────────────────────────────
   useEffect(() => {
     setLoading(true);
     const reqId = Math.random().toString(36).substring(7);
@@ -129,7 +137,8 @@ export const StatsDashboard = () => {
       count: countFilter,
       username: username
     }, reqId);
-  }, [timeFilter, durationFilter, countFilter, username]);
+    // Solo al montar o si el username cambia drásticamente
+  }, [username]);
 
   // ── Lazy load historial ────────────────────────────────────────
 
@@ -149,20 +158,27 @@ export const StatsDashboard = () => {
 
   // ── Actualización por filtros (Debounced) ───────────────────
   const fetchStats = useCallback(() => {
+    if (loading) return; // Evitar fetch si ya estamos en carga inicial
+    
+    setIsFiltering(true);
     const reqId = Math.random().toString(36).substring(7);
     lastStatsRequestId.current = reqId;
     backendService.getStats({
       time: timeFilter,
       duration: durationFilter,
-      count: countFilter
+      count: countFilter,
+      username: username
     }, reqId);
-  }, [timeFilter, durationFilter, countFilter]);
+  }, [timeFilter, durationFilter, countFilter, username, loading]);
 
   useEffect(() => {
+    // No activar el debounce si es la carga inicial (ya disparada por el useEffect de [username])
+    if (loading) return;
+
     if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
     filterTimeoutRef.current = setTimeout(fetchStats, 300);
     return () => clearTimeout(filterTimeoutRef.current);
-  }, [fetchStats]);
+  }, [timeFilter, durationFilter, countFilter, fetchStats, loading]);
 
   // ── Stats (ahora vienen procesadas del backend) ────────────────
   const filteredStats = useMemo(() => {
@@ -210,7 +226,11 @@ export const StatsDashboard = () => {
   );
 
   return (
-    <motion.div className="stats-dashboard-new" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <motion.div 
+      className={`stats-dashboard-new ${isFiltering ? 'is-filtering' : ''}`} 
+      initial={{ opacity: 0 }} 
+      animate={{ opacity: 1 }}
+    >
 
       {/* ── Header ──────────────────────────────────────────────── */}
       <header className="stats-top-bar">
@@ -352,137 +372,12 @@ export const StatsDashboard = () => {
 
           <div className="stats-secondary-grid">
 
-            {/* Por Color */}
-            <div className="stats-card-modern">
-              <div className="card-title-modern"><Zap size={13} /> Por color</div>
-              <div className="color-split-view">
-                <div className="color-block white">
-                  <div className="cb-header">
-                    <span className="cb-label">Blancas</span>
-                    <span className="cb-count">{filteredStats.white.count} partidas</span>
-                  </div>
-                  <div className="cb-row"><span>Win rate</span><strong>{filteredStats.white.wr}%</strong></div>
-                  <div className="cb-row"><span>Precisión</span><strong>{filteredStats.white.acc}%</strong></div>
-                </div>
-                <div className="color-block black">
-                  <div className="cb-header">
-                    <span className="cb-label">Negras</span>
-                    <span className="cb-count">{filteredStats.black.count} partidas</span>
-                  </div>
-                  <div className="cb-row"><span>Win rate</span><strong>{filteredStats.black.wr}%</strong></div>
-                  <div className="cb-row"><span>Precisión</span><strong>{filteredStats.black.acc}%</strong></div>
-                </div>
-              </div>
-            </div>
-
-            {/* Por Fase */}
-            <div className="stats-card-modern">
-              <div className="card-title-modern"><Target size={13} /> Por fase</div>
-              {filteredStats.accuracyByPhase.length > 0 ? (
-                <div className="phase-minimal-list">
-                  {filteredStats.accuracyByPhase.map((p, i) => (
-                    <div key={p.phase} className="phase-item-new">
-                      <div className="pi-info">
-                        <span>{p.phase}</span>
-                        <strong>{p.accuracy}%</strong>
-                      </div>
-                      <div className="pi-bar-bg">
-                        <motion.div
-                          className="pi-bar-fill"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${p.accuracy}%` }}
-                          style={{ background: p.color || (i === 0 ? '#4caf50' : i === 1 ? '#ff9800' : '#2196f3') }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="card-placeholder">
-                  <span>Disponible tras analizar partidas</span>
-                </div>
-              )}
-            </div>
-
-            {/* Aperturas */}
-            <div className="stats-card-modern">
-              <div className="card-title-modern"><BookOpen size={13} /> Aperturas</div>
-              <div className="opening-modern-list">
-                {filteredStats.openingStats.map((op, i) => (
-                  <div key={i} className="op-row-modern">
-                    <span className="op-name-m">{op.name}</span>
-                    <div className="op-vals-m">
-                      <span title="Win Rate">W {op.wr}%</span>
-                      <span title="Accuracy">A {op.acc}%</span>
-                      <span className="op-count-badge">{op.count}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Calidad de Jugadas */}
-            <div className="stats-card-modern">
-              <div className="card-title-modern"><AlertTriangle size={13} /> Calidad de jugadas</div>
-              {filteredStats.moveQuality.length > 0 ? (
-                <div className="tactical-modern-list">
-                  {filteredStats.moveQuality.map((t, i) => (
-                    <div key={i} className="t-row-modern">
-                      <span className="t-label-m">{t.label}</span>
-                      <span className="t-count-m">{t.pct}%</span>
-                      <div className="t-bar-m">
-                        <motion.div
-                          className="t-fill-m"
-                          initial={{ width: 0 }}
-                          animate={{ width: `${t.pct}%` }}
-                          style={{ background: t.color }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="card-placeholder">
-                  <span>Disponible tras analizar partidas</span>
-                </div>
-              )}
-            </div>
-
-            {/* Errores por Tiempo */}
-            {filteredStats.blundersByTime && filteredStats.blundersByTime.length > 0 && (
-              <div className="stats-card-modern">
-                <div className="card-title-modern"><Clock size={13} /> Blunders por tiempo</div>
-                <div className="time-blunder-grid">
-                  {filteredStats.blundersByTime.map((b, i) => (
-                    <div key={i} className="time-blunder-card" style={{ '--accent': b.color }}>
-                      <div className="tbc-value">{b.count}</div>
-                      <div className="tbc-label">{b.label}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Aperturas Peligrosas */}
-            {filteredStats.dangerousOpenings && filteredStats.dangerousOpenings.length > 0 && (
-              <div className="stats-card-modern">
-                <div className="card-title-modern"><AlertTriangle size={13} color="#f44336" /> Aperturas críticas (Err/Game)</div>
-                <div className="dangerous-list">
-                  {filteredStats.dangerousOpenings.map((op, i) => (
-                    <div key={i} className="dangerous-row">
-                      <div className="dr-main">
-                        <span className="dr-eco">{op.eco || '???'}</span>
-                        <span className="dr-name">{op.name}</span>
-                      </div>
-                      <div className="dr-stats">
-                        <span className="dr-avg">{op.errorsPerGame.toFixed(1)}</span>
-                        <span className="dr-label">err/partida</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            <ColorStatsCard stats={filteredStats} />
+            <PhaseStatsCard stats={filteredStats} />
+            <OpeningStatsCard stats={filteredStats} />
+            <QualityStatsCard stats={filteredStats} />
+            <BlundersByTimeCard stats={filteredStats} />
+            <DangerousOpeningsCard stats={filteredStats} />
 
 
 

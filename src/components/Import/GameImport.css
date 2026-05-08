@@ -50,22 +50,10 @@
   position: relative;
 }
 
+
 .gi-toggle-btn.active {
   background: rgba(255, 255, 255, 0.05);
   color: var(--accent-primary);
-}
-
-/* Indicador sutil para el activo */
-.gi-toggle-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: 4px;
-  left: 25%;
-  right: 25%;
-  height: 2px;
-  background: var(--accent-primary);
-  border-radius: 2px;
-  box-shadow: 0 0 4px var(--accent-primary);
 }
 
 .gi-toggle-btn:hover:not(.active) {
