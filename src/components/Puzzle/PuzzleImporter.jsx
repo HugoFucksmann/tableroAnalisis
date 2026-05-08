@@ -1,58 +1,82 @@
 import React, { useState, useEffect } from 'react';
 import { backendService } from '../../services/backendService';
 import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, Loader, AlertCircle, ChevronLeft, Check, Target } from 'lucide-react';
-import { Chess } from 'chess.js';
+import { Search, Loader, AlertCircle, ChevronLeft, Check, Target, CheckSquare, Square } from 'lucide-react';
 import './Puzzle.css';
 
+/**
+ * PuzzleImporter — consume el estado compartido del librarySlice.
+ * Si el usuario ya buscó partidas en GameImport, aparecen aquí sin re-fetch.
+ */
 export const PuzzleImporter = ({ onBack }) => {
-  const [platform, setPlatform] = useState('lichess');
-  const [username, setUsername] = useState(useGameStore.getState().searchUsername || '');
-  const [games, setGames] = useState([]);
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [isFetching, setIsFetching] = useState(false);
-  const [error, setError] = useState('');
+  const {
+    username, platform, games,
+    lichessToken, selectedGameIds,
+    setSearchUsername, setSearchPlatform,
+    setImportedGames, setPagination, resetGames,
+    toggleGameSelection, selectAllGames, clearSelection,
+  } = useGameStore(useShallow(state => ({
+    username:            state.searchUsername,
+    platform:            state.searchPlatform,
+    games:               state.importedGames,
+    lichessToken:        state.lichessToken,
+    selectedGameIds:     state.selectedGameIds,
+    setSearchUsername:   state.setSearchUsername,
+    setSearchPlatform:   state.setSearchPlatform,
+    setImportedGames:    state.setImportedGames,
+    setPagination:       state.setPagination,
+    resetGames:          state.resetGames,
+    toggleGameSelection: state.toggleGameSelection,
+    selectAllGames:      state.selectAllGames,
+    clearSelection:      state.clearSelection,
+  })));
+
+  const [isFetching, setIsFetching]       = useState(false);
+  const [error, setError]                 = useState('');
+  const [localUsername, setLocalUsername] = useState(username);
+  const [localPlatform, setLocalPlatform] = useState(platform);
   const [extractionStatus, setExtractionStatus] = useState(null);
 
+  // ── Backend handler ───────────────────────────────────────────────
   useEffect(() => {
     const removeHandler = backendService.addHandler((msg) => {
       if (msg.type === 'puzzle_extraction_started') {
         setExtractionStatus({ current: 0, total: msg.totalGames, extracted: 0 });
       } else if (msg.type === 'puzzle_game_done') {
-        setExtractionStatus(prev => ({
-          ...prev,
-          current: msg.gameIndex + 1,
-          extracted: msg.totalExtracted
-        }));
+        setExtractionStatus(prev => ({ ...prev, current: msg.gameIndex + 1, extracted: msg.totalExtracted }));
       } else if (msg.type === 'puzzle_extraction_complete') {
-        alert(`¡Extracción completada! Se han añadido ${msg.totalExtracted} puzzles.`);
+        alert(`¡Extracción completada! Se añadieron ${msg.totalExtracted} puzzles.`);
         setExtractionStatus(null);
-        setSelectedIds(new Set());
+        clearSelection();
       } else if (msg.type === 'extraction_cancelled') {
         alert(`Extracción cancelada. Puzzles extraídos: ${msg.totalExtracted}`);
         setExtractionStatus(null);
-        setSelectedIds(new Set());
+        clearSelection();
       } else if (msg.type === 'error') {
-        alert(`Error en la extracción: ${msg.message}`);
+        alert(`Error: ${msg.message}`);
         setExtractionStatus(null);
       }
     });
     return () => removeHandler();
-  }, []);
+  }, [clearSelection]);
 
+  // ── Search ────────────────────────────────────────────────────────
   const handleSearch = async () => {
-    if (!username.trim()) return;
+    if (!localUsername.trim()) return;
     setIsFetching(true);
     setError('');
+    resetGames();
+    setSearchUsername(localUsername);
+    setSearchPlatform(localPlatform);
     try {
-      let result;
-      if (platform === 'lichess') {
-        result = await fetchLichessGames(username.trim(), 20);
-      } else {
-        result = await fetchChesscomGames(username.trim(), 20);
-      }
-      setGames(result.games);
+      const fetcher = localPlatform === 'lichess'
+        ? fetchLichessGames(localUsername.trim(), 20, null, lichessToken)
+        : fetchChesscomGames(localUsername.trim(), 20, null);
+      const result = await fetcher;
+      setImportedGames(result.games);
+      setPagination({ lastTimestamp: result.lastTimestamp ?? null, chesscomPagination: result.pagination ?? null, hasMoreGames: result.hasMore });
       if (result.games.length === 0) setError('No se encontraron partidas.');
     } catch (err) {
       setError(err.message);
@@ -61,23 +85,18 @@ export const PuzzleImporter = ({ onBack }) => {
     }
   };
 
-  const toggleSelect = (id) => {
-    const next = new Set(selectedIds);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelectedIds(next);
-  };
-
+  // ── Extraction ────────────────────────────────────────────────────
   const handleStartExtraction = () => {
     const selectedGames = games
-      .filter(g => selectedIds.has(g.id))
+      .filter(g => selectedGameIds.includes(g.id))
       .map(g => ({ pgn: g.pgn, gameId: g.id }));
-
     if (selectedGames.length === 0) return;
-
     backendService.extractPuzzles(selectedGames, useGameStore.getState().engineConfig);
   };
 
+  const allSelected = games.length > 0 && selectedGameIds.length === games.length;
+
+  // ── Render ────────────────────────────────────────────────────────
   return (
     <div className="puzzle-importer">
       <div className="puzzle-header">
@@ -88,32 +107,26 @@ export const PuzzleImporter = ({ onBack }) => {
       {!extractionStatus ? (
         <>
           <div className="pi-platform-tabs">
-            <button 
-              className={platform === 'lichess' ? 'active' : ''} 
-              onClick={() => setPlatform('lichess')}
-            >Lichess</button>
-            <button 
-              className={platform === 'chesscom' ? 'active' : ''} 
-              onClick={() => setPlatform('chesscom')}
-            >Chess.com</button>
+            <button className={localPlatform === 'lichess' ? 'active' : ''} onClick={() => setLocalPlatform('lichess')}>Lichess</button>
+            <button className={localPlatform === 'chesscom' ? 'active' : ''} onClick={() => setLocalPlatform('chesscom')}>Chess.com</button>
           </div>
 
           <div className="pi-search-bar">
-            <input 
-              type="text" 
-              value={username} 
-              onChange={e => setUsername(e.target.value)}
+            <input
+              type="text"
+              value={localUsername}
+              onChange={e => setLocalUsername(e.target.value)}
               placeholder="Nombre de usuario..."
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
             />
             <button onClick={handleSearch} disabled={isFetching} title="Buscar Partidas">
               {isFetching ? <Loader size={14} className="spin" /> : <Search size={14} />}
             </button>
-            <button 
+            <button
               className="pi-extract-icon-btn"
-              onClick={handleStartExtraction} 
-              disabled={selectedIds.size === 0}
-              title={`Extraer de ${selectedIds.size} partidas seleccionadas`}
+              onClick={handleStartExtraction}
+              disabled={selectedGameIds.length === 0}
+              title={`Extraer de ${selectedGameIds.length} seleccionadas`}
             >
               <Target size={14} />
             </button>
@@ -121,22 +134,38 @@ export const PuzzleImporter = ({ onBack }) => {
 
           {error && <div className="pi-error"><AlertCircle size={14} /> {error}</div>}
 
-          <div className="pi-game-list premium-scroll">
-            {games.map(game => (
-              <div 
-                key={game.id} 
-                className={`pi-game-card ${selectedIds.has(game.id) ? 'selected' : ''}`}
-                onClick={() => toggleSelect(game.id)}
+          {games.length > 0 && (
+            <div className="pi-list-header">
+              <span className="pi-game-count">{games.length} partidas</span>
+              <button
+                className="pi-select-all-btn"
+                onClick={() => allSelected ? clearSelection() : selectAllGames()}
               >
-                <div className="pi-card-info">
-                  <span className="pi-players">{game.white} vs {game.black}</span>
-                  <span className="pi-date">{game.date}</span>
+                {allSelected ? <CheckSquare size={13} /> : <Square size={13} />}
+                {allSelected ? 'Ninguna' : 'Todas'}
+              </button>
+            </div>
+          )}
+
+          <div className="pi-game-list premium-scroll">
+            {games.map(game => {
+              const isSelected = selectedGameIds.includes(game.id);
+              return (
+                <div
+                  key={game.id}
+                  className={`pi-game-card ${isSelected ? 'selected' : ''}`}
+                  onClick={() => toggleGameSelection(game.id)}
+                >
+                  <div className="pi-card-info">
+                    <span className="pi-players">{game.white} vs {game.black}</span>
+                    <span className="pi-date">{game.date}</span>
+                  </div>
+                  <div className="pi-card-check">
+                    {isSelected ? <Check size={14} /> : <div className="dot" />}
+                  </div>
                 </div>
-                <div className="pi-card-check">
-                  {selectedIds.has(game.id) ? <Check size={14} /> : <div className="dot" />}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       ) : (
@@ -153,12 +182,9 @@ export const PuzzleImporter = ({ onBack }) => {
           <div className="pi-stats">
             <span>Puzzles encontrados: <strong>{extractionStatus.extracted}</strong></span>
           </div>
-          <button 
-            className="pi-cancel-btn" 
-            onClick={() => {
-              setExtractionStatus(prev => ({ ...prev, canceling: true }));
-              backendService.cancelExtraction();
-            }}
+          <button
+            className="pi-cancel-btn"
+            onClick={() => { setExtractionStatus(prev => ({ ...prev, canceling: true })); backendService.cancelExtraction(); }}
             disabled={extractionStatus.canceling}
           >
             {extractionStatus.canceling ? 'Cancelando...' : 'Cancelar'}

@@ -322,6 +322,54 @@
   background: var(--error-bg);
 }
 
+.pi-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-1);
+  margin-top: var(--space-1);
+}
+
+.pi-game-count {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pi-select-all-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px var(--space-2);
+  border-radius: var(--border-radius);
+  transition: color 0.12s, background 0.12s;
+}
+
+.pi-select-all-btn:hover {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
+}
+
+.pi-error {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--error-primary);
+  background: var(--error-bg);
+  border: 1px solid var(--error-border);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--border-radius);
+  font-size: var(--text-sm);
+}
+
 /* ── Library ─────────────────────────────────────────────────── */
 .pl-stats-bar {
   display: flex;

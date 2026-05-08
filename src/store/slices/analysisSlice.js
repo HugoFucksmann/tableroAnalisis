@@ -15,7 +15,7 @@ export const createAnalysisSlice = (set, get) => ({
   openingName: 'Initial Position',
   openingPly: -1,
   openingDetected: false,
-  analyses: [],
+  analyses: [], // kept as empty for backward compat — source of truth is librarySlice
 
   engineConfig: {
     depth: 18,
@@ -125,13 +125,7 @@ export const createAnalysisSlice = (set, get) => ({
   setBestMoves: (v) => set({ bestMoves: v }),
   setAlternativeLines: (v) => set({ alternativeLines: v }),
   setEngineConfig: (config) => set({ engineConfig: config }),
-  setAnalyses: (v) => set((state) => ({ 
-    analyses: typeof v === 'function' ? v(state.analyses) : v 
-  })),
-  appendAnalyses: (v) => set((state) => ({ analyses: [...state.analyses, ...v] })),
-  removeAnalyses: (ids) => set((state) => ({ 
-    analyses: state.analyses.filter(a => !ids.includes(a.id)) 
-  })),
+  // analyses actions moved to librarySlice — use state.setAnalyses / appendAnalyses / removeAnalyses from there
   applyFullAnalysis: (data) => {
     if (!data) return;
 

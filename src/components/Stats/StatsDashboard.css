@@ -479,7 +479,7 @@
 /* ── History View ────────────────────────────────────────────────── */
 .stats-history-view {
   flex: 1;
-  padding: 12px 16px;
+  padding: 0;
   background: transparent;
   min-height: 0;
   display: flex;
@@ -489,48 +489,47 @@
 .history-list {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 0;
   content-visibility: auto;
-  contain-intrinsic-size: 0 60px; /* Tamaño estimado de cada item */
+  contain-intrinsic-size: 0 60px;
 }
 
 .history-item {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  gap: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: var(--transition);
 }
 
 .history-item:hover {
-  background: rgba(255, 255, 255, 0.045);
-  border-color: rgba(255, 152, 0, 0.25);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .history-item.selected {
-  background: rgba(255, 152, 0, 0.06);
-  border-color: rgba(255, 152, 0, 0.5);
+  background: var(--accent-glow-muted);
+  border-bottom-color: var(--accent-glow);
 }
 
 /* checkbox */
 .hi-check {
-  width: 16px;
-  height: 16px;
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--text-muted);
+  border-radius: 3px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: var(--transition);
 }
 
 .selected .hi-check {
-  background: #ff9800;
-  border-color: #ff9800;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
 }
 
 .hi-check-inner {
@@ -552,51 +551,51 @@
 
 .hi-opening {
   font-weight: 700;
-  color: #ddd;
-  font-size: 0.82rem;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 2px;
 }
 
 .hi-meta {
-  font-size: 0.67rem;
-  color: #555;
+  font-size: var(--text-xs);
+  color: var(--text-muted);
   display: flex;
-  gap: 10px;
-  margin-top: 2px;
+  gap: 12px;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .hi-tc {
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 1px 5px;
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  padding: 1px 4px;
   border-radius: 3px;
-  background: rgba(33, 150, 243, 0.1);
-  color: #4a9fd4;
+  background: var(--info-glow);
+  color: var(--info-primary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .hi-result-badge {
-  font-size: 0.6rem;
-  font-weight: 700;
-  padding: 1px 5px;
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  padding: 1px 4px;
   border-radius: 3px;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.05em;
 }
 
 .hi-result-badge.win {
-  background: rgba(76, 175, 80, 0.1);
-  color: #4caf50;
+  background: var(--success-glow);
+  color: var(--success-primary);
 }
 
 .hi-result-badge.loss {
-  background: rgba(244, 67, 54, 0.1);
-  color: #f44336;
+  background: var(--error-bg);
+  color: var(--error-primary);
 }
 
 .hi-acc {
@@ -605,17 +604,20 @@
 }
 
 .hi-acc-val {
-  font-family: monospace;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: #ff9800;
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: var(--text-md);
+  color: var(--accent-primary);
+  line-height: 1;
 }
 
 .hi-acc-label {
-  font-size: 0.6rem;
-  color: #444;
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   text-align: right;
-  margin-top: 1px;
+  margin-top: 2px;
 }
 
 .hi-actions {
@@ -625,18 +627,18 @@
 }
 
 .hi-delete {
-  background: rgba(244, 67, 54, 0.08);
-  color: #f44336;
+  background: var(--error-bg);
+  color: var(--error-primary);
   border: none;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: 4px;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   opacity: 0;
-  transition: opacity 0.15s ease;
+  transition: var(--transition);
 }
 
 .history-item:hover .hi-delete {
@@ -653,19 +655,19 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: rgba(244, 67, 54, 0.1);
-  color: #f44336;
-  border: 1px solid rgba(244, 67, 54, 0.18);
+  background: var(--error-bg);
+  color: var(--error-primary);
+  border: 1px solid var(--error-border);
   padding: 5px 12px;
-  border-radius: 6px;
-  font-size: 0.72rem;
-  font-weight: 700;
+  border-radius: 4px;
+  font-size: var(--text-xs);
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: var(--transition);
 }
 
 .bulk-delete-btn:hover {
-  background: rgba(244, 67, 54, 0.18);
+  background: rgba(239, 68, 68, 0.15);
 }
 
 .empty-history {
@@ -689,17 +691,18 @@
 
 .load-more-history-btn {
   width: 100%;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px dashed rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: #888;
-  font-size: 0.75rem;
-  font-weight: 700;
+  padding: 14px;
+  background: transparent;
+  border: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 8px;
-  margin-bottom: 20px;
+  transition: var(--transition);
+  margin-bottom: 24px;
 }
 
 .load-more-history-btn:hover {

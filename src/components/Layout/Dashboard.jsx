@@ -181,39 +181,30 @@ export const Dashboard = () => {
               <ModeSelector />
             </div>
             
-            {appMode === 'analysis' && (
-              <div className="global-action-buttons glass-panel">
+            <div className="global-action-buttons">
+              {appMode === 'analysis' && (
                 <button
                   className={`global-action-btn analyze-btn ${history.length > 0 ? 'ready' : ''} ${analysisReady ? 're-analyze' : ''}`}
-                    title={analysisReady ? "Volver a analizar (Sobrescribir)" : (history.length > 0 ? "Analizar Partida con Stockfish" : "Haz movimientos para analizar")}
-                    onClick={() => startFullAnalysis()}
-                    disabled={history.length === 0}
-                  >
-                    <Cpu size={15} />
-                  </button>
-                {analysisReady && (
-                  <button
-                    className="global-action-btn"
-                    title="Descargar PGN"
-                    onClick={() => handleDownloadPgn()}
-                  >
-                    <Download size={15} />
-                  </button>
-                )}
-                <button
-                  className="global-action-btn"
-                  title="Configurar motor de análisis"
-                  onClick={() => setShowEngineConfig(true)}
+                  title={analysisReady ? "Volver a analizar (Sobrescribir)" : (history.length > 0 ? "Analizar Partida con Stockfish" : "Haz movimientos para analizar")}
+                  onClick={() => startFullAnalysis()}
+                  disabled={history.length === 0}
                 >
-                  <Settings size={15} />
+                  <Cpu size={15} />
                 </button>
-              </div>
-            )}
+              )}
+              <button
+                className="global-action-btn"
+                title="Configurar motor de análisis"
+                onClick={() => setShowEngineConfig(true)}
+              >
+                <Settings size={15} />
+              </button>
+            </div>
           </div>
 
           {appMode === 'analysis' && (
             <>
-              <div className="panel-container glass-panel controls-panel">
+              <div className="panel-container controls-panel">
                 <div className="panel-header">
                   <h3>Análisis</h3>
                 </div>
@@ -223,15 +214,26 @@ export const Dashboard = () => {
                 </div>
               </div>
 
-              <div className={`panel-container glass-panel move-history-panel ${isHistoryCollapsed ? 'collapsed' : ''}`}>
+              <div className={`panel-container move-history-panel ${isHistoryCollapsed ? 'collapsed' : ''}`}>
                 <div className="panel-header" onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}>
                   <h3>Historial</h3>
-                  <span className="collapse-toggle">{isHistoryCollapsed ? '+' : '−'}</span>
+                  <div className="panel-actions">
+                    {analysisReady && !isHistoryCollapsed && (
+                      <button
+                        className="panel-action-btn"
+                        onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
+                        title="Descargar PGN Anotado"
+                      >
+                        <Download size={14} />
+                      </button>
+                    )}
+                    <span className="collapse-toggle">{isHistoryCollapsed ? '+' : '−'}</span>
+                  </div>
                 </div>
                 {!isHistoryCollapsed && <MoveList />}
               </div>
 
-              <div className={`panel-container glass-panel explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
+              <div className={`panel-container explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
                 <div className="panel-header" onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}>
                   <div className="panel-title-group">
                     {ecoCode && !isExplorerCollapsed && <span className="panel-eco-badge">{ecoCode}</span>}
@@ -253,7 +255,7 @@ export const Dashboard = () => {
                 {!isExplorerCollapsed && <OpeningExplorer />}
               </div>
 
-              <div className={`panel-container glass-panel import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
+              <div className={`panel-container import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
                 <div className="panel-header" onClick={() => setIsImportCollapsed(!isImportCollapsed)}>
                   <div className="panel-title-group">
                     <h3>Importar</h3>

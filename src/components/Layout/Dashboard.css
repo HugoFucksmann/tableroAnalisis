@@ -11,7 +11,7 @@
 .dashboard-container {
   height: 100vh;
   width: 100vw;
-  padding: var(--space-2);
+  padding: 0;
   background-color: var(--bg-primary);
   display: flex;
   flex-direction: column;
@@ -87,14 +87,13 @@ body.is-resizing {
 .side-panels {
   display: flex;
   flex-direction: column;
-  gap: var(--dashboard-gap);
+  gap: 0;
   height: 100%;
   overflow: hidden;
   container-type: inline-size;
   container-name: sidebar;
-  padding-left: var(--space-3); /* Más espacio para que el resizer no tape nada */
-  overflow-y: auto; /* Permitir scroll si las letras grandes empujan todo hacia abajo */
-  scrollbar-width: none; /* Ocultar scrollbar para un look más limpio */
+  background: var(--bg-tertiary);
+  border-left: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .side-panels::-webkit-scrollbar {
@@ -128,19 +127,28 @@ body.is-resizing {
   display: flex;
   flex-direction: column;
   padding: 0;
-  /* Eliminamos el padding para ganar espacio */
   gap: 0;
   overflow: hidden;
-  border: 1px solid var(--glass-border);
-  background: var(--bg-tertiary);
-  /* Fondo más claro para mejor contraste */
-  border-radius: var(--border-radius);
+  border: none;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: transparent;
+  border-radius: 0;
   transition: var(--transition);
+  flex-shrink: 0; /* Por defecto no se encogen para no solaparse */
+  min-height: fit-content;
+}
+
+.panel-container.collapsed {
+  flex-grow: 0 !important;
+  flex-shrink: 0 !important;
+}
+
+.panel-container:last-child {
+  border-bottom: none;
 }
 
 .import-panel {
-  background: var(--bg-secondary);
-  /* El panel de importar se mantiene oscuro */
+  background: transparent;
 }
 
 .panel-header {
@@ -150,17 +158,17 @@ body.is-resizing {
   cursor: pointer;
   user-select: none;
   flex-shrink: 0;
-  padding: var(--space-3) var(--space-4);
-  /* Recuperamos el padding aquí */
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  background: var(--bg-secondary);
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .panel-header h3 {
-  font-size: var(--text-sm);
-  font-weight: 700;
-  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
   transition: color 0.15s ease;
   white-space: nowrap;
   overflow: hidden;
@@ -228,7 +236,9 @@ body.is-resizing {
 .top-global-bar {
   display: flex;
   gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-4) var(--space-3) var(--space-6);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
 .mode-selector-wrapper {
@@ -245,30 +255,32 @@ body.is-resizing {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  padding: 0 var(--space-2);
-  background: var(--bg-tertiary);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
+  padding: 0;
+  background: transparent;
+  border: none;
 }
 
 .global-action-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 2rem;
+  height: 2rem;
   border: none;
-  border-radius: 0.25rem;
+  border-radius: 4px;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: var(--transition);
 }
 
-.global-action-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
+.global-action-btn:hover:not(:disabled) {
   color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.global-action-btn:active:not(:disabled) {
+  transform: scale(0.9);
 }
 
 .global-action-btn.has-token {
@@ -289,12 +301,22 @@ body.is-resizing {
 
 .global-action-btn.analyze-btn.ready {
   color: var(--accent-primary);
+  filter: drop-shadow(0 0 4px var(--accent-glow));
 }
 
 .global-action-btn.analyze-btn.ready:hover {
-  background: var(--accent-glow);
+  background: var(--accent-glow-muted);
   color: var(--accent-primary);
-  transform: scale(1.05);
+}
+
+.global-action-btn.analyze-btn.ready.re-analyze {
+  animation: analyze-pulse 2s infinite ease-in-out;
+}
+
+@keyframes analyze-pulse {
+  0% { filter: drop-shadow(0 0 2px var(--accent-glow)); }
+  50% { filter: drop-shadow(0 0 8px var(--accent-glow)); }
+  100% { filter: drop-shadow(0 0 2px var(--accent-glow)); }
 }
 
 .puzzle-mode-placeholder {
@@ -346,7 +368,7 @@ body.is-resizing {
 .move-history-panel:not(.collapsed) {
   flex-grow: 3;
   flex-shrink: 1;
-  min-height: 0;
+  min-height: 100px;
 }
 
 .move-history-panel>div:not(.panel-header) {
@@ -358,7 +380,7 @@ body.is-resizing {
 .explorer-panel:not(.collapsed) {
   flex-grow: 2;
   flex-shrink: 1;
-  min-height: 0;
+  min-height: 100px;
 }
 
 .explorer-panel>div:not(.panel-header) {
@@ -375,8 +397,9 @@ body.is-resizing {
 .import-panel:not(.collapsed) {
   display: flex;
   flex-direction: column;
-  flex-shrink: 1; /* Permitir que se encoja si el historial o el explorador crecen mucho */
-  min-height: 0;
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-height: 100px;
 }
 
 @media (max-width: 1440px) {

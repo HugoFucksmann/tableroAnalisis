@@ -3,10 +3,6 @@ export const createUISlice = (set, get) => ({
   players: { white: 'Blancas', black: 'Negras' },
   playerElos: { white: null, black: null },
   gamePhase: 'Opening',
-  importedGames: [],
-  searchUsername: 'elcolof',
-  searchPlatform: 'lichess',
-  lichessToken: import.meta.env.VITE_TOKEN_LICHESS || '',
   showTokenInput: false,
   boardOrientation: 'white',
   playerColor: 'white',
@@ -26,12 +22,6 @@ export const createUISlice = (set, get) => ({
     players: { white, black },
     playerElos: { white: whiteElo, black: blackElo }
   }),
-  setImportedGames: (games) => set((state) => ({ 
-    importedGames: typeof games === 'function' ? games(state.importedGames) : games 
-  })),
-  setSearchUsername: (username) => set({ searchUsername: username }),
-  setSearchPlatform: (platform) => set({ searchPlatform: platform }),
-  setLichessToken: (token) => set({ lichessToken: token }),
   
   appMode: 'analysis',
   setAppMode: (mode) => set({ appMode: mode }),

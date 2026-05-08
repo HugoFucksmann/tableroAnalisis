@@ -39,7 +39,7 @@ const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) => (
         <span className={`hi-result-badge ${item.win ? 'win' : 'loss'}`}>
           {item.win ? 'Victoria' : 'Derrota'}
         </span>
-        <span style={{ color: '#555' }}>
+        <span style={{ color: 'var(--text-muted)' }}>
           {item.color === 'white' ? '♙' : '♟'}
         </span>
       </div>
