@@ -27,9 +27,9 @@ export const PuzzleDashboard = () => {
           if (interval) clearInterval(interval);
         }
       });
-      
+
       backendService.getPuzzles();
-      
+
       interval = setInterval(() => {
         backendService.getPuzzles();
       }, 1000);
@@ -45,8 +45,8 @@ export const PuzzleDashboard = () => {
     <div className="puzzle-dashboard">
       {view === 'menu' && (
         <div className="puzzle-menu">
-          <button 
-            className="puzzle-menu-btn train" 
+          <button
+            className="puzzle-menu-btn train"
             onClick={() => handleSetView('train')}
             disabled={puzzleCount === 0}
             style={{ opacity: puzzleCount === 0 ? 0.5 : 1, cursor: puzzleCount === 0 ? 'not-allowed' : 'pointer' }}
@@ -57,7 +57,7 @@ export const PuzzleDashboard = () => {
               <span className="btn-desc">{puzzleCount === 0 ? 'No hay puzzles guardados' : 'Resolver puzzles de tus errores'}</span>
             </div>
           </button>
-          
+
           <button className="puzzle-menu-btn explorer" onClick={() => handleSetView('explorer')}>
             <Search size={20} />
             <div className="btn-text">
@@ -65,7 +65,7 @@ export const PuzzleDashboard = () => {
               <span className="btn-desc">Analiza tus jugadas más frecuentes</span>
             </div>
           </button>
-          
+
           <button className="puzzle-menu-btn import" onClick={() => handleSetView('import')}>
             <Download size={20} />
             <div className="btn-text">
@@ -73,7 +73,7 @@ export const PuzzleDashboard = () => {
               <span className="btn-desc">Buscar errores en nuevas partidas</span>
             </div>
           </button>
-          
+
           <button className="puzzle-menu-btn manage" onClick={() => handleSetView('manage')}>
             <Library size={20} />
             <div className="btn-text">

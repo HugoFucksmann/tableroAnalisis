@@ -97,6 +97,7 @@ export const MoveExplorerView = ({ onBack }) => {
     // infinito si el backend no responde o el FEN no matchea ningún mensaje.
     loadingTimerRef.current = setTimeout(() => {
       setLoading(false);
+      setIsStale(false);
     }, 10000);
   }, [fen, setExplorerData]);
 

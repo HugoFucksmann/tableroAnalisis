@@ -155,9 +155,9 @@ export const Dashboard = () => {
     <div className="dashboard-container">
       <AnalysisLoadingModal />
 
-      <main 
+      <main
         className="dashboard-content"
-        style={{ 
+        style={{
           gridTemplateColumns: isMobile ? '1fr' : `1fr auto ${sidePanelWidth}px`,
           '--side-panel-width': `${sidePanelWidth}px`
         }}
@@ -169,7 +169,7 @@ export const Dashboard = () => {
         </section>
 
         {!isMobile && (
-          <div 
+          <div
             className={`resizer-handle ${isResizing ? 'active' : ''}`}
             onMouseDown={startResizing}
           />
@@ -180,7 +180,7 @@ export const Dashboard = () => {
             <div className="mode-selector-wrapper">
               <ModeSelector />
             </div>
-            
+
             <div className="global-action-buttons">
               {appMode === 'analysis' && (
                 <button

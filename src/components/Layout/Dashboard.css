@@ -43,7 +43,8 @@ body.is-resizing {
   background: transparent;
   transition: background 0.2s ease;
   z-index: 100;
-  margin: 0 -5px; /* Se solapa un poco para que sea más fácil de agarrar */
+  margin: 0 -5px;
+  /* Se solapa un poco para que sea más fácil de agarrar */
   position: relative;
 }
 
@@ -101,8 +102,9 @@ body.is-resizing {
 }
 
 @container sidebar (min-width: 0px) {
+
   /* Aplicamos las variables a los hijos directos para que se hereden */
-  .side-panels > * {
+  .side-panels>* {
     --text-2xs: clamp(0.55rem, 2cqw, 0.75rem);
     --text-xs: clamp(0.65rem, 2.5cqw, 0.8rem);
     --text-sm: clamp(0.75rem, 3cqw, 1.0rem);
@@ -134,7 +136,8 @@ body.is-resizing {
   background: transparent;
   border-radius: 0;
   transition: var(--transition);
-  flex-shrink: 0; /* Por defecto no se encogen para no solaparse */
+  flex-shrink: 0;
+  /* Por defecto no se encogen para no solaparse */
   min-height: fit-content;
 }
 
@@ -314,9 +317,17 @@ body.is-resizing {
 }
 
 @keyframes analyze-pulse {
-  0% { filter: drop-shadow(0 0 2px var(--accent-glow)); }
-  50% { filter: drop-shadow(0 0 8px var(--accent-glow)); }
-  100% { filter: drop-shadow(0 0 2px var(--accent-glow)); }
+  0% {
+    filter: drop-shadow(0 0 2px var(--accent-glow));
+  }
+
+  50% {
+    filter: drop-shadow(0 0 8px var(--accent-glow));
+  }
+
+  100% {
+    filter: drop-shadow(0 0 2px var(--accent-glow));
+  }
 }
 
 .puzzle-mode-placeholder {
