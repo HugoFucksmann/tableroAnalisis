@@ -14,6 +14,23 @@ export const ArrowEvalOverlay = React.memo(({ arrowsWithDelta, orientation }) =>
             aria-hidden="true"
         >
             {arrowsWithDelta.map((item, i) => {
+                if (item.isExplorerArrow) {
+                    const coords = squareToPct(item.arrow.endSquare, orientation);
+                    if (!coords) return null;
+                    return (
+                        <span
+                            key={`${item.arrow.endSquare}-${i}`}
+                            className="arrow-eval-badge badge--explorer"
+                            style={{
+                                left: `calc(${coords.x}% + 6px)`,
+                                top: `calc(${coords.y}% - 14px)`,
+                            }}
+                        >
+                            {item.count}
+                        </span>
+                    );
+                }
+
                 if (!item.isEngineArrow || item.delta == null) return null;
 
                 const coords = squareToPct(item.arrow.endSquare, orientation);

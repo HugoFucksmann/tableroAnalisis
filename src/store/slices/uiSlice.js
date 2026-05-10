@@ -30,4 +30,7 @@ export const createUISlice = (set, get) => ({
   setPuzzleState: (updater) => set((state) => ({ 
     puzzleState: typeof updater === 'function' ? updater(state.puzzleState) : updater 
   })),
+
+  explorerMode: false,
+  setExplorerMode: (v) => set({ explorerMode: v }),
 });

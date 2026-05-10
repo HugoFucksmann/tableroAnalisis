@@ -7,6 +7,20 @@ export function uciToArrow(uci, color = 'rgba(217, 119, 6, 0.8)') {
 }
 
 /**
+ * Converts a SAN move string (e.g. "Nf3") to an Arrow object using a Chess instance.
+ */
+export function sanToArrow(san, chessInstance, color = 'rgba(217, 119, 6, 0.8)') {
+    try {
+        const moves = chessInstance.moves({ verbose: true });
+        const match = moves.find(m => m.san === san);
+        if (!match) return null;
+        return { startSquare: match.from, endSquare: match.to, color };
+    } catch {
+        return null;
+    }
+}
+
+/**
  * Derives whose turn it is from a FEN string.
  * Returns 'white' | 'black'.
  */

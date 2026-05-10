@@ -65,6 +65,13 @@
     /* light red text */
 }
 
+.arrow-eval-badge.badge--explorer {
+    background: var(--accent-color);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
+}
+
 /* Equal / negligible delta → neutral gray */
 .arrow-eval-badge.badge--neutral {
     background: #3f3f46;

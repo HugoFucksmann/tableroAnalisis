@@ -50,6 +50,11 @@
   --arrow-explorer-base: rgba(59, 130, 246, 0.45);
   --arrow-explorer-hover: rgba(59, 130, 246, 0.85);
 
+  --arrow-user: rgba(168, 85, 247, 0.85); /* Purple primary */
+  --arrow-opponent: rgba(245, 158, 11, 0.85); /* Warning/Amber */
+  --arrow-master: rgba(16, 185, 129, 0.85); /* Success/Green */
+  --accent-color: var(--accent-primary);
+
   /* ── Typography ─────────────────────────────────────────────── */
   --font-main: 'Outfit', 'Inter', -apple-system, sans-serif;
 

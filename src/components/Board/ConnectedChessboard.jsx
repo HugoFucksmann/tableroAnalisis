@@ -7,6 +7,8 @@ import { useArrows } from '../../store/selectors/gameSelectors';
 import {
     useCurrentMoveLines, useCurrentBestMove, useCurrentEval
 } from '../../store/selectors/analysisSelectors';
+import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
 
 export const ConnectedChessboard = React.memo(({
     fen,
@@ -21,13 +23,27 @@ export const ConnectedChessboard = React.memo(({
     const currentEval = useCurrentEval();
     const arrows = useArrows();
     const activeColor = React.useMemo(() => getActiveColor(fen), [fen]);
+    const { explorerMode, explorerData, game, playerColor, hoveredExplorerMove, mastersData } = useGameStore(useShallow(state => ({
+        explorerMode: state.explorerMode,
+        explorerData: state.explorerData,
+        game: state.game,
+        playerColor: state.playerColor,
+        hoveredExplorerMove: state.hoveredExplorerMove,
+        mastersData: state.mastersData
+    })));
 
     const { combinedArrows, arrowsWithDelta } = useBoardArrows(
         currentLines,
         currentBestMove,
         currentEval,
         arrows,
-        activeColor
+        activeColor,
+        explorerMode,
+        explorerData,
+        game,
+        playerColor,
+        hoveredExplorerMove,
+        mastersData
     );
 
 

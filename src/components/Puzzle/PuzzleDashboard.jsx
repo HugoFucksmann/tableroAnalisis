@@ -2,13 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { PuzzleImporter } from './PuzzleImporter';
 import { PuzzleLibrary } from './PuzzleLibrary';
 import { PuzzleSession } from './PuzzleSession';
-import { Download, Play, Library } from 'lucide-react';
+import { MoveExplorerView } from './MoveExplorerView';
+import { Download, Play, Library, Search } from 'lucide-react';
 import { backendService } from '../../services/backendService';
+import { useGameStore } from '../../store/useGameStore';
 import './Puzzle.css';
 
 export const PuzzleDashboard = () => {
-  const [view, setView] = useState('menu'); // menu, import, train, manage
+  const [view, setView] = useState('menu'); // menu, import, train, manage, explorer
   const [puzzleCount, setPuzzleCount] = useState(null);
+  const { setExplorerMode } = useGameStore();
+
+  const handleSetView = (newView) => {
+    setView(newView);
+    setExplorerMode(newView === 'explorer');
+  };
 
   useEffect(() => {
     if (view === 'menu') {
@@ -39,7 +47,7 @@ export const PuzzleDashboard = () => {
         <div className="puzzle-menu">
           <button 
             className="puzzle-menu-btn train" 
-            onClick={() => setView('train')}
+            onClick={() => handleSetView('train')}
             disabled={puzzleCount === 0}
             style={{ opacity: puzzleCount === 0 ? 0.5 : 1, cursor: puzzleCount === 0 ? 'not-allowed' : 'pointer' }}
           >
@@ -50,7 +58,15 @@ export const PuzzleDashboard = () => {
             </div>
           </button>
           
-          <button className="puzzle-menu-btn import" onClick={() => setView('import')}>
+          <button className="puzzle-menu-btn explorer" onClick={() => handleSetView('explorer')}>
+            <Search size={20} />
+            <div className="btn-text">
+              <span className="btn-title">Explorador de Repertorio</span>
+              <span className="btn-desc">Analiza tus jugadas más frecuentes</span>
+            </div>
+          </button>
+          
+          <button className="puzzle-menu-btn import" onClick={() => handleSetView('import')}>
             <Download size={20} />
             <div className="btn-text">
               <span className="btn-title">Extraer Puzzles</span>
@@ -58,7 +74,7 @@ export const PuzzleDashboard = () => {
             </div>
           </button>
           
-          <button className="puzzle-menu-btn manage" onClick={() => setView('manage')}>
+          <button className="puzzle-menu-btn manage" onClick={() => handleSetView('manage')}>
             <Library size={20} />
             <div className="btn-text">
               <span className="btn-title">Biblioteca</span>
@@ -68,9 +84,10 @@ export const PuzzleDashboard = () => {
         </div>
       )}
 
-      {view === 'import' && <PuzzleImporter onBack={() => setView('menu')} />}
-      {view === 'manage' && <PuzzleLibrary onBack={() => setView('menu')} />}
-      {view === 'train' && <PuzzleSession onBack={() => setView('menu')} />}
+      {view === 'import' && <PuzzleImporter onBack={() => handleSetView('menu')} />}
+      {view === 'manage' && <PuzzleLibrary onBack={() => handleSetView('menu')} />}
+      {view === 'train' && <PuzzleSession onBack={() => handleSetView('menu')} />}
+      {view === 'explorer' && <MoveExplorerView onBack={() => handleSetView('menu')} />}
     </div>
   );
 };

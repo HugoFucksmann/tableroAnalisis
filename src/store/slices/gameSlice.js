@@ -8,6 +8,9 @@ function evalFromEntry(evalObj) {
   return { score: evalObj.score ?? 0, mate: evalObj.mate ?? null };
 }
 
+// BUG #5 CORREGIDO: se añaden explorerData y mastersData a GAME_RESET para
+// que al resetear la partida o cargar un PGN nuevo los datos del explorador
+// de la sesión anterior no persistan en el store.
 const GAME_RESET = {
   arrows: [],
   highlights: {},
@@ -16,6 +19,8 @@ const GAME_RESET = {
   hasPgnEvaluations: false,
   isReviewRequested: false,
   startFen: null,
+  explorerData: null,
+  mastersData: null,
 };
 
 export const createGameSlice = (set, get) => ({
@@ -29,6 +34,15 @@ export const createGameSlice = (set, get) => ({
 
   setArrows: (arrows) => set({ arrows }),
   setHighlights: (highlights) => set({ highlights }),
+
+  explorerData: null,
+  setExplorerData: (data) => set({ explorerData: data }),
+
+  hoveredExplorerMove: null,
+  setHoveredExplorerMove: (move) => set({ hoveredExplorerMove: move }),
+
+  mastersData: null,
+  setMastersData: (data) => set({ mastersData: data }),
 
   setGame: (newGame) => {
     const headers = newGame.header();
@@ -199,7 +213,12 @@ export const createGameSlice = (set, get) => ({
       if (state.gameId) analysisBridge.clearCache(state.gameId);
 
       const headers = newGame.header();
-      state.setPlayers(headers.White ?? 'Blancas', headers.Black ?? 'Negras', headers.WhiteElo ?? null, headers.BlackElo ?? null);
+      state.setPlayers(
+        headers.White ?? 'Blancas',
+        headers.Black ?? 'Negras',
+        headers.WhiteElo ?? null,
+        headers.BlackElo ?? null
+      );
 
       const blackPlayer = (headers.Black ?? '').toLowerCase();
       const whitePlayer = (headers.White ?? '').toLowerCase();
@@ -209,14 +228,11 @@ export const createGameSlice = (set, get) => ({
       if (currentUser !== '') {
         if (blackPlayer === currentUser) detectedColor = 'black';
         else if (whitePlayer === currentUser) detectedColor = 'white';
-        // If neither matches (e.g. PGN manual sin username), keep 'white'
       }
 
       state.setBoardOrientation(detectedColor);
       state.setPlayerColor(detectedColor);
 
-      // providedId (passed from GameImport card click) always wins.
-      // Only fall back to Site header or timestamp if no providedId.
       let gameId = providedId;
       if (!gameId) {
         if (headers.Site && headers.Site.includes('lichess.org/')) {
@@ -227,6 +243,7 @@ export const createGameSlice = (set, get) => ({
       }
       if (!gameId) gameId = Date.now();
       console.log('[loadPgn] gameId resolved:', gameId, '| providedId was:', providedId);
+
       const verboseHistory = newGame.history({ verbose: true });
       const comments = newGame.getComments();
 

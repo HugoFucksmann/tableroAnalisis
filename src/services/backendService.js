@@ -185,6 +185,10 @@ class BackendService {
     getFullAnalysis(gameId, requestId = null) {
         return this.send('get_full_analysis', { gameId }, requestId);
     }
+
+    getMoveExplorer(fen, requestId = null) {
+        return this.send('get_move_explorer', { fen }, requestId);
+    }
 }
 
 export const backendService = new BackendService();
