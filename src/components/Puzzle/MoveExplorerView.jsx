@@ -25,7 +25,8 @@ export const MoveExplorerView = ({ onBack }) => {
     setPlayerColor,
     setBoardOrientation,
     searchUsername,
-    setPlayers
+    setPlayers,
+    lichessToken
   } = useGameStore(useShallow(state => ({
     fen: state.fen,
     explorerData: state.explorerData,
@@ -42,13 +43,14 @@ export const MoveExplorerView = ({ onBack }) => {
     setPlayerColor: state.setPlayerColor,
     setBoardOrientation: state.setBoardOrientation,
     searchUsername: state.searchUsername,
-    setPlayers: state.setPlayers
+    setPlayers: state.setPlayers,
+    lichessToken: state.lichessToken
   })));
 
   const [loading, setLoading] = useState(false);
+  const [isStale, setIsStale] = useState(false);
   const [loadingMasters, setLoadingMasters] = useState(false);
   const lastScrollTime = useRef(0);
-  // Ref para cancelar el timeout de fallback cuando llegan datos reales
   const loadingTimerRef = useRef(null);
 
   // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -83,7 +85,9 @@ export const MoveExplorerView = ({ onBack }) => {
     if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
 
     setLoading(true);
-    setExplorerData(null);
+    setIsStale(true);
+    // Ya no hacemos setExplorerData(null) para evitar flickering.
+    // El usuario verá los datos anteriores con un estilo "stale" hasta que lleguen los nuevos.
 
     const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
     const requestId = Math.random().toString(36).substring(7);
@@ -102,10 +106,19 @@ export const MoveExplorerView = ({ onBack }) => {
     const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
     setLoadingMasters(true);
     try {
+      const headers = {};
+      if (lichessToken) {
+        headers['Authorization'] = `Bearer ${lichessToken}`;
+      }
+
       const response = await fetch(
-        `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`
+        `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`,
+        { headers }
       );
-      if (!response.ok) throw new Error('API Error');
+      if (!response.ok) {
+        if (response.status === 401) console.error('Lichess 401: Token inválido o expirado');
+        throw new Error(`API Error: ${response.status}`);
+      }
       const data = await response.json();
       setMastersData(
         (data.moves || []).map(m => {
@@ -125,7 +138,7 @@ export const MoveExplorerView = ({ onBack }) => {
     } finally {
       setLoadingMasters(false);
     }
-  }, [fen, setMastersData]);
+  }, [fen, setMastersData, lichessToken]);
 
   // ─── Effect principal: dispara fetches y escucha respuesta WS ───────────────
 
@@ -146,6 +159,7 @@ export const MoveExplorerView = ({ onBack }) => {
           if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
           setExplorerData(msg);
           setLoading(false);
+          setIsStale(false);
         }
       }
     });
@@ -342,7 +356,7 @@ export const MoveExplorerView = ({ onBack }) => {
         </div>
       </nav>
 
-      <div className="explorer-content premium-scroll">
+      <div className={`explorer-content premium-scroll ${isStale ? 'stale-overlay' : ''}`}>
         {/* BUG #3 CORREGIDO: .explorer-grids ahora tiene estilos en el CSS */}
         <div className="explorer-grids">
           {renderMoveSection(

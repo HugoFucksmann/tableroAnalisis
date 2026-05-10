@@ -127,11 +127,12 @@ class AnalysisBridge {
         const playerColor = callbacks.playerColor || storeState.playerColor || 'white';
         
         // Determinar si ganó el jugador
+        // Determinar si ganó el jugador (1: Win, 0: Draw, -1: Loss)
         const result = pgnHeaders.Result || '*';
-        let win = true;
-        if (playerColor === 'white' && result === '0-1') win = false;
-        if (playerColor === 'black' && result === '1-0') win = false;
-        if (result === '1/2-1/2') win = false;
+        let win = 1; 
+        if (result === '1/2-1/2') win = 0;
+        else if (playerColor === 'white' && result === '0-1') win = -1;
+        else if (playerColor === 'black' && result === '1-0') win = -1;
 
         // Normalizar el TimeControl del PGN a un formato corto ('1m','3m','5m','10m','15m','30m')
         // Si no hay header TimeControl, intentar usar el tiempo inicial del reloj
