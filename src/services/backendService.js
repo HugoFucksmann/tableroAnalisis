@@ -189,6 +189,14 @@ class BackendService {
     getMoveExplorer(fen, requestId = null) {
         return this.send('get_move_explorer', { fen }, requestId);
     }
+
+    getBookMoves(fen, requestId = null) {
+        return this.send('get_book_moves', { fen }, requestId);
+    }
+
+    getServerConfig(requestId = null) {
+        return this.send('get_server_config', {}, requestId);
+    }
 }
 
 export const backendService = new BackendService();

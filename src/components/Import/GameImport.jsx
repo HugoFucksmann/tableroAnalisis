@@ -210,9 +210,10 @@ export const GameImport = ({ onGameSelect }) => {
         const isBlack = g.black.toLowerCase() === userLower;
         const playerColor = isWhite ? 'white' : (isBlack ? 'black' : 'white');
         
-        let win = false;
-        if (isWhite && g.result === '1-0') win = true;
-        if (isBlack && g.result === '0-1') win = true;
+        let win = 1;
+        if (g.result === '1/2-1/2') win = 0;
+        else if (isWhite && g.result === '0-1') win = -1;
+        else if (isBlack && g.result === '1-0') win = -1;
 
         return {
           pgn: g.pgn,
