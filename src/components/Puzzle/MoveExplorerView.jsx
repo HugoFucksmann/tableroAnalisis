@@ -4,9 +4,18 @@ import { useShallow } from 'zustand/react/shallow';
 import { backendService } from '../../services/backendService';
 import {
   BarChart2, User, Users, ChevronLeft, ChevronRight,
-  ChevronsLeft, ChevronsRight, Loader2, Award
+  ChevronsLeft, ChevronsRight, Loader2, Award, Cpu
 } from 'lucide-react';
+import { analysisBridge } from '../../services/analysisBridge';
+import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
 import './MoveExplorerView.css';
+
+// Fallback config para etiquetas especiales del extractor de errores
+const SPECIAL_LABELS = {
+  'Insta-move Blunder': { color: '#f44336', label: 'IB' },
+  'Deep-think Blunder': { color: '#b71c1c', label: 'DB' },
+  'Time Pressure Error': { color: '#ff5722', label: 'TP' }
+};
 
 export const MoveExplorerView = ({ onBack }) => {
   const {
@@ -26,7 +35,18 @@ export const MoveExplorerView = ({ onBack }) => {
     setBoardOrientation,
     searchUsername,
     setPlayers,
-    lichessToken
+    lichessToken,
+    isAnalyzing,
+    setOpeningName,
+    setEcoCode,
+    openingName,
+    ecoCode,
+    setEvaluation,
+    setBestMoveForIndex,
+    setAlternativeLinesForIndex,
+    setAnalyzing,
+    explorerAnalysisEnabled,
+    setExplorerAnalysisEnabled
   } = useGameStore(useShallow(state => ({
     fen: state.fen,
     explorerData: state.explorerData,
@@ -44,7 +64,18 @@ export const MoveExplorerView = ({ onBack }) => {
     setBoardOrientation: state.setBoardOrientation,
     searchUsername: state.searchUsername,
     setPlayers: state.setPlayers,
-    lichessToken: state.lichessToken
+    lichessToken: state.lichessToken,
+    isAnalyzing: state.isAnalyzing,
+    setOpeningName: state.setOpeningName,
+    setEcoCode: state.setEcoCode,
+    openingName: state.openingName,
+    ecoCode: state.ecoCode,
+    setEvaluation: state.setEvaluation,
+    setBestMoveForIndex: state.setBestMoveForIndex,
+    setAlternativeLinesForIndex: state.setAlternativeLinesForIndex,
+    setAnalyzing: state.setAnalyzing,
+    explorerAnalysisEnabled: state.explorerAnalysisEnabled,
+    setExplorerAnalysisEnabled: state.setExplorerAnalysisEnabled,
   })));
 
   const [loading, setLoading] = useState(false);
@@ -121,9 +152,16 @@ export const MoveExplorerView = ({ onBack }) => {
         throw new Error(`API Error: ${response.status}`);
       }
       const data = await response.json();
+      
+      // Identificación dinámica de aperturas
+      if (data.opening) {
+        setOpeningName(data.opening.name);
+        setEcoCode(data.opening.eco);
+      }
+
       setMastersData(
         (data.moves || []).map(m => {
-          const total = m.white + m.draws + m.black || 1; // evitar división por 0
+          const total = m.white + m.draws + m.black || 1;
           return {
             san: m.san,
             count: total,
@@ -139,9 +177,26 @@ export const MoveExplorerView = ({ onBack }) => {
     } finally {
       setLoadingMasters(false);
     }
-  }, [fen, setMastersData, lichessToken]);
+  }, [fen, setMastersData, lichessToken, setOpeningName, setEcoCode]);
+
+  const handleQuickAnalysis = useCallback(() => {
+    const newValue = !explorerAnalysisEnabled;
+    setExplorerAnalysisEnabled(newValue);
+    
+    if (!newValue) {
+      analysisBridge.cancel();
+    }
+  }, [explorerAnalysisEnabled, setExplorerAnalysisEnabled]);
 
   // ─── Effect principal: dispara fetches y escucha respuesta WS ───────────────
+
+  // Limpiar análisis al salir
+  useEffect(() => {
+    return () => {
+      setExplorerAnalysisEnabled(false);
+      analysisBridge.cancel();
+    };
+  }, [setExplorerAnalysisEnabled]);
 
   // BUG #4 CORREGIDO: el efecto captura el FEN limpio una sola vez y lo usa
   // tanto para disparar los fetches como para comparar con la respuesta del
@@ -245,6 +300,25 @@ export const MoveExplorerView = ({ onBack }) => {
                   <div className="bar-seg d" style={{ width: `${isMaster ? move.draws : move.drawRate}%` }} />
                   <div className="bar-seg l" style={{ width: `${isMaster ? move.black : move.lossRate}%` }} />
                 </div>
+
+                {!isMaster && move.labels && Object.keys(move.labels).length > 0 && (
+                  <div className="move-labels-row">
+                    {Object.entries(move.labels).map(([label, count]) => {
+                      const config = EVAL_CONFIG[label] || SPECIAL_LABELS[label];
+                      return (
+                        <div 
+                          key={label} 
+                          className="label-pill" 
+                          style={{ backgroundColor: config?.bg || config?.color || '#555' }}
+                          title={`${label}: ${count}`}
+                        >
+                          <span className="label-icon-wrapper">{config?.icon || config?.label || label[0]}</span>
+                          {count > 1 && <span className="label-count-inner">{count}</span>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="move-count-area">
@@ -303,6 +377,13 @@ export const MoveExplorerView = ({ onBack }) => {
                 B
               </button>
             </div>
+            <button 
+              className={`explorer-action-btn ${explorerAnalysisEnabled ? 'analyzing' : ''}`}
+              onClick={handleQuickAnalysis}
+              title={explorerAnalysisEnabled ? "Desactivar análisis en vivo" : "Activar análisis en vivo"}
+            >
+              <Cpu size={14} className={explorerAnalysisEnabled ? 'gi-spin' : ''} />
+            </button>
             <button className="explorer-close-btn" onClick={onBack}>
               <ChevronLeft size={13} style={{ marginRight: '4px' }} />
               Cerrar
@@ -311,9 +392,9 @@ export const MoveExplorerView = ({ onBack }) => {
         </div>
 
         <div className="opening-info">
-          <div className="eco-badge">{gameHeaders?.ECO || '---'}</div>
-          <div className="opening-name" title={gameHeaders?.Opening || 'Posición personalizada'}>
-            {gameHeaders?.Opening || 'Sin apertura definida'}
+          <div className="eco-badge">{ecoCode || '---'}</div>
+          <div className="opening-name" title={openingName || 'Posición personalizada'}>
+            {openingName || 'Sin apertura definida'}
           </div>
         </div>
       </header>

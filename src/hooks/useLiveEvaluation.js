@@ -21,6 +21,14 @@ export const useLiveEvaluation = () => {
         // Evitar interrumpir un análisis de partida completa en curso
         const isFullGameAnalysisRunning = state.isReviewRequested && !state.analysisReady;
 
+        const isExplorerMode = state.explorerMode;
+        const explorerEnabled = state.explorerAnalysisEnabled;
+
+        // Si estamos en modo puzzle/explorer, solo analizar si el usuario lo activó explícitamente
+        if (state.appMode === 'puzzle') {
+            if (!isExplorerMode || !explorerEnabled) return;
+        }
+
         if (!needsLiveAnalysis || currentMoveIndex < -1 || isFullGameAnalysisRunning) return;
 
         let isActive = true;

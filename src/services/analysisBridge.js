@@ -151,7 +151,7 @@ class AnalysisBridge {
         const state = useGameStore.getState();
         const engineConfig = state.engineConfig ?? {};
 
-        if (state.appMode === 'puzzle' || !backendService.isConnected) return;
+        if ((state.appMode === 'puzzle' && !state.explorerMode) || !backendService.isConnected) return;
 
         this.cancel(false);
         onStatus?.(true);
