@@ -1,0 +1,150 @@
+/* ── Cabecera ─────────────────────────────────────────────────────────────── */
+.move-explorer-view .explorer-header {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  background: rgba(0, 0, 0, 0.1);
+}
+
+.move-explorer-view .header-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.move-explorer-view .explorer-title-area {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.move-explorer-view .explorer-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* ── Información de apertura compacta ────────────────────────────────────── */
+.move-explorer-view .opening-info-compact {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.move-explorer-view .eco-badge {
+  font-size: 0.58rem;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.05);
+  color: #888;
+  padding: 1px 4px;
+  border-radius: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.move-explorer-view .opening-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #777;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.move-explorer-view .live-eval-badge {
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  min-width: 35px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.move-explorer-view .live-eval-badge.pos { color: #4caf50; border-color: rgba(76, 175, 80, 0.2); }
+.move-explorer-view .live-eval-badge.neg { color: #f44336; border-color: rgba(244, 67, 54, 0.2); }
+
+.move-explorer-view .live-eval-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.move-explorer-view .current-move-valuation {
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Acciones del header ──────────────────────────────────────────────────── */
+.move-explorer-view .header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Toggle de perspectiva W / B ──────────────────────────────────────────── */
+.move-explorer-view .perspective-toggle {
+  display: flex;
+  background: rgba(255, 255, 255, 0.04);
+  padding: 2px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.move-explorer-view .toggle-btn {
+  background: transparent;
+  border: none;
+  color: #555;
+  width: 24px;
+  height: 22px;
+  font-size: 0.65rem;
+  font-weight: 800;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.move-explorer-view .toggle-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* ── Botón de Acción del Explorador (Quick Analysis) ─────────────────────── */
+.move-explorer-view .explorer-action-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: #777;
+  width: 28px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.move-explorer-view .explorer-action-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--accent-primary);
+  border-color: var(--accent-glow);
+}
+
+.move-explorer-view .explorer-action-btn.analyzing {
+  color: var(--accent-primary);
+  background: var(--accent-glow);
+}

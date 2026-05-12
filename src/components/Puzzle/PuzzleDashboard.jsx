@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { PuzzleImporter } from './PuzzleImporter';
 import { PuzzleLibrary } from './PuzzleLibrary';
 import { PuzzleSession } from './PuzzleSession';
-import { MoveExplorerView } from './MoveExplorerView';
+import { MoveExplorerView } from './MoveExplorer/MoveExplorerView';
 import { Download, Play, Library, Search } from 'lucide-react';
 import { backendService } from '../../services/backendService';
 import { useGameStore } from '../../store/useGameStore';

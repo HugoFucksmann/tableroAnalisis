@@ -1,0 +1,150 @@
+/* ── Sección individual (Mis Jugadas / Rival / Maestros) ─────────────────── */
+.move-explorer-view .explorer-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.move-explorer-view .explorer-section:not(:last-child) {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* ── Cabecera de sección ──────────────────────────────────────────────────── */
+.move-explorer-view .section-header {
+  padding: 12px 16px 8px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.01);
+}
+
+/* ── Estado vacío / cargando ──────────────────────────────────────────────── */
+.move-explorer-view .explorer-placeholder {
+  padding: 40px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: #444;
+  text-align: center;
+}
+
+.move-explorer-view .explorer-placeholder span {
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ── Lista de movimientos ─────────────────────────────────────────────────── */
+.move-explorer-view .moves-list {
+  display: flex;
+  flex-direction: column;
+  padding: 4px 0;
+}
+
+.move-explorer-view .move-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 4px 16px;
+  cursor: pointer;
+  transition: all 0.1s ease;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+  min-height: 32px;
+}
+
+.move-explorer-view .move-row:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.move-explorer-view .move-main-info {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.move-explorer-view .move-san-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.move-explorer-view .move-san {
+  font-weight: 800;
+  color: #fff;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+}
+
+.move-explorer-view .piece-icon-not {
+  font-size: 1.1rem;
+  margin-right: 1px;
+  color: var(--accent-primary);
+  opacity: 0.9;
+  line-height: 0.8;
+}
+
+.move-explorer-view .move-stats-row {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.move-explorer-view .win-rate-bar-compact {
+  height: 4px;
+  flex: 1;
+  display: flex;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.move-explorer-view .bar-seg.w { background: #4caf50; }
+.move-explorer-view .bar-seg.d { background: #777; }
+.move-explorer-view .bar-seg.l { background: #f44336; }
+
+.move-explorer-view .wr-val {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #666;
+  width: 32px;
+  text-align: right;
+}
+
+.move-explorer-view .eval-mini {
+  font-size: 0.65rem;
+  font-weight: 800;
+  min-width: 35px;
+  text-align: right;
+}
+
+.move-explorer-view .eval-mini.pos { color: #4caf50; }
+.move-explorer-view .eval-mini.neg { color: #f44336; }
+
+.move-explorer-view .move-right-area {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 90px;
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.move-explorer-view .count-number {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #555;
+  min-width: 30px;
+  text-align: right;
+}

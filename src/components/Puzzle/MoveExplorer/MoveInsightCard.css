@@ -1,0 +1,111 @@
+/* ── Move Insight Card (Detalle del último movimiento) ───────────────────── */
+.move-explorer-view .move-insight-card {
+  margin: 12px 16px;
+  padding: 12px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.move-explorer-view .insight-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.move-explorer-view .insight-san-box {
+  display: flex;
+  flex-direction: column;
+}
+
+.move-explorer-view .insight-label {
+  font-size: 0.55rem;
+  text-transform: uppercase;
+  color: #555;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.move-explorer-view .insight-san {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--accent-primary);
+  line-height: 1;
+}
+
+.move-explorer-view .insight-summary {
+  display: flex;
+  gap: 12px;
+}
+
+.move-explorer-view .insight-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.move-explorer-view .insight-stat .val {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #ccc;
+}
+
+.move-explorer-view .insight-stat .lbl {
+  font-size: 0.5rem;
+  color: #555;
+  text-transform: uppercase;
+}
+
+.move-explorer-view .insight-history-compact {
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.move-explorer-view .top-valuations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.move-explorer-view .valuation-pill-large {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.move-explorer-view .v-icon {
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.move-explorer-view .v-count {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.move-explorer-view .v-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #777;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.move-explorer-view .no-errors-msg {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  color: #666;
+  font-weight: 600;
+  font-style: italic;
+}
