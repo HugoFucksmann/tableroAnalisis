@@ -3,6 +3,7 @@ import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { Loader, AlertCircle, BookOpen, Globe } from 'lucide-react';
 import { backendService } from '../../services/backendService';
+import { getPieceIcon } from '../../utils/chessUtils';
 import './OpeningExplorer.css';
 
 function sanToArrow(san, chessInstance, color = 'var(--arrow-explorer-hover)') {
@@ -14,219 +15,95 @@ function sanToArrow(san, chessInstance, color = 'var(--arrow-explorer-hover)') {
   } catch { return null; }
 }
 
-// ── Sección Polyglot ─────────────────────────────────────────────────────────
-function PolyglotSection({ moves, game, onHover, onLeave, onPlay }) {
-  if (!moves?.length) return null;
-  const totalW = moves.reduce((s, m) => s + m.weight, 0);
-
+const RenderMoveSAN = ({ san, turn }) => {
+  const pieceChar = san[0];
+  const isPiece = /^[KQRBN]/.test(pieceChar);
+  if (!isPiece) return <span className="move-san">{san}</span>;
+  const side = turn === 'w' ? 'white' : 'black';
   return (
-    <div className="explorer-section">
-      <div className="explorer-source-badge polyglot-badge">
-        <BookOpen size={10} />
-        <span>GM Book · gm2001</span>
-      </div>
-      <div className="moves-stats-list">
-        {moves.slice(0, 8).map(m => (
-          <div
-            key={m.san}
-            className="move-stat-row"
-            onMouseEnter={() => onHover(m.san)}
-            onMouseLeave={onLeave}
-            onClick={() => onPlay(m.san)}
-          >
-            <div className="move-san">{m.san}</div>
-            <div className="win-rate-bar">
-              <div
-                className="bar-segment polyglot-freq"
-                style={{ width: `${m.freq}%` }}
-              >
-                {m.freq > 12 && <span>{m.freq}%</span>}
-              </div>
-              <div className="bar-segment polyglot-rest" style={{ width: `${100 - m.freq}%` }} />
-            </div>
-            <div className="games-count poly-weight">w:{m.weight}</div>
-          </div>
-        ))}
+    <span className="move-san">
+      <span className={`piece-icon ${side}`}>{getPieceIcon(pieceChar, side)}</span>
+      {san.slice(1)}
+    </span>
+  );
+};
+
+const MoveRow = ({ move, type, turn, onHover, onLeave, onPlay }) => (
+  <div className="move-stat-row" onMouseEnter={() => onHover(move.san)} onMouseLeave={onLeave} onClick={() => onPlay(move.san)}>
+    <div className="move-san-container"><RenderMoveSAN san={move.san} turn={turn} /></div>
+    <div className="win-rate-bar-container">
+      <div className="win-rate-bar">
+        {type === 'offline' ? <div className="bar-segment tsv-freq" style={{ width: `${move.freq}%` }} /> : (
+          <><div className="bar-segment white" style={{ width: `${move.white}%` }} /><div className="bar-segment draw"  style={{ width: `${move.draw}%` }} /><div className="bar-segment black" style={{ width: `${move.black}%` }} /></>
+        )}
       </div>
     </div>
-  );
-}
+    <div className="games-count">{type === 'offline' ? <span className="count-label">Off</span> : (move.games >= 1000 ? `${(move.games/1000).toFixed(1)}k` : move.games)}</div>
+  </div>
+);
 
-// ── Sección Lichess ──────────────────────────────────────────────────────────
-function LichessSection({ data, loading, error, game, onHover, onLeave, onPlay }) {
-  if (loading && !data) {
-    return (
-      <div className="explorer-section">
-        <div className="explorer-source-badge lichess-badge">
-          <Globe size={10} />
-          <span>Lichess Masters</span>
-        </div>
-        <div className="explorer-state-msg compact">
-          <Loader className="gi-spin" size={16} />
-          <span>Cargando...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="explorer-section">
-        <div className="explorer-source-badge lichess-badge">
-          <Globe size={10} />
-          <span>Lichess Masters</span>
-        </div>
-        <div className="explorer-state-msg compact error-msg">
-          <AlertCircle size={14} />
-          <span>{error}</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (!data?.moves?.length) return null;
-
-  return (
-    <div className="explorer-section">
-      <div className="explorer-source-badge lichess-badge">
-        <Globe size={10} />
-        <span>Lichess · {data.opening}</span>
-      </div>
-      <div className="moves-stats-list">
-        {data.moves.slice(0, 8).map(move => (
-          <div
-            key={move.san}
-            className="move-stat-row"
-            onMouseEnter={() => onHover(move.san)}
-            onMouseLeave={onLeave}
-            onClick={() => onPlay(move.san)}
-          >
-            <div className="move-san">{move.san}</div>
-            <div className="win-rate-bar">
-              <div className="bar-segment white" style={{ width: `${move.white}%` }}>
-                {move.white > 15 && <span>{move.white}%</span>}
-              </div>
-              <div className="bar-segment draw" style={{ width: `${move.draw}%` }}>
-                {move.draw > 15 && <span>{move.draw}%</span>}
-              </div>
-              <div className="bar-segment black" style={{ width: `${move.black}%` }}>
-                {move.black > 15 && <span>{move.black}%</span>}
-              </div>
-            </div>
-            <div className="games-count">
-              {move.games >= 1000 ? `${(move.games / 1000).toFixed(1)}k` : move.games}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// ── Componente principal ─────────────────────────────────────────────────────
 export const OpeningExplorer = () => {
-  const {
-    setArrows, game, fen,
-    lichessToken, showTokenInput, setLichessToken, makeMove,
-  } = useGameStore(useShallow(state => ({
-    setArrows:      state.setArrows,
-    game:           state.game,
-    fen:            state.fen,
-    lichessToken:   state.lichessToken,
-    showTokenInput: state.showTokenInput,
-    setLichessToken: state.setLichessToken,
-    makeMove:       state.makeMove,
+  const { setArrows, game, fen, makeMove, lichessToken, showTokenInput, setLichessToken } = useGameStore(useShallow(state => ({
+    setArrows: state.setArrows, game: state.game, fen: state.fen, makeMove: state.makeMove,
+    lichessToken: state.lichessToken, showTokenInput: state.showTokenInput, setLichessToken: state.setLichessToken,
   })));
 
-  const [polyglotMoves, setPolyglotMoves] = React.useState([]);
-  const [lichessData,   setLichessData]   = React.useState(null);
+  const [bookData, setBookData] = React.useState({ moves: [], opening: '' });
+  const [lichessData, setLichessData] = React.useState(null);
   const [lichessLoading, setLichessLoading] = React.useState(false);
-  const [lichessError,   setLichessError]   = React.useState(null);
-  const [hoveredMove, setHovered] = React.useState(null);
+  const [lichessError, setLichessError] = React.useState(null);
+  const [isStale, setIsStale] = React.useState(false);
+
+  const turn = fen?.split(' ')[1] || 'w';
 
   React.useEffect(() => {
     let active = true;
-    setPolyglotMoves([]);
-    setLichessData(null);
-    setLichessError(null);
+    setIsStale(true); // Marcamos como "viejo" mientras cargamos lo nuevo
+    
+    // Debounce corto para offline, más largo para online
+    const offlineTimer = setTimeout(() => loadOffline(), 50);
+    const onlineTimer  = setTimeout(() => loadOnline(), 400);
 
-    const timer = setTimeout(() => {
-      loadBoth();
-    }, 600);
-
-    async function loadBoth() {
-      // ── Polyglot (paralelo) ──────────────────────────────────────────────
-      if (backendService.isConnected) {
-        backendService.request('get_book_moves', { fen }, 'book_moves')
-          .then(result => {
-            if (!active) return;
-            if (result.source === 'polyglot' && result.moves?.length > 0) {
-              setPolyglotMoves(result.moves);
-              // Flechas del libro: top 2 por defecto
-              const arrows = result.moves.slice(0, 2)
-                .map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)'))
-                .filter(Boolean);
-              setArrows(arrows);
-            }
-          })
-          .catch(() => {}); // silencioso si el backend no responde
-      }
-
-      // ── Lichess (paralelo) ───────────────────────────────────────────────
-      setLichessLoading(true);
+    async function loadOffline() {
+      if (!backendService.isConnected) return;
       try {
-        const cleanFen  = fen.trim().split(' ').slice(0, 4).join(' ');
-        const mastersUrl = `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`;
-        const playerUrl  = `https://explorer.lichess.ovh/lichess?fen=${encodeURIComponent(cleanFen)}&ratings=1800,2000,2200,2500`;
+        const result = await backendService.request('get_book_moves', { fen }, 'book_moves');
+        if (!active) return;
+        setBookData({ moves: result.moves || [], opening: result.opening || '' });
+        setIsStale(false);
+        const arrows = (result.moves || []).slice(0, 2).map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)')).filter(Boolean);
+        setArrows(arrows);
+      } catch (e) {}
+    }
 
+    async function loadOnline() {
+      setLichessLoading(true);
+      setLichessError(null);
+      try {
+        const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
+        const url = `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`;
         const headers = { 'Accept': 'application/json' };
-        if (lichessToken?.trim().length > 10) {
-          headers['Authorization'] = `Bearer ${lichessToken.trim()}`;
-        }
+        if (lichessToken?.trim().length > 10) headers['Authorization'] = `Bearer ${lichessToken.trim()}`;
 
-        let res = await fetch(mastersUrl, { headers });
-        let explorerData = { moves: [] };
-
-        if (res.ok) {
-          explorerData = await res.json();
-        } else if (res.status !== 401 && res.status !== 429) {
-          throw new Error(`Error del servidor Lichess (${res.status})`);
-        }
-
-        if (!explorerData.moves?.length) {
-          const resPlayer = await fetch(playerUrl, { headers });
-          if (resPlayer.ok) {
-            explorerData = await resPlayer.json();
-          } else if (resPlayer.status === 401 || resPlayer.status === 429) {
-            throw new Error('Configura tu Token de Lichess (🔑) para usar el explorador.');
-          } else {
-            throw new Error(`Error Lichess Players DB (${resPlayer.status})`);
-          }
-        }
-
+        const res = await fetch(url, { headers });
+        if (!res.ok) throw new Error(`Lichess ${res.status}`);
+        const data = await res.json();
         if (!active) return;
 
-        const rawName   = explorerData.opening?.name || '';
-        const colonIdx  = rawName.indexOf(':');
-        const cleanName = colonIdx !== -1 ? rawName.slice(0, colonIdx).trim() : rawName;
-
+        const cleanName = (data.opening?.name || '').split(':')[0].trim();
         setLichessData({
-          opening: cleanName || 'Teoría de Aperturas',
-          moves: (explorerData.moves || []).slice(0, 12).map(m => {
-            const w = m.white || 0;
-            const d = m.draws || m.draw || 0;
-            const b = m.black || 0;
-            const total = w + d + b;
+          opening: cleanName,
+          moves: (data.moves || []).slice(0, 10).map(m => {
+            const total = (m.white || 0) + (m.draws || 0) + (m.black || 0);
             return {
-              san:   m.san,
-              white: total > 0 ? Math.round((w / total) * 100) : 0,
-              draw:  total > 0 ? Math.round((d / total) * 100) : 0,
-              black: total > 0 ? Math.round((b / total) * 100) : 0,
+              san: m.san,
+              white: total > 0 ? Math.round((m.white / total) * 100) : 0,
+              draw:  total > 0 ? Math.round((m.draws / total) * 100) : 0,
+              black: total > 0 ? Math.round((m.black / total) * 100) : 0,
               games: total,
             };
           }),
         });
-
       } catch (err) {
         if (active) setLichessError(err.message);
       } finally {
@@ -234,81 +111,63 @@ export const OpeningExplorer = () => {
       }
     }
 
-    return () => { active = false; clearTimeout(timer); };
-  }, [fen, lichessToken, game, setArrows]);
+    return () => { active = false; clearTimeout(offlineTimer); clearTimeout(onlineTimer); };
+  }, [fen, game, setArrows, lichessToken]);
 
-  const handleHover = React.useCallback((san) => {
-    setHovered(san);
+  const handleHover = (san) => {
     const arrow = sanToArrow(san, game, 'var(--arrow-explorer-hover)');
     setArrows(arrow ? [arrow] : []);
-  }, [game, setArrows]);
+  };
 
-  const handleLeave = React.useCallback(() => {
-    setHovered(null);
-    // Restaurar flechas: Polyglot si disponible, sino Lichess
-    const source = polyglotMoves.length > 0 ? polyglotMoves : (lichessData?.moves ?? []);
-    const arrows = source.slice(0, 2)
-      .map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)'))
-      .filter(Boolean);
+  const handleLeave = () => {
+    const sourceMoves = bookData.moves.length > 0 ? bookData.moves : (lichessData?.moves ?? []);
+    const arrows = sourceMoves.slice(0, 2).map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)')).filter(Boolean);
     setArrows(arrows);
-  }, [game, setArrows, polyglotMoves, lichessData]);
+  };
 
-  const hasAnyData = polyglotMoves.length > 0 || lichessData || lichessLoading;
-
-  if (!hasAnyData && !lichessError) {
-    return (
-      <div className="explorer-container">
-        <div className="explorer-state-msg empty-msg">
-          <AlertCircle size={14} />
-          <span>No hay datos para esta posición.</span>
-        </div>
-      </div>
-    );
-  }
+  const hasAnyData = bookData.moves.length > 0 || lichessData;
 
   return (
-    <div className="explorer-container" onMouseLeave={handleLeave}>
+    <div className={`explorer-container-v2 ${isStale ? 'stale' : ''}`} onMouseLeave={handleLeave}>
       {showTokenInput && (
-        <div className="explorer-token-input-wrap">
-          <input
-            className="explorer-token-input"
-            type="password"
-            placeholder="Lichess Personal Token..."
-            value={lichessToken || ''}
-            onChange={(e) => setLichessToken(e.target.value)}
-          />
-          <p className="explorer-token-hint">
-            Ingresa tu token para evitar bloqueos por límite de peticiones.
-          </p>
+        <div className="explorer-header-mini">
+          <input className="explorer-token-input-mini" type="password" placeholder="Lichess Token..." value={lichessToken || ''} onChange={(e) => setLichessToken(e.target.value)} />
         </div>
       )}
 
-      {/* Sección Polyglot */}
-      {polyglotMoves.length > 0 && (
-        <PolyglotSection
-          moves={polyglotMoves}
-          game={game}
-          onHover={handleHover}
-          onLeave={handleLeave}
-          onPlay={makeMove}
-        />
-      )}
+      <div className="explorer-scroll-area premium-scroll">
+        {bookData.moves.length > 0 && (
+          <div className="explorer-subgroup">
+            <div className="subgroup-label"><BookOpen size={10} /> OFFLINE</div>
+            {bookData.moves.slice(0, 8).map(m => (
+              <MoveRow key={`off-${m.san}`} move={m} type="offline" turn={turn} onHover={handleHover} onLeave={handleLeave} onPlay={makeMove} />
+            ))}
+          </div>
+        )}
 
-      {/* Separador */}
-      {polyglotMoves.length > 0 && (lichessData || lichessLoading) && (
-        <div className="explorer-divider" />
-      )}
+        {bookData.moves.length > 0 && lichessData && <div className="subgroup-divider" />}
 
-      {/* Sección Lichess */}
-      <LichessSection
-        data={lichessData}
-        loading={lichessLoading}
-        error={lichessError}
-        game={game}
-        onHover={handleHover}
-        onLeave={handleLeave}
-        onPlay={makeMove}
-      />
+        {lichessLoading && !lichessData && (
+          <div className="explorer-loading-mini"><Loader className="gi-spin" size={14} /> <span>Sincronizando Lichess...</span></div>
+        )}
+        
+        {lichessError && (
+          <div className="explorer-error-mini"><AlertCircle size={12} /> <span>{lichessError}</span></div>
+        )}
+
+        {lichessData && (
+          <div className="explorer-subgroup">
+            <div className="subgroup-label"><Globe size={10} /> MASTERS</div>
+            {lichessData.moves.slice(0, 10).map(m => (
+              <MoveRow key={`on-${m.san}`} move={m} type="online" turn={turn} onHover={handleHover} onLeave={handleLeave} onPlay={makeMove} />
+            ))}
+          </div>
+        )}
+
+        {!hasAnyData && !isStale && (
+          <div className="explorer-empty-mini">Fuera de teoría</div>
+        )}
+      </div>
     </div>
   );
 };
