@@ -20,6 +20,7 @@ class BackendService {
         this.ws.onopen = () => {
             console.log('[BackendService] ✅ Conectado al backend nativo');
             this.isConnected = true;
+            this.handlers.forEach(h => h({ type: 'connection_status', connected: true }));
             if (this._reconnectTimer) {
                 clearInterval(this._reconnectTimer);
                 this._reconnectTimer = null;
@@ -39,6 +40,7 @@ class BackendService {
             console.warn('[BackendService] ❌ Conexión cerrada');
             this.isConnected = false;
             this.ws = null;
+            this.handlers.forEach(h => h({ type: 'connection_status', connected: false }));
 
             if (this.shouldBeConnected && !this._reconnectTimer) {
                 console.log('[BackendService] Intentando reconectar en 5s...');
@@ -66,7 +68,10 @@ class BackendService {
     }
 
     send(type, payload, requestId = null) {
-        if (!this.isConnected) return false;
+        if (!this.isConnected) {
+            console.warn(`[BackendService] ⚠️ Mensaje '${type}' descartado: no hay conexión.`);
+            return false;
+        }
         const msg = { type, ...payload };
         if (requestId) msg.requestId = requestId;
         this.ws.send(JSON.stringify(msg));

@@ -1,7 +1,7 @@
 import React from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
-import { Search, BrainCircuit, BarChart3 } from 'lucide-react';
+import { Search, BrainCircuit, BarChart3, Compass } from 'lucide-react';
 import './ModeSelector.css';
 
 export const ModeSelector = () => {
@@ -16,10 +16,11 @@ export const ModeSelector = () => {
         <div 
           className={`mode-selector-highlight ${appMode}`} 
           style={{ 
-            width: '33.33%',
+            width: '25%',
             transform: `translateX(${
               appMode === 'analysis' ? '0%' : 
-              appMode === 'puzzle' ? '100%' : '200%'
+              appMode === 'explorer' ? '100%' :
+              appMode === 'puzzle' ? '200%' : '300%'
             })` 
           }}
         />
@@ -30,6 +31,14 @@ export const ModeSelector = () => {
         >
           <Search size={16} />
           <span>Análisis</span>
+        </button>
+
+        <button 
+          className={`mode-btn ${appMode === 'explorer' ? 'active' : ''}`}
+          onClick={() => setAppMode('explorer')}
+        >
+          <Compass size={16} />
+          <span>Explorador</span>
         </button>
         
         <button 

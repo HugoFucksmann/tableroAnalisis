@@ -15,6 +15,7 @@ import { EngineConfigModal } from '../Import/EngineConfigModal';
 import { ModeSelector } from './ModeSelector';
 import { PuzzleDashboard } from '../Puzzle/PuzzleDashboard';
 import { StatsDashboard } from '../Stats/StatsDashboard';
+import { MoveExplorerView } from '../Puzzle/MoveExplorerView';
 import { backendService } from '../../services/backendService';
 import './Dashboard.css';
 
@@ -105,7 +106,8 @@ export const Dashboard = () => {
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, hasPgnEvaluations, startFullAnalysis,
-    analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId
+    analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId,
+    setAppMode, setExplorerMode
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -119,18 +121,41 @@ export const Dashboard = () => {
     appMode: state.appMode,
     applyFullAnalysis: state.applyFullAnalysis,
     setAnalyses: state.setAnalyses,
-    gameId: state.gameId
+    gameId: state.gameId,
+    setAppMode: state.setAppMode,
+    setExplorerMode: state.setExplorerMode
   })));
 
   useEffect(() => {
+    setExplorerMode(appMode === 'explorer');
+  }, [appMode, setExplorerMode]);
+
+  useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
+      if (msg.type === 'connection_status' && msg.connected) {
+        backendService.getAnalyses(0, 50);
+      }
       if (msg.type === 'full_analysis_data') {
         applyFullAnalysis(msg.data);
       }
       if (msg.type === 'analyses_list') {
-        setAnalyses(msg.analyses);
+        if (msg.offset === 0) {
+          setAnalyses(msg.analyses);
+        } else {
+          setAnalyses(prev => {
+            const existingIds = new Set(prev.map(a => a.id));
+            const newItems = msg.analyses.filter(a => !existingIds.has(a.id));
+            return [...prev, ...newItems];
+          });
+        }
       }
     });
+
+    // Si ya está conectado al montar, pedir la lista
+    if (backendService.isConnected) {
+      backendService.getAnalyses(0, 50);
+    }
+
     return () => cleanup();
   }, [applyFullAnalysis, setAnalyses]);
 
@@ -182,16 +207,6 @@ export const Dashboard = () => {
             </div>
 
             <div className="global-action-buttons">
-              {appMode === 'analysis' && (
-                <button
-                  className={`global-action-btn analyze-btn ${history.length > 0 ? 'ready' : ''} ${analysisReady ? 're-analyze' : ''}`}
-                  title={analysisReady ? "Volver a analizar (Sobrescribir)" : (history.length > 0 ? "Analizar Partida con Stockfish" : "Haz movimientos para analizar")}
-                  onClick={() => startFullAnalysis()}
-                  disabled={history.length === 0}
-                >
-                  <Cpu size={15} />
-                </button>
-              )}
               <button
                 className="global-action-btn"
                 title="Configurar motor de análisis"
@@ -218,14 +233,27 @@ export const Dashboard = () => {
                 <div className="panel-header" onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}>
                   <h3>Historial</h3>
                   <div className="panel-actions">
-                    {analysisReady && !isHistoryCollapsed && (
-                      <button
-                        className="panel-action-btn"
-                        onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
-                        title="Descargar PGN Anotado"
-                      >
-                        <Download size={14} />
-                      </button>
+                    {!isHistoryCollapsed && (
+                      <>
+                        <button
+                          className={`panel-action-btn ${history.length > 0 ? 'ready' : ''} ${analysisReady ? 're-analyze' : ''}`}
+                          title={analysisReady ? "Volver a analizar (Sobrescribir)" : (history.length > 0 ? "Analizar Partida con Stockfish" : "Haz movimientos para analizar")}
+                          onClick={(e) => { e.stopPropagation(); startFullAnalysis(); }}
+                          disabled={history.length === 0}
+                        >
+                          <Cpu size={14} />
+                        </button>
+
+                        {analysisReady && (
+                          <button
+                            className="panel-action-btn"
+                            onClick={(e) => { e.stopPropagation(); handleDownloadPgn(); }}
+                            title="Descargar PGN Anotado"
+                          >
+                            <Download size={14} />
+                          </button>
+                        )}
+                      </>
                     )}
                     <span className="collapse-toggle">{isHistoryCollapsed ? '+' : '−'}</span>
                   </div>
@@ -271,6 +299,7 @@ export const Dashboard = () => {
 
           {appMode === 'puzzle' && <PuzzleDashboard />}
           {appMode === 'stats' && <StatsDashboard />}
+          {appMode === 'explorer' && <MoveExplorerView onBack={() => useGameStore.getState().setAppMode('analysis')} />}
         </aside>
       </main>
 

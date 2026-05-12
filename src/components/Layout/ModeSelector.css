@@ -70,3 +70,16 @@
   transform: scale(1.1);
   filter: drop-shadow(0 0 5px var(--accent-glow));
 }
+
+@media (max-width: 500px) {
+  .mode-btn span {
+    display: none;
+  }
+  .mode-btn {
+    padding: var(--space-2) var(--space-2);
+  }
+  .mode-selector-track {
+    gap: var(--space-1);
+    justify-content: space-around;
+  }
+}

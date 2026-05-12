@@ -24,9 +24,9 @@ export const useLiveEvaluation = () => {
         const isExplorerMode = state.explorerMode;
         const explorerEnabled = state.explorerAnalysisEnabled;
 
-        // Si estamos en modo puzzle/explorer, solo analizar si el usuario lo activó explícitamente
-        if (state.appMode === 'puzzle') {
-            if (!isExplorerMode || !explorerEnabled) return;
+        // Si estamos en modo puzzle o explorador, solo analizar si el usuario lo activó explícitamente
+        if (state.appMode === 'puzzle' || state.appMode === 'explorer') {
+            if (!explorerEnabled) return;
         }
 
         if (!needsLiveAnalysis || currentMoveIndex < -1 || isFullGameAnalysisRunning) return;

@@ -92,7 +92,7 @@ export const StatsDashboard = () => {
 
   const [timeFilter, setTimeFilter] = useState('all');
   const [durationFilter, setDurationFilter] = useState('all');
-  const [countFilter, setCountFilter] = useState('25');
+  const [countFilter, setCountFilter] = useState('all');
 
   const lastStatsRequestId = React.useRef(null);
   const filterTimeoutRef = React.useRef(null);
@@ -100,6 +100,9 @@ export const StatsDashboard = () => {
   // ── Handlers de mensajes ───────────────────────────────────────
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
+      if (msg.type === 'connection_status' && msg.connected) {
+        fetchStats(true);
+      }
       if (msg.type === 'stats_data') { 
         if (lastStatsRequestId.current && msg.requestId !== lastStatsRequestId.current) {
           return;
@@ -157,8 +160,8 @@ export const StatsDashboard = () => {
   }, [historyOffset]);
 
   // ── Actualización por filtros (Debounced) ───────────────────
-  const fetchStats = useCallback(() => {
-    if (loading) return; // Evitar fetch si ya estamos en carga inicial
+  const fetchStats = useCallback((force = false) => {
+    if (loading && !force) return; // Evitar fetch si ya estamos en carga inicial, a menos que sea forzado
     
     setIsFiltering(true);
     const reqId = Math.random().toString(36).substring(7);

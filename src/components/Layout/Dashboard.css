@@ -302,17 +302,16 @@ body.is-resizing {
   color: var(--text-muted);
 }
 
-.global-action-btn.analyze-btn.ready {
-  color: var(--accent-primary);
+.panel-action-btn.ready {
+  color: var(--accent-primary) !important;
   filter: drop-shadow(0 0 4px var(--accent-glow));
 }
 
-.global-action-btn.analyze-btn.ready:hover {
-  background: var(--accent-glow-muted);
-  color: var(--accent-primary);
+.panel-action-btn.ready:hover {
+  background: var(--accent-glow-muted) !important;
 }
 
-.global-action-btn.analyze-btn.ready.re-analyze {
+.panel-action-btn.ready.re-analyze {
   animation: analyze-pulse 2s infinite ease-in-out;
 }
 

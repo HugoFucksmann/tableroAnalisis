@@ -58,14 +58,6 @@ export const PuzzleDashboard = () => {
             </div>
           </button>
 
-          <button className="puzzle-menu-btn explorer" onClick={() => handleSetView('explorer')}>
-            <Search size={20} />
-            <div className="btn-text">
-              <span className="btn-title">Explorador de Repertorio</span>
-              <span className="btn-desc">Analiza tus jugadas más frecuentes</span>
-            </div>
-          </button>
-
           <button className="puzzle-menu-btn import" onClick={() => handleSetView('import')}>
             <Download size={20} />
             <div className="btn-text">
@@ -73,7 +65,6 @@ export const PuzzleDashboard = () => {
               <span className="btn-desc">Buscar errores en nuevas partidas</span>
             </div>
           </button>
-
           <button className="puzzle-menu-btn manage" onClick={() => handleSetView('manage')}>
             <Library size={20} />
             <div className="btn-text">

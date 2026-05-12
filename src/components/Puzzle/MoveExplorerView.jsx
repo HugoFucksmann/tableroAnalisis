@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { backendService } from '../../services/backendService';
 import {
   BarChart2, User, Users, ChevronLeft, ChevronRight,
-  ChevronsLeft, ChevronsRight, Loader2, Award, Cpu
+  ChevronsLeft, ChevronsRight, Loader2, Award, Cpu, X
 } from 'lucide-react';
 import { analysisBridge } from '../../services/analysisBridge';
 import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
@@ -46,7 +46,9 @@ export const MoveExplorerView = ({ onBack }) => {
     setAlternativeLinesForIndex,
     setAnalyzing,
     explorerAnalysisEnabled,
-    setExplorerAnalysisEnabled
+    setExplorerAnalysisEnabled,
+    evaluationHistory,
+    moveEvaluations
   } = useGameStore(useShallow(state => ({
     fen: state.fen,
     explorerData: state.explorerData,
@@ -76,15 +78,107 @@ export const MoveExplorerView = ({ onBack }) => {
     setAnalyzing: state.setAnalyzing,
     explorerAnalysisEnabled: state.explorerAnalysisEnabled,
     setExplorerAnalysisEnabled: state.setExplorerAnalysisEnabled,
+    evaluationHistory: state.evaluationHistory,
+    moveEvaluations: state.moveEvaluations
   })));
+
+  const currentEval = evaluationHistory[currentMoveIndex];
 
   const [loading, setLoading] = useState(false);
   const [isStale, setIsStale] = useState(false);
   const [loadingMasters, setLoadingMasters] = useState(false);
+  const [lastMoveStats, setLastMoveStats] = useState(null);
   const lastScrollTime = useRef(0);
   const loadingTimerRef = useRef(null);
 
+  // ─── Capturar estadísticas del movimiento realizado ─────────────────────────
+  useEffect(() => {
+    if (history.length > 0 && currentMoveIndex >= 0) {
+      const lastMove = history[currentMoveIndex];
+      const perspective = lastMove.color === 'w' ? explorerData?.whitePerspective : explorerData?.blackPerspective;
+      const stats = perspective?.userMoves?.find(m => m.san === lastMove.san) || 
+                    perspective?.opponentMoves?.find(m => m.san === lastMove.san);
+      
+      if (stats) {
+        setLastMoveStats({ ...stats, color: lastMove.color });
+      }
+    }
+  }, [fen, currentMoveIndex, explorerData]);
+
   // ─── Helpers ────────────────────────────────────────────────────────────────
+
+  const renderSan = (san) => {
+    const pieceIcons = {
+      'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔'
+    };
+    const firstChar = san[0];
+    if (pieceIcons[firstChar]) {
+      return (
+        <>
+          <span className="piece-icon-not">{pieceIcons[firstChar]}</span>
+          {san.substring(1)}
+        </>
+      );
+    }
+    return san;
+  };
+
+  const MoveInsightCard = ({ stats }) => {
+    if (!stats) return null;
+
+    const totalGames = stats.count;
+    const labels = stats.labels || {};
+    
+    // Obtener las 3 valoraciones más frecuentes
+    const topLabels = Object.entries(labels)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3);
+
+    return (
+      <div className="move-insight-card">
+        <div className="insight-header">
+          <div className="insight-san-box">
+            <span className="insight-label">Análisis de la última jugada</span>
+            <span className="insight-san">{renderSan(stats.san)}</span>
+          </div>
+          <div className="insight-summary">
+            <div className="insight-stat">
+              <span className="val">{totalGames}</span>
+              <span className="lbl">Partidas</span>
+            </div>
+            <div className="insight-stat">
+              <span className={`val ${parseFloat(stats.avgEval) > 0 ? 'pos' : 'neg'}`}>
+                {stats.avgEval > 0 ? '+' : ''}{stats.avgEval || '0.0'}
+              </span>
+              <span className="lbl">Eval. Media</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="insight-history-compact">
+          {topLabels.length > 0 ? (
+            <div className="top-valuations">
+              {topLabels.map(([label, count]) => {
+                const config = EVAL_CONFIG[label] || SPECIAL_LABELS[label];
+                return (
+                  <div key={label} className="valuation-pill-large" style={{ backgroundColor: config?.bg || 'rgba(255,255,255,0.05)' }}>
+                    <span className="v-icon" style={{ color: config?.color }}>{config?.icon || '?'}</span>
+                    <span className="v-count">{count}</span>
+                    <span className="v-label">{label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="no-errors-msg">
+              <span className="v-icon" style={{ color: '#4caf50' }}>✓</span>
+              Sin errores registrados en esta posición
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
 
   const updatePlayerNames = useCallback((color) => {
     const name = searchUsername || 'Mi Usuario';
@@ -231,24 +325,7 @@ export const MoveExplorerView = ({ onBack }) => {
     // exactamente cuando cambia fen.
   }, [fen, fetchExplorerData, fetchMastersData, setExplorerData, setHoveredExplorerMove]);
 
-  // ─── Navegación con rueda del ratón ─────────────────────────────────────────
 
-  const handleWheel = (e) => {
-    const now = performance.now();
-    if (now - lastScrollTime.current < 80) return;
-
-    if (e.deltaY > 0) {
-      if (currentMoveIndex < history.length - 1) {
-        goToMove(currentMoveIndex + 1);
-        lastScrollTime.current = now;
-      }
-    } else if (e.deltaY < 0) {
-      if (currentMoveIndex >= 0) {
-        goToMove(currentMoveIndex - 1);
-        lastScrollTime.current = now;
-      }
-    }
-  };
 
   const handleMoveClick = (san) => {
     makeMove(san);
@@ -256,20 +333,15 @@ export const MoveExplorerView = ({ onBack }) => {
 
   // ─── Renderizado de sección de movimientos ───────────────────────────────────
 
-  const renderMoveSection = (moves, title, icon, isMaster = false, isLoading = false) => (
+  const renderMoveSection = (moves, title, isMaster = false, isLoading = false) => (
     <section className="explorer-section">
       <div className="section-header">
-        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          {icon} {title}
-        </span>
-        {isLoading
-          ? <Loader2 className="gi-spin" size={10} />
-          : <span className="count-badge">{moves?.length || 0} jugadas</span>
-        }
+        <span>{title}</span>
+        {isLoading && <Loader2 className="gi-spin" size={10} />}
       </div>
       <div className="moves-list">
         {moves?.length > 0 ? (
-          moves.slice(0, 10).map((move) => (
+          moves.slice(0, 15).map((move) => (
             <div
               key={move.san}
               className="move-row"
@@ -277,55 +349,32 @@ export const MoveExplorerView = ({ onBack }) => {
               onMouseEnter={() => setHoveredExplorerMove(move.san)}
               onMouseLeave={() => setHoveredExplorerMove(null)}
             >
-              <div className="move-san">{move.san}</div>
+              <div className="move-main-info">
+                <div className="move-san-group">
+                  <span className="move-san">{renderSan(move.san)}</span>
+                </div>
 
-              <div className="move-stats-main">
-                {/* BUG #3: move-wr-label, eval-text, eval-pos, eval-neg ahora
-                    tienen estilos definidos en el CSS */}
-                <div className="move-wr-label">
-                  <span className="wr-text">
-                    {isMaster
-                      ? `W:${move.white}% D:${move.draws}% B:${move.black}%`
-                      : `Win Rate: ${move.winRate}%`
-                    }
+                <div className="move-stats-row">
+                  <div className="win-rate-bar-compact">
+                    <div className="bar-seg w" style={{ width: `${isMaster ? move.white : move.winRate}%` }} />
+                    <div className="bar-seg d" style={{ width: `${isMaster ? move.draws : move.drawRate}%` }} />
+                    <div className="bar-seg l" style={{ width: `${isMaster ? move.black : move.lossRate}%` }} />
+                  </div>
+                  <span className="wr-val">
+                    {isMaster ? `${move.white}%` : `${move.winRate}%`}
                   </span>
                   {!isMaster && move.avgEval != null && (
-                    <span className={`eval-text ${parseFloat(move.avgEval) > 0 ? 'eval-pos' : 'eval-neg'}`}>
+                    <span className={`eval-mini ${parseFloat(move.avgEval) > 0 ? 'pos' : 'neg'}`}>
                       {parseFloat(move.avgEval) > 0 ? '+' : ''}{move.avgEval}
                     </span>
                   )}
                 </div>
-                <div className="win-rate-bar">
-                  <div className="bar-seg w" style={{ width: `${isMaster ? move.white : move.winRate}%` }} />
-                  <div className="bar-seg d" style={{ width: `${isMaster ? move.draws : move.drawRate}%` }} />
-                  <div className="bar-seg l" style={{ width: `${isMaster ? move.black : move.lossRate}%` }} />
-                </div>
-
-                {!isMaster && move.labels && Object.keys(move.labels).length > 0 && (
-                  <div className="move-labels-row">
-                    {Object.entries(move.labels).map(([label, count]) => {
-                      const config = EVAL_CONFIG[label] || SPECIAL_LABELS[label];
-                      return (
-                        <div 
-                          key={label} 
-                          className="label-pill" 
-                          style={{ backgroundColor: config?.bg || config?.color || '#555' }}
-                          title={`${label}: ${count}`}
-                        >
-                          <span className="label-icon-wrapper">{config?.icon || config?.label || label[0]}</span>
-                          {count > 1 && <span className="label-count-inner">{count}</span>}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
               </div>
 
-              <div className="move-count-area">
-                <span className="count-val">
+              <div className="move-right-area">
+                <span className="count-number">
                   {move.count >= 1000 ? `${(move.count / 1000).toFixed(1)}k` : move.count}
                 </span>
-                <span className="count-lbl">{isMaster ? 'Games' : 'Partidas'}</span>
               </div>
             </div>
           ))
@@ -338,7 +387,9 @@ export const MoveExplorerView = ({ onBack }) => {
     </section>
   );
 
-  // ─── Derivar datos según perspectiva activa ──────────────────────────────────
+  // ─── Derivar datos según perspectiva activa y turno ─────────────────────────
+  const isWhiteTurn = fen.split(' ')[1] === 'w';
+  const isUserTurn = (playerColor === 'white' && isWhiteTurn) || (playerColor === 'black' && !isWhiteTurn);
 
   const perspectiveData = playerColor === 'white'
     ? explorerData?.whitePerspective
@@ -347,20 +398,78 @@ export const MoveExplorerView = ({ onBack }) => {
   const userMoves = perspectiveData?.userMoves || [];
   const opponentMoves = perspectiveData?.opponentMoves || [];
 
+  const handleWheel = useCallback((e) => {
+    // Si el mouse está sobre la lista de movimientos (premium-scroll), permitimos el scroll normal de la lista
+    if (e.target.closest('.premium-scroll')) return;
+    
+    e.preventDefault();
+    const now = Date.now();
+    if (now - lastScrollTime.current < 200) return;
+
+    if (e.deltaY > 0) {
+      // Intentar ir al siguiente movimiento en la historia
+      if (currentMoveIndex < history.length - 1) {
+        goToMove(currentMoveIndex + 1);
+        lastScrollTime.current = now;
+      } 
+      // Si estamos al final de la historia, jugar la línea principal del explorador
+      else {
+        const perspective = isWhiteTurn ? explorerData?.whitePerspective : explorerData?.blackPerspective;
+        const allMoves = [...(perspective?.userMoves || []), ...(perspective?.opponentMoves || [])];
+        if (allMoves.length > 0) {
+          // El primer movimiento de la lista ya está ordenado por 'count' (línea principal)
+          const mainMove = allMoves[0];
+          makeMove(mainMove.san);
+          lastScrollTime.current = now;
+        }
+      }
+    } else if (e.deltaY < 0) {
+      // Retroceder en la historia
+      if (currentMoveIndex > -1) {
+        goToMove(currentMoveIndex - 1);
+        lastScrollTime.current = now;
+      }
+    }
+  }, [currentMoveIndex, history, goToMove, makeMove, explorerData, isWhiteTurn]);
+
   // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="move-explorer-view" onWheel={handleWheel}>
       <header className="explorer-header">
         <div className="header-top">
-          <div className="explorer-title">
-            <BarChart2 size={16} className="text-accent" />
-            Explorador de Movimientos
+          <div className="explorer-title-area">
+            <div className="explorer-title">
+              <BarChart2 size={16} className="text-accent" />
+              Explorador
+            </div>
+            <div className="opening-info-compact">
+              <span className="eco-badge">{ecoCode || '---'}</span>
+              <span className="opening-name" title={openingName || 'Posición personalizada'}>
+                {openingName || 'Sin apertura definida'}
+              </span>
+              {explorerAnalysisEnabled && (
+                <div className="live-eval-group">
+                  <div className={`live-eval-badge ${currentEval?.score > 0 ? 'pos' : 'neg'}`}>
+                    {currentEval ? (
+                      `${currentEval.score > 0 ? '+' : ''}${currentEval.score}`
+                    ) : '...'}
+                  </div>
+                  {moveEvaluations[currentMoveIndex] && (
+                    <div 
+                      className="current-move-valuation"
+                      style={{ color: EVAL_CONFIG[moveEvaluations[currentMoveIndex].label]?.color || '#fff' }}
+                      title={moveEvaluations[currentMoveIndex].label}
+                    >
+                      {EVAL_CONFIG[moveEvaluations[currentMoveIndex].label]?.icon || '?'}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="header-actions">
-            {/* BUG #1 CORREGIDO: cada botón establece su propio color
-                en lugar de alternar ciegamente */}
             <div className="perspective-toggle">
               <button
                 className={`toggle-btn ${playerColor === 'white' ? 'active' : ''}`}
@@ -382,19 +491,8 @@ export const MoveExplorerView = ({ onBack }) => {
               onClick={handleQuickAnalysis}
               title={explorerAnalysisEnabled ? "Desactivar análisis en vivo" : "Activar análisis en vivo"}
             >
-              <Cpu size={14} className={explorerAnalysisEnabled ? 'gi-spin' : ''} />
+              <Cpu size={14} />
             </button>
-            <button className="explorer-close-btn" onClick={onBack}>
-              <ChevronLeft size={13} style={{ marginRight: '4px' }} />
-              Cerrar
-            </button>
-          </div>
-        </div>
-
-        <div className="opening-info">
-          <div className="eco-badge">{ecoCode || '---'}</div>
-          <div className="opening-name" title={openingName || 'Posición personalizada'}>
-            {openingName || 'Sin apertura definida'}
           </div>
         </div>
       </header>
@@ -439,26 +537,31 @@ export const MoveExplorerView = ({ onBack }) => {
       </nav>
 
       <div className={`explorer-content premium-scroll ${isStale ? 'stale-overlay' : ''}`}>
+        <MoveInsightCard stats={lastMoveStats} />
+        
         {/* BUG #3 CORREGIDO: .explorer-grids ahora tiene estilos en el CSS */}
         <div className="explorer-grids">
-          {renderMoveSection(
-            userMoves,
-            `Mis Jugadas (${playerColor === 'white' ? 'W' : 'B'})`,
-            <User size={12} />,
-            false,
-            loading
+          {isUserTurn ? (
+            renderMoveSection(
+              userMoves,
+              `Mis Jugadas (${playerColor === 'white' ? 'W' : 'B'})`,
+              false,
+              loading
+            )
+          ) : (
+            renderMoveSection(
+              opponentMoves,
+              'Jugadas Rival',
+              false,
+              loading
+            )
           )}
-          {renderMoveSection(
-            opponentMoves,
-            'Jugadas Rival',
-            <Users size={12} />,
-            false,
-            loading
-          )}
+          
+          <div className="explorer-divider-soft" />
+
           {renderMoveSection(
             mastersData,
             'Maestros (Lichess)',
-            <Award size={12} />,
             true,
             loadingMasters
           )}
