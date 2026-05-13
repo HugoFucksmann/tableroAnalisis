@@ -33,8 +33,6 @@ export const MoveExplorerView = ({ onBack }) => {
     setEcoCode,
     openingName,
     ecoCode,
-    explorerAnalysisEnabled,
-    setExplorerAnalysisEnabled,
     evaluationHistory,
     moveEvaluations
   } = useGameStore(useShallow(state => ({
@@ -58,8 +56,6 @@ export const MoveExplorerView = ({ onBack }) => {
     setEcoCode: state.setEcoCode,
     openingName: state.openingName,
     ecoCode: state.ecoCode,
-    explorerAnalysisEnabled: state.explorerAnalysisEnabled,
-    setExplorerAnalysisEnabled: state.setExplorerAnalysisEnabled,
     evaluationHistory: state.evaluationHistory,
     moveEvaluations: state.moveEvaluations
   })));
@@ -160,18 +156,11 @@ export const MoveExplorerView = ({ onBack }) => {
     }
   }, [fen, setMastersData, lichessToken, setOpeningName, setEcoCode]);
 
-  const handleQuickAnalysis = useCallback(() => {
-    const newValue = !explorerAnalysisEnabled;
-    setExplorerAnalysisEnabled(newValue);
-    if (!newValue) analysisBridge.cancel();
-  }, [explorerAnalysisEnabled, setExplorerAnalysisEnabled]);
-
   useEffect(() => {
     return () => {
-      setExplorerAnalysisEnabled(false);
       analysisBridge.cancel();
     };
-  }, [setExplorerAnalysisEnabled]);
+  }, []);
 
   useEffect(() => {
     const currentCleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
@@ -238,13 +227,11 @@ export const MoveExplorerView = ({ onBack }) => {
       <ExplorerHeader 
         ecoCode={ecoCode}
         openingName={openingName}
-        explorerAnalysisEnabled={explorerAnalysisEnabled}
         currentEval={currentEval}
         moveEvaluations={moveEvaluations}
         currentMoveIndex={currentMoveIndex}
         playerColor={playerColor}
         handleSetColor={handleSetColor}
-        handleQuickAnalysis={handleQuickAnalysis}
       />
 
       <ExplorerNav 

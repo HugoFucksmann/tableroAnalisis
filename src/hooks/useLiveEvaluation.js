@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { analysisBridge } from '../services/analysisBridge';
+import { backendService } from '../services/backendService';
 
 export const useLiveEvaluation = () => {
     const fen = useGameStore(state => state.fen);
@@ -10,23 +11,26 @@ export const useLiveEvaluation = () => {
     const setEvaluation = useGameStore(state => state.setEvaluation);
     const setBestMoveForIndex = useGameStore(state => state.setBestMoveForIndex);
     const setAlternativeLinesForIndex = useGameStore(state => state.setAlternativeLinesForIndex);
-    const explorerAnalysisEnabled = useGameStore(state => state.explorerAnalysisEnabled);
     const appMode = useGameStore(state => state.appMode);
+    
+    const [isConnected, setIsConnected] = useState(backendService.isConnected);
+
+    useEffect(() => {
+        const removeHandler = backendService.addHandler((msg) => {
+            if (msg.type === 'connection_status') {
+                setIsConnected(msg.connected);
+            }
+        });
+        return removeHandler;
+    }, []);
 
     useEffect(() => {
         const state = useGameStore.getState();
-        const hasEval = !!state.evaluationHistory[currentMoveIndex];
-        const cachedLinesCount = state.alternativeLines?.[currentMoveIndex]?.length || 0;
-        const targetMultiPv = state.engineConfig?.liveMultiPv || 3;
-        const needsLiveAnalysis = !hasEval || cachedLinesCount < targetMultiPv;
 
         // Evitar interrumpir un análisis de partida completa en curso
         const isFullGameAnalysisRunning = state.isReviewRequested && !state.analysisReady;
 
-        // Solo analizar si el usuario lo activó explícitamente (en cualquier modo)
-        if (!explorerAnalysisEnabled) return;
-
-        if (!needsLiveAnalysis || currentMoveIndex < -1 || isFullGameAnalysisRunning) return;
+        if (currentMoveIndex < -1 || isFullGameAnalysisRunning) return;
 
         let isActive = true;
 
@@ -44,5 +48,5 @@ export const useLiveEvaluation = () => {
             isActive = false;
             analysisBridge.cancel();
         };
-    }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing, explorerAnalysisEnabled, appMode]);
+    }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing, appMode, isConnected]);
 };

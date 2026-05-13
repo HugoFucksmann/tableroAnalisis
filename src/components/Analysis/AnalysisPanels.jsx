@@ -21,24 +21,13 @@ export const AnalysisPanels = ({
   explorerTitle,
   lichessToken,
   showTokenInput,
-  setShowTokenInput,
-  explorerAnalysisEnabled,
-  setExplorerAnalysisEnabled
+  setShowTokenInput
 }) => {
   return (
     <>
       <div className="panel-container controls-panel">
         <div className="panel-header">
           <h3>Análisis</h3>
-          <div className="panel-actions">
-            <button
-              className={`panel-action-btn ${explorerAnalysisEnabled ? 'active analyzing' : ''}`}
-              title={explorerAnalysisEnabled ? "Desactivar motor en vivo" : "Activar motor en vivo"}
-              onClick={() => setExplorerAnalysisEnabled(!explorerAnalysisEnabled)}
-            >
-              <Cpu size={14} />
-            </button>
-          </div>
         </div>
         <div className="controls-content">
           <EvaluationGraph />

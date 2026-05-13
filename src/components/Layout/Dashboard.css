@@ -379,9 +379,9 @@ body.is-resizing {
   .move-list-body (MoveList.css), no aquí.
 */
 .move-history-panel:not(.collapsed) {
-  flex-grow: 3;
+  flex-grow: 1;
   flex-shrink: 1;
-  min-height: 100px;
+  min-height: 150px;
 }
 
 .move-history-panel>div:not(.panel-header) {
@@ -391,9 +391,10 @@ body.is-resizing {
 }
 
 .explorer-panel:not(.collapsed) {
-  flex-grow: 2;
+  flex-grow: 0;
   flex-shrink: 1;
-  min-height: 100px;
+  max-height: 50%;
+  min-height: 0;
 }
 
 .explorer-panel>div:not(.panel-header) {

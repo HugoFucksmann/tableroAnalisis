@@ -6,13 +6,11 @@ import { EVAL_CONFIG } from '../../../constants/chessConstants.jsx';
 export const ExplorerHeader = ({ 
   ecoCode, 
   openingName, 
-  explorerAnalysisEnabled, 
   currentEval, 
   moveEvaluations, 
   currentMoveIndex,
   playerColor,
-  handleSetColor,
-  handleQuickAnalysis
+  handleSetColor
 }) => {
   return (
     <header className="explorer-header">
@@ -27,24 +25,22 @@ export const ExplorerHeader = ({
             <span className="opening-name" title={openingName || 'Posición personalizada'}>
               {openingName || 'Sin apertura definida'}
             </span>
-            {explorerAnalysisEnabled && (
-              <div className="live-eval-group">
-                <div className={`live-eval-badge ${currentEval?.score > 0 ? 'pos' : 'neg'}`}>
-                  {currentEval ? (
-                    `${currentEval.score > 0 ? '+' : ''}${currentEval.score}`
-                  ) : '...'}
-                </div>
-                {moveEvaluations[currentMoveIndex] && (
-                  <div 
-                    className="current-move-valuation"
-                    style={{ color: EVAL_CONFIG[moveEvaluations[currentMoveIndex].label]?.color || '#fff' }}
-                    title={moveEvaluations[currentMoveIndex].label}
-                  >
-                    {EVAL_CONFIG[moveEvaluations[currentMoveIndex].label]?.icon || '?'}
-                  </div>
-                )}
+            <div className="live-eval-group">
+              <div className={`live-eval-badge ${currentEval?.score > 0 ? 'pos' : 'neg'}`}>
+                {currentEval ? (
+                  `${currentEval.score > 0 ? '+' : ''}${currentEval.score}`
+                ) : '...'}
               </div>
-            )}
+              {moveEvaluations[currentMoveIndex] && (
+                <div 
+                  className="current-move-valuation"
+                  style={{ color: EVAL_CONFIG[moveEvaluations[currentMoveIndex].label]?.color || '#fff' }}
+                  title={moveEvaluations[currentMoveIndex].label}
+                >
+                  {EVAL_CONFIG[moveEvaluations[currentMoveIndex].label]?.icon || '?'}
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
@@ -65,13 +61,6 @@ export const ExplorerHeader = ({
               B
             </button>
           </div>
-          <button 
-            className={`explorer-action-btn ${explorerAnalysisEnabled ? 'analyzing' : ''}`}
-            onClick={handleQuickAnalysis}
-            title={explorerAnalysisEnabled ? "Desactivar análisis en vivo" : "Activar análisis en vivo"}
-          >
-            <Cpu size={14} />
-          </button>
         </div>
       </div>
     </header>

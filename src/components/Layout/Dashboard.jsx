@@ -31,7 +31,7 @@ export const Dashboard = () => {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, hasPgnEvaluations, startFullAnalysis,
     analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId,
-    setAppMode, setExplorerMode, explorerAnalysisEnabled, setExplorerAnalysisEnabled
+    setAppMode, setExplorerMode
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -48,8 +48,6 @@ export const Dashboard = () => {
     gameId: state.gameId,
     setAppMode: state.setAppMode,
     setExplorerMode: state.setExplorerMode,
-    explorerAnalysisEnabled: state.explorerAnalysisEnabled,
-    setExplorerAnalysisEnabled: state.setExplorerAnalysisEnabled,
   })));
 
 
@@ -156,8 +154,6 @@ export const Dashboard = () => {
               lichessToken={lichessToken}
               showTokenInput={showTokenInput}
               setShowTokenInput={setShowTokenInput}
-              explorerAnalysisEnabled={explorerAnalysisEnabled}
-              setExplorerAnalysisEnabled={setExplorerAnalysisEnabled}
             />
           )}
 
