@@ -40,7 +40,6 @@ export const EvaluationGraph = () => {
       analysisReady: state.analysisReady,
     })));
 
-  const MISTAKE_TYPES = ['Error grave', 'Error', 'Imprecisión'];
   const total = history.length;
   const midY = getY(0);
 
@@ -65,17 +64,26 @@ export const EvaluationGraph = () => {
 
   const currentEval = evaluationHistory?.[currentMoveIndex];
 
+  const MISTAKE_TYPES_SET = useMemo(() => new Set(['Error grave', 'Error', 'Imprecisión']), []);
+
   const mistakeMarkers = useMemo(() => {
     if (!moveEvaluations || total === 0) return [];
-    return Object.entries(moveEvaluations)
-      .filter(([, type]) => MISTAKE_TYPES.includes(type))
-      .map(([idxStr, type]) => {
+    return Object.entries(moveEvaluations).reduce((acc, [idxStr, type]) => {
+      if (MISTAKE_TYPES_SET.has(type)) {
         const idx = parseInt(idxStr);
         const evalObj = evaluationHistory?.[idx];
         const score = evalObj?.score ?? 0;
-        return { idx, type, x: getX(idx, total), y: getY(score), style: MISTAKE_STYLES[type] };
-      });
-  }, [moveEvaluations, evaluationHistory, total]);
+        acc.push({ 
+          idx, 
+          type, 
+          x: getX(idx, total), 
+          y: getY(score), 
+          style: MISTAKE_STYLES[type] 
+        });
+      }
+      return acc;
+    }, []);
+  }, [moveEvaluations, evaluationHistory, total, MISTAKE_TYPES_SET]);
 
   const mistakeIndices = useMemo(() => {
     return mistakeMarkers.map(m => m.idx).sort((a, b) => a - b);
@@ -179,7 +187,7 @@ export const EvaluationGraph = () => {
           const isCurrent = idx === currentMoveIndex;
           return (
             <g
-              key={idx}
+              key={`mistake-${idx}`}
               className="mistake-marker-group"
               onClick={(e) => { e.stopPropagation(); goToMove(idx); }}
             >

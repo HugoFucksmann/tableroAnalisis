@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useReducer, useEffect } from 'react';
 import { backendService } from '../../services/backendService';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -10,6 +10,54 @@ import './Puzzle.css';
  * PuzzleImporter — consume el estado compartido del librarySlice.
  * Si el usuario ya buscó partidas en GameImport, aparecen aquí sin re-fetch.
  */
+
+// ✅ FIX (use-reducer): los 5 useState locales originales se unifican en un
+// reducer. Estado relacionado que cambia junto va junto — evita renders
+// intermedios con estado inconsistente (ej: isFetching=false pero error aún vacío).
+const initialLocalState = {
+  isFetching: false,
+  error: '',
+  localUsername: '',     // se inicializa desde username del store en el componente
+  localPlatform: 'lichess',
+  extractionStatus: null,
+};
+
+function importerReducer(state, action) {
+  switch (action.type) {
+    case 'INIT':
+      return { ...state, localUsername: action.username, localPlatform: action.platform };
+    case 'SET_USERNAME':
+      return { ...state, localUsername: action.payload };
+    case 'SET_PLATFORM':
+      return { ...state, localPlatform: action.payload };
+    case 'FETCH_START':
+      return { ...state, isFetching: true, error: '' };
+    case 'FETCH_SUCCESS':
+      return { ...state, isFetching: false };
+    case 'FETCH_ERROR':
+      return { ...state, isFetching: false, error: action.payload };
+    case 'EXTRACTION_STARTED':
+      return { ...state, extractionStatus: { current: 0, total: action.totalGames, extracted: 0 } };
+    case 'EXTRACTION_PROGRESS':
+      return {
+        ...state,
+        extractionStatus: {
+          ...state.extractionStatus,
+          current: action.gameIndex + 1,
+          extracted: action.totalExtracted,
+        },
+      };
+    case 'EXTRACTION_DONE':
+      return { ...state, extractionStatus: null };
+    case 'EXTRACTION_CANCELING':
+      return { ...state, extractionStatus: { ...state.extractionStatus, canceling: true } };
+    case 'SET_ERROR':
+      return { ...state, error: action.payload };
+    default:
+      return state;
+  }
+}
+
 export const PuzzleImporter = ({ onBack }) => {
   const {
     username, platform, games,
@@ -18,45 +66,47 @@ export const PuzzleImporter = ({ onBack }) => {
     setImportedGames, setPagination, resetGames,
     toggleGameSelection, selectAllGames, clearSelection,
   } = useGameStore(useShallow(state => ({
-    username:            state.searchUsername,
-    platform:            state.searchPlatform,
-    games:               state.importedGames,
-    lichessToken:        state.lichessToken,
-    selectedGameIds:     state.selectedGameIds,
-    setSearchUsername:   state.setSearchUsername,
-    setSearchPlatform:   state.setSearchPlatform,
-    setImportedGames:    state.setImportedGames,
-    setPagination:       state.setPagination,
-    resetGames:          state.resetGames,
+    username: state.searchUsername,
+    platform: state.searchPlatform,
+    games: state.importedGames,
+    lichessToken: state.lichessToken,
+    selectedGameIds: state.selectedGameIds,
+    setSearchUsername: state.setSearchUsername,
+    setSearchPlatform: state.setSearchPlatform,
+    setImportedGames: state.setImportedGames,
+    setPagination: state.setPagination,
+    resetGames: state.resetGames,
     toggleGameSelection: state.toggleGameSelection,
-    selectAllGames:      state.selectAllGames,
-    clearSelection:      state.clearSelection,
+    selectAllGames: state.selectAllGames,
+    clearSelection: state.clearSelection,
   })));
 
-  const [isFetching, setIsFetching]       = useState(false);
-  const [error, setError]                 = useState('');
-  const [localUsername, setLocalUsername] = useState(username);
-  const [localPlatform, setLocalPlatform] = useState(platform);
-  const [extractionStatus, setExtractionStatus] = useState(null);
+  const [local, dispatch] = useReducer(importerReducer, {
+    ...initialLocalState,
+    localUsername: username,
+    localPlatform: platform,
+  });
+
+  const { isFetching, error, localUsername, localPlatform, extractionStatus } = local;
 
   // ── Backend handler ───────────────────────────────────────────────
   useEffect(() => {
     const removeHandler = backendService.addHandler((msg) => {
       if (msg.type === 'puzzle_extraction_started') {
-        setExtractionStatus({ current: 0, total: msg.totalGames, extracted: 0 });
+        dispatch({ type: 'EXTRACTION_STARTED', totalGames: msg.totalGames });
       } else if (msg.type === 'puzzle_game_done') {
-        setExtractionStatus(prev => ({ ...prev, current: msg.gameIndex + 1, extracted: msg.totalExtracted }));
+        dispatch({ type: 'EXTRACTION_PROGRESS', gameIndex: msg.gameIndex, totalExtracted: msg.totalExtracted });
       } else if (msg.type === 'puzzle_extraction_complete') {
         alert(`¡Extracción completada! Se añadieron ${msg.totalExtracted} puzzles.`);
-        setExtractionStatus(null);
+        dispatch({ type: 'EXTRACTION_DONE' });
         clearSelection();
       } else if (msg.type === 'extraction_cancelled') {
         alert(`Extracción cancelada. Puzzles extraídos: ${msg.totalExtracted}`);
-        setExtractionStatus(null);
+        dispatch({ type: 'EXTRACTION_DONE' });
         clearSelection();
       } else if (msg.type === 'error') {
         alert(`Error: ${msg.message}`);
-        setExtractionStatus(null);
+        dispatch({ type: 'EXTRACTION_DONE' });
       }
     });
     return () => removeHandler();
@@ -65,8 +115,7 @@ export const PuzzleImporter = ({ onBack }) => {
   // ── Search ────────────────────────────────────────────────────────
   const handleSearch = async () => {
     if (!localUsername.trim()) return;
-    setIsFetching(true);
-    setError('');
+    dispatch({ type: 'FETCH_START' });
     resetGames();
     setSearchUsername(localUsername);
     setSearchPlatform(localPlatform);
@@ -76,20 +125,27 @@ export const PuzzleImporter = ({ onBack }) => {
         : fetchChesscomGames(localUsername.trim(), 20, null);
       const result = await fetcher;
       setImportedGames(result.games);
-      setPagination({ lastTimestamp: result.lastTimestamp ?? null, chesscomPagination: result.pagination ?? null, hasMoreGames: result.hasMore });
-      if (result.games.length === 0) setError('No se encontraron partidas.');
+      setPagination({
+        lastTimestamp: result.lastTimestamp ?? null,
+        chesscomPagination: result.pagination ?? null,
+        hasMoreGames: result.hasMore,
+      });
+      if (result.games.length === 0) dispatch({ type: 'SET_ERROR', payload: 'No se encontraron partidas.' });
+      else dispatch({ type: 'FETCH_SUCCESS' });
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsFetching(false);
+      dispatch({ type: 'FETCH_ERROR', payload: err.message });
     }
   };
 
   // ── Extraction ────────────────────────────────────────────────────
   const handleStartExtraction = () => {
-    const selectedGames = games
-      .filter(g => selectedGameIds.includes(g.id))
-      .map(g => ({ pgn: g.pgn, gameId: g.id }));
+    const selectedSet = new Set(selectedGameIds);
+    const selectedGames = games.reduce((acc, g) => {
+      if (selectedSet.has(g.id)) {
+        acc.push({ pgn: g.pgn, gameId: g.id });
+      }
+      return acc;
+    }, []);
     if (selectedGames.length === 0) return;
     backendService.extractPuzzles(selectedGames, useGameStore.getState().engineConfig);
   };
@@ -107,16 +163,26 @@ export const PuzzleImporter = ({ onBack }) => {
       {!extractionStatus ? (
         <>
           <div className="pi-platform-tabs">
-            <button className={localPlatform === 'lichess' ? 'active' : ''} onClick={() => setLocalPlatform('lichess')}>Lichess</button>
-            <button className={localPlatform === 'chesscom' ? 'active' : ''} onClick={() => setLocalPlatform('chesscom')}>Chess.com</button>
+            <button
+              className={localPlatform === 'lichess' ? 'active' : ''}
+              onClick={() => dispatch({ type: 'SET_PLATFORM', payload: 'lichess' })}
+            >
+              Lichess
+            </button>
+            <button
+              className={localPlatform === 'chesscom' ? 'active' : ''}
+              onClick={() => dispatch({ type: 'SET_PLATFORM', payload: 'chesscom' })}
+            >
+              Chess.com
+            </button>
           </div>
 
           <div className="pi-search-bar">
             <input
               type="text"
               value={localUsername}
-              onChange={e => setLocalUsername(e.target.value)}
-              placeholder="Nombre de usuario..."
+              onChange={e => dispatch({ type: 'SET_USERNAME', payload: e.target.value })}
+              placeholder="Nombre de usuario…"
               onKeyDown={e => e.key === 'Enter' && handleSearch()}
             />
             <button onClick={handleSearch} disabled={isFetching} title="Buscar Partidas">
@@ -178,13 +244,16 @@ export const PuzzleImporter = ({ onBack }) => {
               <span className="total">{extractionStatus.total}</span>
             </div>
           </div>
-          <p>Analizando partidas...</p>
+          <p>Analizando partidas…</p>
           <div className="pi-stats">
             <span>Puzzles encontrados: <strong>{extractionStatus.extracted}</strong></span>
           </div>
           <button
             className="pi-cancel-btn"
-            onClick={() => { setExtractionStatus(prev => ({ ...prev, canceling: true })); backendService.cancelExtraction(); }}
+            onClick={() => {
+              dispatch({ type: 'EXTRACTION_CANCELING' });
+              backendService.cancelExtraction();
+            }}
             disabled={extractionStatus.canceling}
           >
             {extractionStatus.canceling ? 'Cancelando...' : 'Cancelar'}

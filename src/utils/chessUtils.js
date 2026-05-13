@@ -14,17 +14,9 @@ export function replayTo(history, index, startFen = null) {
   return g;
 }
 
-export function uciToCoords(uci) {
-  if (!uci || uci.length < 4) return null;
-  const from = uci.slice(0, 2);
-  const to = uci.slice(2, 4);
-  return { from, to };
-}
 
-export function normalizeFen(fen) {
-  if (!fen) return '';
-  return fen.split(' ').slice(0, 4).join(' ');
-}
+
+
 
 export function getPieceIcon(pieceChar, forcedSide) {
   if (!pieceChar) return '';
@@ -78,27 +70,25 @@ export function extractPgnData(verboseHistory, comments) {
   const moveEvaluations = {};
   const pgnCommentsByIndex = {};
   let hasEvaluations = false;
-
+  const commentMap = new Map(comments.map(c => [c.fen, c.comment]));
+  
   for (let i = 0; i < verboseHistory.length; i++) {
     const move = verboseHistory[i];
-    const matchComment = comments.find(c => c.fen === move.after);
+    const commentStr = commentMap.get(move.after);
 
-    if (matchComment && matchComment.comment) {
-      pgnCommentsByIndex[i] = matchComment.comment;
-      const commentStr = matchComment.comment;
+    if (commentStr) {
+      pgnCommentsByIndex[i] = commentStr;
 
       const evalMatch = commentStr.match(/\[%eval\s+([-\d.]+)\]/);
       if (evalMatch) {
-        // FIX: Asignación O(1) directa al índice
         evaluationHistory[i] = { moveIndex: i, score: parseFloat(evalMatch[1]), mate: null };
         hasEvaluations = true;
       }
 
-      for (const label of MOVE_LABELS) {
-        if (commentStr.includes(label)) {
-          moveEvaluations[i] = label;
-          break;
-        }
+      const LABEL_REGEX = /Error grave|Error|Imprecisión|Bueno|Excelente|Mejor|Brillante|Libro/;
+      const matchLabel = commentStr.match(LABEL_REGEX);
+      if (matchLabel) {
+        moveEvaluations[i] = matchLabel[0];
       }
     }
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Board } from '../Board/Board';
 import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
 import { Settings } from 'lucide-react';
@@ -13,6 +13,7 @@ import { MoveExplorerView } from '../Puzzle/MoveExplorer/MoveExplorerView';
 import { backendService } from '../../services/backendService';
 import { AnalysisPanels } from '../Analysis/AnalysisPanels';
 import { usePanelManagement, useSidebarResize } from '../../hooks/useDashboardLayout';
+import { useState } from 'react';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -30,7 +31,7 @@ export const Dashboard = () => {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, hasPgnEvaluations, startFullAnalysis,
     analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId,
-    setAppMode, setExplorerMode
+    setAppMode, setExplorerMode, explorerAnalysisEnabled, setExplorerAnalysisEnabled
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -46,12 +47,12 @@ export const Dashboard = () => {
     setAnalyses: state.setAnalyses,
     gameId: state.gameId,
     setAppMode: state.setAppMode,
-    setExplorerMode: state.setExplorerMode
+    setExplorerMode: state.setExplorerMode,
+    explorerAnalysisEnabled: state.explorerAnalysisEnabled,
+    setExplorerAnalysisEnabled: state.setExplorerAnalysisEnabled,
   })));
 
-  useEffect(() => {
-    setExplorerMode(appMode === 'explorer');
-  }, [appMode, setExplorerMode]);
+
 
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
@@ -139,7 +140,7 @@ export const Dashboard = () => {
           </div>
 
           {appMode === 'analysis' && (
-            <AnalysisPanels 
+            <AnalysisPanels
               isHistoryCollapsed={isHistoryCollapsed}
               setIsHistoryCollapsed={setIsHistoryCollapsed}
               isExplorerCollapsed={isExplorerCollapsed}
@@ -155,6 +156,8 @@ export const Dashboard = () => {
               lichessToken={lichessToken}
               showTokenInput={showTokenInput}
               setShowTokenInput={setShowTokenInput}
+              explorerAnalysisEnabled={explorerAnalysisEnabled}
+              setExplorerAnalysisEnabled={setExplorerAnalysisEnabled}
             />
           )}
 

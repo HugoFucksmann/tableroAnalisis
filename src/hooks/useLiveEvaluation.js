@@ -10,6 +10,8 @@ export const useLiveEvaluation = () => {
     const setEvaluation = useGameStore(state => state.setEvaluation);
     const setBestMoveForIndex = useGameStore(state => state.setBestMoveForIndex);
     const setAlternativeLinesForIndex = useGameStore(state => state.setAlternativeLinesForIndex);
+    const explorerAnalysisEnabled = useGameStore(state => state.explorerAnalysisEnabled);
+    const appMode = useGameStore(state => state.appMode);
 
     useEffect(() => {
         const state = useGameStore.getState();
@@ -21,13 +23,8 @@ export const useLiveEvaluation = () => {
         // Evitar interrumpir un análisis de partida completa en curso
         const isFullGameAnalysisRunning = state.isReviewRequested && !state.analysisReady;
 
-        const isExplorerMode = state.explorerMode;
-        const explorerEnabled = state.explorerAnalysisEnabled;
-
-        // Si estamos en modo puzzle o explorador, solo analizar si el usuario lo activó explícitamente
-        if (state.appMode === 'puzzle' || state.appMode === 'explorer') {
-            if (!explorerEnabled) return;
-        }
+        // Solo analizar si el usuario lo activó explícitamente (en cualquier modo)
+        if (!explorerAnalysisEnabled) return;
 
         if (!needsLiveAnalysis || currentMoveIndex < -1 || isFullGameAnalysisRunning) return;
 
@@ -47,5 +44,5 @@ export const useLiveEvaluation = () => {
             isActive = false;
             analysisBridge.cancel();
         };
-    }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing]);
+    }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing, explorerAnalysisEnabled, appMode]);
 };

@@ -25,7 +25,7 @@ export const ArrowEvalOverlay = React.memo(({ arrowsWithDelta, orientation }) =>
                 const hasExplorerInfo = item.isExplorerArrow && item.count;
 
                 return (
-                    <React.Fragment key={`${item.arrow.endSquare}-${i}`}>
+                    <React.Fragment key={`${item.arrow.startSquare}-${item.arrow.endSquare}-${item.isEngineArrow ? 'eng' : 'exp'}`}>
                         {/* 1. BADGE DE MOTOR (Delta de evaluación) */}
                         {hasEngineInfo && (() => {
                             const label = formatDelta(item.delta, item.mate);

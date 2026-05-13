@@ -24,7 +24,7 @@ export const createUISlice = (set, get) => ({
   }),
   
   appMode: 'analysis',
-  setAppMode: (mode) => set({ appMode: mode }),
+  setAppMode: (mode) => set({ appMode: mode, explorerMode: mode === 'explorer' }),
   
   puzzleState: null,
   setPuzzleState: (updater) => set((state) => ({ 

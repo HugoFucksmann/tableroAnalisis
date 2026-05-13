@@ -63,27 +63,45 @@ export async function fetchChesscomGames(username, max = 15, pagination = null, 
 
     let collectedGames = [];
 
+    const BATCH_SIZE = 2;
     while (currentIdx < archives.length && collectedGames.length < max) {
-      const res = await fetch(archives[currentIdx], { headers, signal });
+      const batchEnd = Math.min(currentIdx + BATCH_SIZE, archives.length);
+      const batchUrls = archives.slice(currentIdx, batchEnd);
+      
+      const batchResults = await Promise.all(
+        batchUrls.map(url => 
+          fetch(url, { headers, signal })
+            .then(res => res.ok ? res.json() : null)
+            .catch(() => null)
+        )
+      );
 
-      if (!res.ok) {
-        currentIdx++;
-        offset = 0;
-        continue;
-      }
+      for (let i = 0; i < batchResults.length; i++) {
+        const data = batchResults[i];
+        if (!data || !data.games) {
+          currentIdx++;
+          offset = 0;
+          continue;
+        }
 
-      const data = await res.json();
-      const allMonthlyGames = [...data.games].reverse();
-      const available = allMonthlyGames.slice(offset);
-      const needed = max - collectedGames.length;
-      const toAdd = available.slice(0, needed);
+        const allMonthlyGames = [...data.games].reverse();
+        const available = allMonthlyGames.slice(offset);
+        const needed = max - collectedGames.length;
+        
+        if (needed <= 0) break;
 
-      collectedGames = [...collectedGames, ...toAdd];
-      offset += toAdd.length;
+        const toAdd = available.slice(0, needed);
+        collectedGames = [...collectedGames, ...toAdd];
+        offset += toAdd.length;
 
-      if (offset >= allMonthlyGames.length) {
-        currentIdx++;
-        offset = 0;
+        if (offset >= allMonthlyGames.length) {
+          currentIdx++;
+          offset = 0;
+        } else {
+          // We found enough games in the middle of this archive
+          // break out of the for loop and the while loop will exit
+          break;
+        }
       }
     }
 

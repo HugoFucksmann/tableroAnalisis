@@ -36,7 +36,7 @@ const CapturedPieces = ({ pieces }) => {
             {pieces.map((p, i) => {
                 const side = p === p.toUpperCase() ? 'white' : 'black';
                 return (
-                    <span key={i} className={`captured-piece ${side}`}>
+                    <span key={`${p}-${i}`} className={`captured-piece ${side}`}>
                         {getPieceIcon(p)}
                     </span>
                 );

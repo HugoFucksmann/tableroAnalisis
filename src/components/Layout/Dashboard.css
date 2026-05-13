@@ -311,8 +311,11 @@ body.is-resizing {
   background: var(--accent-glow-muted) !important;
 }
 
-.panel-action-btn.ready.re-analyze {
+.panel-action-btn.ready.re-analyze,
+.panel-action-btn.analyzing {
   animation: analyze-pulse 2s infinite ease-in-out;
+  color: var(--accent-primary) !important;
+  filter: drop-shadow(0 0 4px var(--accent-glow));
 }
 
 @keyframes analyze-pulse {

@@ -23,11 +23,11 @@ export const generateAnnotatedPgn = (
         const pgnGame = startFen ? new Chess(startFen) : new Chess();
 
         // Copiar encabezados originales filtrando nulos y placeholders de chess.js
-        const PLACEHOLDER = ['?', '????.??.??'];
+        const PLACEHOLDERS = new Set(['?', '????.??.??']);
         for (const key in originalHeaders) {
             const val = originalHeaders[key];
             if (val === null || val === undefined) continue;
-            if (PLACEHOLDER.includes(String(val))) continue;
+            if (PLACEHOLDERS.has(String(val))) continue;
             // No sobreescribir FEN si ya lo inicializamos en el constructor
             if (key === 'FEN' && startFen) continue;
             pgnGame.header(key, String(val));

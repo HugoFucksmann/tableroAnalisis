@@ -65,15 +65,25 @@ export const OpeningExplorer = () => {
     const onlineTimer  = setTimeout(() => loadOnline(), 400);
 
     async function loadOffline() {
-      if (!backendService.isConnected) return;
+      if (!backendService.isConnected) {
+        setIsStale(false);
+        return;
+      }
       try {
         const result = await backendService.request('get_book_moves', { fen }, 'book_moves');
         if (!active) return;
         setBookData({ moves: result.moves || [], opening: result.opening || '' });
-        setIsStale(false);
-        const arrows = (result.moves || []).slice(0, 2).map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)')).filter(Boolean);
+        
+        const arrows = (result.moves || []).slice(0, 2).flatMap(m => {
+          const arrow = sanToArrow(m.san, game, 'var(--arrow-explorer-base)');
+          return arrow ? [arrow] : [];
+        });
         setArrows(arrows);
-      } catch (e) {}
+      } catch (e) {
+        console.warn('[OpeningExplorer] Offline load failed:', e);
+      } finally {
+        if (active) setIsStale(false);
+      }
     }
 
     async function loadOnline() {
@@ -107,7 +117,10 @@ export const OpeningExplorer = () => {
       } catch (err) {
         if (active) setLichessError(err.message);
       } finally {
-        if (active) setLichessLoading(false);
+        if (active) {
+          setLichessLoading(false);
+          setIsStale(false); // Por si acaso falló el offline
+        }
       }
     }
 
@@ -121,7 +134,10 @@ export const OpeningExplorer = () => {
 
   const handleLeave = () => {
     const sourceMoves = bookData.moves.length > 0 ? bookData.moves : (lichessData?.moves ?? []);
-    const arrows = sourceMoves.slice(0, 2).map(m => sanToArrow(m.san, game, 'var(--arrow-explorer-base)')).filter(Boolean);
+    const arrows = sourceMoves.slice(0, 2).flatMap(m => {
+      const arrow = sanToArrow(m.san, game, 'var(--arrow-explorer-base)');
+      return arrow ? [arrow] : [];
+    });
     setArrows(arrows);
   };
 
@@ -148,7 +164,7 @@ export const OpeningExplorer = () => {
         {bookData.moves.length > 0 && lichessData && <div className="subgroup-divider" />}
 
         {lichessLoading && !lichessData && (
-          <div className="explorer-loading-mini"><Loader className="gi-spin" size={14} /> <span>Sincronizando Lichess...</span></div>
+          <div className="explorer-loading-mini"><Loader className="gi-spin" size={14} /> <span>Sincronizando Lichess…</span></div>
         )}
         
         {lichessError && (

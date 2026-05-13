@@ -503,6 +503,42 @@
   contain-intrinsic-size: 0 60px;
 }
 
+.history-bulk-actions {
+  padding: 8px 16px;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.history-select-all {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  transition: var(--transition);
+}
+
+.history-select-all:hover {
+  color: var(--text-secondary);
+}
+
+.history-select-all.all-selected {
+  color: var(--accent-primary);
+}
+
+.all-selected .hi-check {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.all-selected .hi-check-inner {
+  display: block;
+}
+
 .history-item {
   display: flex;
   align-items: center;

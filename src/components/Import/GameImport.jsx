@@ -1,16 +1,23 @@
-import React from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
-import { Search, ExternalLink, Loader, AlertCircle, FileText, Zap, CheckSquare, Square, Cpu, Brain, X } from 'lucide-react';
 import { backendService } from '../../services/backendService';
 import './GameImport.css';
 
+// Sub-components
+import { PlatformSelector } from './GameImport/PlatformSelector';
+import { SearchInput } from './GameImport/SearchInput';
+import { PgnManualImport } from './GameImport/PgnManualImport';
+import { ImportGameList } from './GameImport/ImportGameList';
+import { BatchProgressOverlay } from './GameImport/BatchProgressOverlay';
+import { BulkActionBar } from './GameImport/BulkActionBar';
+import { AlertCircle } from 'lucide-react';
+
 export const GameImport = ({ onGameSelect }) => {
-  // ── Store: game state ────────────────────────────────────────────
+  // ── Store ──────────────────────────────────────────────────────────
   const loadPgn = useGameStore(s => s.loadPgn);
 
-  // ── Store: library slice ─────────────────────────────────────────
   const {
     username, platform, games, lichessToken,
     lastTimestamp, chesscomPagination, hasMoreGames,
@@ -41,51 +48,46 @@ export const GameImport = ({ onGameSelect }) => {
     setAnalyses: state.setAnalyses,
   })));
 
-  // ── Local UI state (transient, no need to persist) ───────────────
-  const [loadingId, setLoadingId] = React.useState(null);
-  const [isFetching, setIsFetching] = React.useState(false);
-  const [isFetchingMore, setIsFetchingMore] = React.useState(false);
-  const [error, setError] = React.useState('');
-  const [customPgn, setCustomPgn] = React.useState('');
-  const [batchStatus, setBatchStatus] = React.useState(null);
+  // ── Local UI state ───────────────────────────────────────────────
+  const [loadingId, setLoadingId] = useState(null);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
+  const [error, setError] = useState('');
+  const [customPgn, setCustomPgn] = useState('');
+  const [batchStatus, setBatchStatus] = useState(null);
 
-  const listRef = React.useRef(null);
-  const sentinelRef = React.useRef(null);
+  const listRef = useRef(null);
+  const sentinelRef = useRef(null);
 
-  // ── Sync analyses cache from backend on mount ────────────────────
-  React.useEffect(() => {
+  // ── Sync analyses cache and batch status ─────────────────────────
+  useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
       if (msg.type === 'analyses_list') {
-        if (msg.offset === 0) {
-          setAnalyses(msg.analyses);
-        } else {
-          setAnalyses(prev => {
-            const existingIds = new Set(prev.map(a => a.id));
-            const newItems = msg.analyses.filter(a => !existingIds.has(a.id));
-            return [...prev, ...newItems];
-          });
-        }
+        if (msg.offset === 0) setAnalyses(msg.analyses);
+        else setAnalyses(prev => {
+          const existingIds = new Set(prev.map(a => a.id));
+          const newItems = msg.analyses.filter(a => !existingIds.has(a.id));
+          return [...prev, ...newItems];
+        });
       }
 
       // Batch analysis handlers
-      if (msg.type === 'batch_analysis_started') {
-        setBatchStatus({ current: 0, total: msg.total, pct: 0, label: 'Iniciando...' });
-      } else if (msg.type === 'batch_analysis_progress') {
-        setBatchStatus(prev => ({
-          ...prev,
-          current: msg.gameIndex,
-          pct: msg.pct,
-          label: msg.label
-        }));
-      } else if (msg.type === 'batch_analysis_game_complete') {
-        setBatchStatus(prev => ({ ...prev, current: msg.gameIndex + 1, pct: 100 }));
-      } else if (msg.type === 'batch_analysis_complete') {
-        setBatchStatus(null);
-        clearSelection();
-        backendService.getAnalyses(0, 50); // Refresh list
-      } else if (msg.type === 'batch_analysis_cancelled') {
-        setBatchStatus(null);
-        backendService.getAnalyses(0, 50);
+      switch (msg.type) {
+        case 'batch_analysis_started':
+          setBatchStatus({ current: 0, total: msg.total, pct: 0, label: 'Iniciando...' });
+          break;
+        case 'batch_analysis_progress':
+          setBatchStatus(prev => ({ ...prev, current: msg.gameIndex, pct: msg.pct, label: msg.label }));
+          break;
+        case 'batch_analysis_game_complete':
+          setBatchStatus(prev => ({ ...prev, current: msg.gameIndex + 1, pct: 100 }));
+          break;
+        case 'batch_analysis_complete':
+        case 'batch_analysis_cancelled':
+          setBatchStatus(null);
+          clearSelection();
+          backendService.getAnalyses(0, 50);
+          break;
       }
     });
     backendService.getAnalyses(0, 50);
@@ -99,7 +101,7 @@ export const GameImport = ({ onGameSelect }) => {
     setError('');
   };
 
-  const performSearch = React.useCallback(async (targetUsername, targetPlatform) => {
+  const performSearch = useCallback(async (targetUsername, targetPlatform) => {
     if (!targetUsername.trim()) return;
     setIsFetching(true);
     setError('');
@@ -125,7 +127,7 @@ export const GameImport = ({ onGameSelect }) => {
     }
   }, [lichessToken, setImportedGames, setPagination, resetGames]);
 
-  const loadMore = React.useCallback(async () => {
+  const loadMore = useCallback(async () => {
     if (isFetching || isFetchingMore || !hasMoreGames || !username) return;
     setIsFetchingMore(true);
     try {
@@ -146,7 +148,7 @@ export const GameImport = ({ onGameSelect }) => {
   }, [isFetching, isFetchingMore, hasMoreGames, username, platform, lastTimestamp, chesscomPagination, lichessToken, appendImportedGames, setPagination]);
 
   // Infinite scroll observer
-  React.useEffect(() => {
+  useEffect(() => {
     if (!hasMoreGames || isFetching) return;
     const observer = new IntersectionObserver(
       (entries) => { if (entries[0].isIntersecting && !isFetchingMore) loadMore(); },
@@ -156,12 +158,10 @@ export const GameImport = ({ onGameSelect }) => {
     return () => observer.disconnect();
   }, [hasMoreGames, isFetching, isFetchingMore, loadMore]);
 
-  // Auto-search on mount if username is set and list is empty
-  const lastSearchRef = React.useRef({ username: '', platform: '' });
-  React.useEffect(() => {
-    const shouldSearch =
-      username &&
-      games.length === 0 &&
+  // Auto-search logic
+  const lastSearchRef = useRef({ username: '', platform: '' });
+  useEffect(() => {
+    const shouldSearch = username && games.length === 0 && 
       (lastSearchRef.current.username !== username || lastSearchRef.current.platform !== platform);
     if (shouldSearch) {
       lastSearchRef.current = { username, platform };
@@ -169,293 +169,100 @@ export const GameImport = ({ onGameSelect }) => {
     }
   }, [username, games.length, platform, performSearch]);
 
-  const handleSearch = (e) => {
-    if (e.key === 'Enter' || e.type === 'click') performSearch(username, platform);
-  };
-
   const handleLoadGame = (pgn, gameId) => {
     setLoadingId(gameId);
     const ok = loadPgn(pgn, gameId);
-    if (!ok) { setLoadingId(null); return; }
-    if (onGameSelect) onGameSelect();
+    if (ok && onGameSelect) onGameSelect();
     setLoadingId(null);
   };
 
-  // ── Derived ──────────────────────────────────────────────────────
-  const analysedIds = React.useMemo(
-    () => new Set(analyses.map(a => String(a.gameId))),
-    [analyses]
-  );
-
-  // ── Bulk actions ─────────────────────────────────────────────────
-  const unanalysedIds = React.useMemo(
-    () => games.filter(g => !analysedIds.has(String(g.id))).map(g => g.id),
-    [games, analysedIds]
-  );
-
-  const selectedCount = selectedGameIds.length;
-  // Consideramos "todo seleccionado" si están marcadas todas las no analizadas,
-  // o si absolutamente todas las partidas de la lista están marcadas.
-  const allSelected = games.length > 0 && (
-    (unanalysedIds.length > 0 && unanalysedIds.every(id => selectedGameIds.includes(id))) ||
-    (selectedCount > 0 && selectedCount === games.length)
-  );
-
   const handleAnalyzeBatch = () => {
     const userLower = username.trim().toLowerCase();
-    const selectedGames = games
-      .filter(g => selectedGameIds.includes(g.id))
-      .map(g => {
+    const selectedSet = new Set(selectedGameIds);
+    
+    const selectedGames = games.reduce((acc, g) => {
+      if (selectedSet.has(g.id)) {
         const isWhite = g.white.toLowerCase() === userLower;
         const isBlack = g.black.toLowerCase() === userLower;
         const playerColor = isWhite ? 'white' : (isBlack ? 'black' : 'white');
         
-        let win = 1;
-        if (g.result === '1/2-1/2') win = 0;
-        else if (isWhite && g.result === '0-1') win = -1;
-        else if (isBlack && g.result === '1-0') win = -1;
+        const win = g.result === '1/2-1/2' ? 0 : ((isWhite && g.result === '1-0') || (isBlack && g.result === '0-1') ? 1 : -1);
 
-        return {
-          pgn: g.pgn,
-          gameId: g.id,
-          username: username.trim(),
-          playerColor,
-          win,
-          timeControl: g.timeControl
-        };
+        acc.push({ 
+          pgn: g.pgn, 
+          gameId: g.id, 
+          username: username.trim(), 
+          playerColor, 
+          win, 
+          timeControl: g.timeControl 
+        });
+      }
+      return acc;
+    }, []);
 
-      });
-
-    if (selectedGames.length === 0) return;
-    backendService.analyzeGames(selectedGames, useGameStore.getState().engineConfig);
+    if (selectedGames.length > 0) {
+      backendService.analyzeGames(selectedGames, useGameStore.getState().engineConfig);
+    }
   };
 
-  const handleCancelBatch = () => {
-    backendService.cancel();
-  };
-
-  const listTitle = username ? `Partidas de ${username}` : 'Búsqueda de partidas';
+  // ── Derived ──────────────────────────────────────────────────────
+  const analysedIds = useMemo(() => new Set(analyses.map(a => String(a.gameId))), [analyses]);
+  const unanalysedIds = useMemo(() => 
+    games.reduce((acc, g) => {
+      if (!analysedIds.has(String(g.id))) acc.push(g.id);
+      return acc;
+    }, []), [games, analysedIds]);
+  const allSelected = games.length > 0 && (
+    (unanalysedIds.length > 0 && unanalysedIds.every(id => selectedGameIds.includes(id))) ||
+    (selectedGameIds.length > 0 && selectedGameIds.length === games.length)
+  );
 
   return (
     <div className="gi-root">
-
       <div className="gi-header-bar">
-        {/* ── Platform selector ───────────────────────────────────── */}
-        <div className="gi-platform-toggle">
-          <button
-            className={`gi-toggle-btn ${platform === 'lichess' ? 'active' : ''}`}
-            onClick={() => handlePlatformSwitch('lichess')}
-            title="Lichess"
-          >
-            <img src="/lichess-favicon.png" alt="Lichess" className="gi-platform-icon"
-              onError={(e) => { e.target.style.display = 'none'; }} />
-          </button>
-          <button
-            className={`gi-toggle-btn ${platform === 'chesscom' ? 'active' : ''}`}
-            onClick={() => handlePlatformSwitch('chesscom')}
-            title="Chess.com"
-          >
-            <img src="/chesscom-favicon.ico" alt="Chess.com" className="gi-platform-icon"
-              onError={(e) => { e.target.style.display = 'none'; }} />
-          </button>
-          <button
-            className={`gi-toggle-btn ${platform === 'pgn' ? 'active' : ''}`}
-            onClick={() => handlePlatformSwitch('pgn')}
-            title="PGN Manual"
-          >
-            <FileText size={16} className="gi-platform-icon" />
-          </button>
-        </div>
-
-        {/* ── Search Input (if not PGN) ─────────────────────────── */}
-        {platform !== 'pgn' && (
-          <div className="gi-search-wrap">
-            <input
-              className="gi-search-input"
-              type="text"
-              placeholder={`Usuario en ${platform === 'lichess' ? 'Lichess' : 'Chess.com'}…`}
-              value={username}
-              onChange={(e) => setSearchUsername(e.target.value)}
-              onKeyDown={handleSearch}
-            />
-            <button
-              className="gi-search-btn"
-              onClick={handleSearch}
-              disabled={isFetching || !username.trim()}
-              aria-label="Buscar"
-            >
-              {isFetching ? <Loader size={15} className="gi-spin" /> : <Search size={15} />}
-            </button>
-          </div>
-        )}
+        <PlatformSelector platform={platform} onPlatformSwitch={handlePlatformSwitch} />
+        <SearchInput 
+          platform={platform} 
+          username={username} 
+          setSearchUsername={setSearchUsername} 
+          onSearch={() => performSearch(username, platform)} 
+          isFetching={isFetching} 
+        />
       </div>
 
       {platform === 'pgn' ? (
-        <div className="gi-pgn-manual-wrap">
-          <textarea
-            className="gi-pgn-textarea premium-scroll"
-            placeholder="Pega el texto de tu PGN aquí..."
-            value={customPgn}
-            onChange={(e) => setCustomPgn(e.target.value)}
-          />
-          <button
-            className="gi-pgn-load-btn"
-            onClick={() => handleLoadGame(customPgn, Date.now())}
-            disabled={!customPgn.trim()}
-          >
-            Cargar al tablero
-          </button>
-        </div>
+        <PgnManualImport customPgn={customPgn} setCustomPgn={setCustomPgn} onLoad={(pgn) => handleLoadGame(pgn, Date.now())} />
       ) : (
         <>
-          {error && (
-            <div className="gi-error">
-              <AlertCircle size={13} /><span>{error}</span>
-            </div>
-          )}
+          {error && <div className="gi-error"><AlertCircle size={13} /><span>{error}</span></div>}
+          
+          <ImportGameList 
+            games={games}
+            isFetching={isFetching}
+            error={error}
+            listTitle={username ? `Partidas de ${username}` : 'Búsqueda de partidas'}
+            allSelected={allSelected}
+            onToggleAll={() => allSelected ? clearSelection() : selectAllGames()}
+            analysedIds={analysedIds}
+            selectedGameIds={selectedGameIds}
+            loadingId={loadingId}
+            onToggleGameSelection={toggleGameSelection}
+            onLoadGame={handleLoadGame}
+            isFetchingMore={isFetchingMore}
+            listRef={listRef}
+            sentinelRef={sentinelRef}
+          />
 
-          {/* ── Game list ──────────────────────────────────────── */}
-          <div className="gi-list-section">
-            {games.length > 0 && (
-              <div className="gi-list-header">
-                <p className="gi-list-label">{listTitle}</p>
-                <button
-                  className="gi-select-all-btn"
-                  onClick={() => allSelected ? clearSelection() : selectAllGames()}
-                  title={allSelected ? 'Deseleccionar todo' : 'Seleccionar todo'}
-                >
-                  {allSelected
-                    ? <CheckSquare size={14} />
-                    : <Square size={14} />}
-                  <span>{allSelected ? 'Ninguna' : 'Todas'}</span>
-                </button>
-              </div>
-            )}
-            {!games.length && <p className="gi-list-label">{listTitle}</p>}
-
-            {isFetching ? (
-              <div className="gi-fetching">
-                <Loader size={22} className="gi-spin" />
-                <span>Buscando partidas…</span>
-              </div>
-            ) : (
-              <div ref={listRef} className="gi-list premium-scroll">
-                {games.length > 0 ? (
-                  <>
-                    {games.map((game) => {
-                      const isAnalyzed = analysedIds.has(String(game.id));
-                      const isSelected = selectedGameIds.includes(game.id);
-                      return (
-                        <div
-                          key={game.id}
-                          className={`gi-card ${isAnalyzed ? 'analyzed' : ''} ${isSelected ? 'selected' : ''}`}
-                        >
-                          {/* Checkbox de selección */}
-                          <button
-                            className="gi-checkbox"
-                            onClick={(e) => { e.stopPropagation(); toggleGameSelection(game.id); }}
-                            title="Seleccionar para acción masiva"
-                            aria-label={isSelected ? 'Deseleccionar partida' : 'Seleccionar partida'}
-                          >
-                            {isSelected ? <CheckSquare size={15} /> : <Square size={15} />}
-                          </button>
-
-                          {/* Área principal: carga la partida al tablero */}
-                          <button
-                            className={`gi-card-body ${loadingId === game.id ? 'loading' : ''}`}
-                            onClick={() => handleLoadGame(game.pgn, game.id)}
-                            disabled={!!loadingId}
-                          >
-                            <div className="gi-card-players">
-                              <span className="gi-player white" title={game.white}>{game.white}</span>
-                              <span className="gi-result">{game.result}</span>
-                              <span className="gi-player black" title={game.black}>{game.black}</span>
-                            </div>
-                            <div className="gi-card-meta">
-                              <span className="gi-date">{game.date}</span>
-                              <div className="gi-card-status">
-                                {isAnalyzed && (
-                                  <span className="gi-analyzed-badge" title="Partida analizada">
-                                    <Zap size={10} fill="currentColor" />
-                                  </span>
-                                )}
-                                {loadingId === game.id
-                                  ? <Loader size={13} className="gi-spin" />
-                                  : <ExternalLink size={13} className="gi-ext-icon" />}
-                              </div>
-                            </div>
-                          </button>
-                        </div>
-                      );
-                    })}
-
-                    {/* Sentinel para infinite scroll */}
-                    <div ref={sentinelRef} className="gi-sentinel">
-                      {isFetchingMore && (
-                        <div className="gi-loading-more">
-                          <Loader size={18} className="gi-spin" />
-                          <span>Cargando más...</span>
-                        </div>
-                      )}
-                    </div>
-                  </>
-                ) : (
-                  !isFetching && !error && <div className="gi-empty-state" />
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* ── Batch Progress Overlay ─────────────────────────── */}
-          {batchStatus && (
-            <div className="gi-batch-overlay">
-              <div className="gi-batch-card">
-                <div className="gi-batch-header">
-                  <Brain size={18} className="gi-brain-icon" />
-                  <div className="gi-batch-title">
-                    <h4>Analizando Partidas</h4>
-                    <span>Partida {batchStatus.current + 1} de {batchStatus.total}</span>
-                  </div>
-                  <button className="gi-batch-cancel" onClick={handleCancelBatch}>
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div className="gi-batch-progress">
-                  <div className="gi-progress-track">
-                    <div
-                      className="gi-progress-fill"
-                      style={{ width: `${batchStatus.pct}%` }}
-                    />
-                  </div>
-                  <div className="gi-progress-info">
-                    <span className="gi-progress-label">{batchStatus.label}</span>
-                    <span className="gi-progress-pct">{batchStatus.pct}%</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ── Bulk Action Bar ────────────────────────────────── */}
-          {selectedCount > 0 && !batchStatus && (
-            <div className="gi-bulk-bar">
-              <span className="gi-bulk-count">{selectedCount} seleccionada{selectedCount !== 1 ? 's' : ''}</span>
-              <div className="gi-bulk-actions">
-                <button
-                  className="gi-bulk-btn analyze"
-                  onClick={handleAnalyzeBatch}
-                  title="Analizar partidas seleccionadas en lote"
-                >
-                  <Cpu size={14} />
-                  Analizar Partidas
-                </button>
-              </div>
-              <button className="gi-bulk-clear" onClick={clearSelection} title="Limpiar selección">✕</button>
-            </div>
-          )}
+          <BatchProgressOverlay batchStatus={batchStatus} onCancel={() => backendService.cancel()} />
+          
+          <BulkActionBar 
+            selectedCount={selectedGameIds.length} 
+            batchStatus={batchStatus} 
+            onAnalyze={handleAnalyzeBatch} 
+            onClear={clearSelection} 
+          />
         </>
       )}
     </div>
   );
-};
+};

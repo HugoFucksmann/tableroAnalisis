@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { Zap, Target, BookOpen, AlertTriangle, Clock } from 'lucide-react';
 
 export const ColorStatsCard = ({ stats }) => (
@@ -38,7 +38,7 @@ export const PhaseStatsCard = ({ stats }) => (
               <strong>{p.accuracy}%</strong>
             </div>
             <div className="pi-bar-bg">
-              <motion.div
+              <m.div
                 className="pi-bar-fill"
                 initial={{ width: 0 }}
                 animate={{ width: `${p.accuracy}%` }}
@@ -60,8 +60,8 @@ export const OpeningStatsCard = ({ stats }) => (
   <div className="stats-card-modern">
     <div className="card-title-modern"><BookOpen size={13} /> Aperturas</div>
     <div className="opening-modern-list premium-scroll">
-      {stats.openingStats.map((op, i) => (
-        <div key={i} className="op-row-modern">
+      {stats.openingStats.map((op) => (
+        <div key={op.name} className="op-row-modern">
           <span className="op-name-m">{op.name}</span>
           <div className="op-vals-m">
             <span title="Win Rate">W {op.wr}%</span>
@@ -79,12 +79,12 @@ export const QualityStatsCard = ({ stats }) => (
     <div className="card-title-modern"><AlertTriangle size={13} /> Calidad de jugadas</div>
     {stats.moveQuality.length > 0 ? (
       <div className="tactical-modern-list">
-        {stats.moveQuality.map((t, i) => (
-          <div key={i} className="t-row-modern">
+        {stats.moveQuality.map((t) => (
+          <div key={t.label} className="t-row-modern">
             <span className="t-label-m">{t.label}</span>
             <span className="t-count-m">{t.pct}%</span>
             <div className="t-bar-m">
-              <motion.div
+              <m.div
                 className="t-fill-m"
                 initial={{ width: 0 }}
                 animate={{ width: `${t.pct}%` }}
@@ -108,8 +108,8 @@ export const BlundersByTimeCard = ({ stats }) => {
     <div className="stats-card-modern">
       <div className="card-title-modern"><Clock size={13} /> Blunders por tiempo</div>
       <div className="time-blunder-grid">
-        {stats.blundersByTime.map((b, i) => (
-          <div key={i} className="time-blunder-card" style={{ '--accent': b.color }}>
+        {stats.blundersByTime.map((b) => (
+          <div key={b.label} className="time-blunder-card" style={{ '--accent': b.color }}>
             <div className="tbc-value">{b.count}</div>
             <div className="tbc-label">{b.label}</div>
           </div>
@@ -125,8 +125,8 @@ export const DangerousOpeningsCard = ({ stats }) => {
     <div className="stats-card-modern">
       <div className="card-title-modern"><AlertTriangle size={13} color="#f44336" /> Aperturas críticas (Err/Game)</div>
       <div className="dangerous-list">
-        {stats.dangerousOpenings.map((op, i) => (
-          <div key={i} className="dangerous-row">
+        {stats.dangerousOpenings.map((op) => (
+          <div key={op.name} className="dangerous-row">
             <div className="dr-main">
               <span className="dr-eco">{op.eco || '???'}</span>
               <span className="dr-name">{op.name}</span>

@@ -381,7 +381,7 @@ export const PuzzleSession = ({ onBack }) => {
                 const isNext = puzzleState ? i === puzzleState.currentStep && !isSolved && !showOriginal : false;
                 return (
                   <span
-                    key={i}
+                    key={`${m}-${i}`}
                     className={`sol-move ${(isDone || showOriginal) ? 'done' : ''} ${isNext ? 'clickable' : ''}`}
                     onClick={() => !showOriginal ? handleSolutionClick(m, i) : null}
                     title={isNext ? 'Clic para reproducir' : ''}
