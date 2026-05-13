@@ -7,7 +7,9 @@ import {
   OpeningStatsCard,
   QualityStatsCard,
   BlundersByTimeCard,
-  DangerousOpeningsCard
+  DangerousOpeningsCard,
+  PsychologicalProfileCard,
+  TimeManagementCard
 } from '../StatsCards';
 
 export const StatsSummaryView = ({ stats }) => {
@@ -39,10 +41,12 @@ export const StatsSummaryView = ({ stats }) => {
       </section>
 
       <div className="stats-secondary-grid">
+        <PsychologicalProfileCard stats={stats} />
+        <TimeManagementCard stats={stats} />
         <ColorStatsCard stats={stats} />
         <PhaseStatsCard stats={stats} />
-        <OpeningStatsCard stats={stats} />
         <QualityStatsCard stats={stats} />
+        <OpeningStatsCard stats={stats} />
         <BlundersByTimeCard stats={stats} />
         <DangerousOpeningsCard stats={stats} />
       </div>

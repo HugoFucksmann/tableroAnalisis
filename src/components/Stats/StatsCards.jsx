@@ -1,6 +1,6 @@
 import React from 'react';
 import { m } from 'framer-motion';
-import { Zap, Target, BookOpen, AlertTriangle, Clock } from 'lucide-react';
+import { Zap, Target, BookOpen, AlertTriangle, Clock, Brain, Timer, ShieldAlert, Award } from 'lucide-react';
 
 export const ColorStatsCard = ({ stats }) => (
   <div className="stats-card-modern">
@@ -137,6 +137,117 @@ export const DangerousOpeningsCard = ({ stats }) => {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+export const PsychologicalProfileCard = ({ stats }) => {
+  if (!stats.advancedStats) return null;
+  const { convertedAdvantages, blownAdvantages, comebackWins, savedDraws, failedComebacks, tiltEvents } = stats.advancedStats;
+  
+  const totalAdvantages = convertedAdvantages + blownAdvantages;
+  const conversionRate = totalAdvantages > 0 ? Math.round((convertedAdvantages / totalAdvantages) * 100) : 0;
+  
+  const totalComebackChances = comebackWins + savedDraws + failedComebacks;
+  const resilienceRate = totalComebackChances > 0 ? Math.round(((comebackWins + savedDraws) / totalComebackChances) * 100) : 0;
+
+  return (
+    <div className="stats-card-modern">
+      <div className="card-title-modern"><Brain size={13} color="#9c27b0" /> Psicología & Control</div>
+      
+      <div className="psycho-list-modern">
+        {/* Row 1: Conversión */}
+        <div className="psycho-row">
+          <div className="psycho-info">
+            <span className="psycho-label">Conversión de Ventaja</span>
+            <span className="psycho-sub">{convertedAdvantages} ganadas de {totalAdvantages} oportunidades</span>
+          </div>
+          <div className="psycho-data">
+            <span className="psycho-val">{conversionRate}%</span>
+            <div className="t-bar-m">
+              <m.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${conversionRate}%` }} style={{ background: '#4caf50' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Remontadas */}
+        <div className="psycho-row">
+          <div className="psycho-info">
+            <span className="psycho-label">Resiliencia</span>
+            <span className="psycho-sub">{comebackWins + savedDraws} salvadas de {totalComebackChances} crisis</span>
+          </div>
+          <div className="psycho-data">
+            <span className="psycho-val">{resilienceRate}%</span>
+            <div className="t-bar-m">
+              <m.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${resilienceRate}%` }} style={{ background: '#2196f3' }} />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Tilt */}
+        <div className="psycho-row tilt-row">
+          <div className="psycho-info">
+            <span className="psycho-label">Control Emocional</span>
+            <span className="psycho-sub">Efecto cascada (colapsos post-error)</span>
+          </div>
+          <div className="psycho-data text-only">
+            <span className="psycho-val" style={{ color: tiltEvents > 0 ? '#f44336' : '#4caf50' }}>
+              {tiltEvents === 0 ? 'Excelente' : `${tiltEvents} colapsos`}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export const TimeManagementCard = ({ stats }) => {
+  if (!stats.advancedStats || stats.advancedStats.avgMidgameTime === 0) return null;
+  const { avgMidgameTime, avgBlunderTime } = stats.advancedStats;
+  
+  const speedRatio = avgBlunderTime / avgMidgameTime;
+  let assessment = 'Reflexión Constante';
+  let assessmentColor = '#4caf50';
+  let desc = `Piensas los errores al mismo ritmo que las buenas jugadas.`;
+
+  if (speedRatio < 0.5) {
+    assessment = 'Impulsividad';
+    assessmentColor = '#ff9800';
+    desc = `Juegas al doble de velocidad justo antes de cometer un error.`;
+  } else if (speedRatio < 0.2) {
+    assessment = 'Insta-move / Pánico';
+    assessmentColor = '#f44336';
+    desc = `Haces errores graves jugando casi al instante sin pensar.`;
+  } else if (speedRatio > 2) {
+    assessment = 'Sobrepensado';
+    assessmentColor = '#ff9800';
+    desc = `Te bloqueas y consumes mucho reloj en posiciones críticas.`;
+  }
+
+  return (
+    <div className="stats-card-modern">
+      <div className="card-title-modern"><Timer size={13} color="#00bcd4" /> Gestión de Tiempo Crítico</div>
+      
+      <div className="tm-modern-view">
+        <div className="tm-comparison">
+          <div className="tm-side">
+            <span className="tm-val">{(avgMidgameTime / 1000).toFixed(1)}s</span>
+            <span className="tm-label">Ritmo Normal</span>
+          </div>
+          <div className="tm-divider"></div>
+          <div className="tm-side alert-side">
+            <span className="tm-val" style={{ color: assessmentColor }}>{(avgBlunderTime / 1000).toFixed(1)}s</span>
+            <span className="tm-label">En Errores</span>
+          </div>
+        </div>
+
+        <div className="tm-insight">
+          <span className="tm-badge" style={{ backgroundColor: assessmentColor + '15', color: assessmentColor, border: `1px solid ${assessmentColor}30` }}>
+            {assessment}
+          </span>
+          <span className="tm-desc">{desc}</span>
+        </div>
       </div>
     </div>
   );
