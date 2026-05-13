@@ -1,4 +1,4 @@
-/* ── Move Insight Card (Detalle del último movimiento) ───────────────────── */
+/* ── Move Insight Card (Detalle de la posición) ───────────────────── */
 .move-explorer-view .move-insight-card {
   margin: 12px 16px;
   padding: 12px;
@@ -36,32 +36,72 @@
   line-height: 1;
 }
 
-.move-explorer-view .insight-summary {
+/* ── Engine Live Stats ── */
+.move-explorer-view .insight-live-engine {
   display: flex;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
 }
 
-.move-explorer-view .insight-stat {
+.move-explorer-view .engine-eval-badge {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-}
-
-.move-explorer-view .insight-stat .val {
-  font-size: 0.85rem;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-tertiary);
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   font-weight: 800;
-  color: #ccc;
+  font-size: 0.95rem;
 }
 
-.move-explorer-view .insight-stat .lbl {
-  font-size: 0.5rem;
-  color: #555;
-  text-transform: uppercase;
+.move-explorer-view .engine-eval-badge.pos {
+  color: var(--accent-primary);
 }
 
+.move-explorer-view .engine-eval-badge.neg {
+  color: #f44336;
+}
+
+.move-explorer-view .engine-icon {
+  color: var(--text-muted);
+}
+
+.move-explorer-view .current-move-valuation {
+  font-size: 1.1rem;
+  font-weight: 900;
+}
+
+/* ── Historical Stats ── */
 .move-explorer-view .insight-history-compact {
   padding-top: 8px;
   border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.move-explorer-view .history-stats-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.move-explorer-view .db-icon {
+  color: #888;
+}
+
+.move-explorer-view .stat-separator {
+  color: #444;
+}
+
+.move-explorer-view .stat-item .pos {
+  color: var(--accent-primary);
+}
+
+.move-explorer-view .stat-item .neg {
+  color: #f44336;
 }
 
 .move-explorer-view .top-valuations {

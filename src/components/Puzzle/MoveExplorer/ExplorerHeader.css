@@ -58,32 +58,6 @@
   max-width: 160px;
 }
 
-.move-explorer-view .live-eval-badge {
-  font-size: 0.65rem;
-  font-weight: 800;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, 0.04);
-  min-width: 35px;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-.move-explorer-view .live-eval-badge.pos { color: #4caf50; border-color: rgba(76, 175, 80, 0.2); }
-.move-explorer-view .live-eval-badge.neg { color: #f44336; border-color: rgba(244, 67, 54, 0.2); }
-
-.move-explorer-view .live-eval-group {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.move-explorer-view .current-move-valuation {
-  font-size: 1.1rem;
-  font-weight: 900;
-  line-height: 1;
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-}
 
 /* ── Acciones del header ──────────────────────────────────────────────────── */
 .move-explorer-view .header-actions {

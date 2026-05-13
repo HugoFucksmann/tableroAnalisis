@@ -227,8 +227,6 @@ export const MoveExplorerView = ({ onBack }) => {
       <ExplorerHeader 
         ecoCode={ecoCode}
         openingName={openingName}
-        currentEval={currentEval}
-        moveEvaluations={moveEvaluations}
         currentMoveIndex={currentMoveIndex}
         playerColor={playerColor}
         handleSetColor={handleSetColor}
