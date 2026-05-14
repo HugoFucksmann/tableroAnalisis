@@ -43,17 +43,22 @@ export const MoveInsightCard = ({ stats }) => {
     .slice(0, 3);
 
   return (
-    <div className="move-insight-card">
-      <div className="insight-header">
-        <div className="insight-san-box">
-          <span className="insight-label">Análisis de la posición</span>
-          <span className="insight-san">{lastMove ? renderSan(lastMove.san) : 'Inicio'}</span>
+    <div className="move-insight-card-modern">
+      <div className="insight-main-row">
+        <div className="current-move-display">
+          <div className="move-target-icon">
+            <div className="target-dot" />
+          </div>
+          <div className="move-info-text">
+            <span className="move-san-large">{lastMove ? renderSan(lastMove.san) : 'Inicio'}</span>
+            <span className="move-context-label">{lastMove ? 'Jugada actual' : 'Posición inicial'}</span>
+          </div>
         </div>
 
-        <div className="insight-live-engine">
-          <div className={`engine-eval-badge ${currentEval?.score > 0 ? 'pos' : 'neg'}`}>
-            <Cpu size={14} className="engine-icon" />
-            <span className="engine-score">
+        <div className="engine-status-area">
+          <div className={`engine-score-capsule ${currentEval?.score > 0 ? 'pos' : 'neg'}`}>
+            <Cpu size={12} className="cpu-icon" />
+            <span className="score-val">
               {currentEval ? (
                 currentEval.mate
                   ? `M${Math.abs(currentEval.mate)}`
@@ -61,52 +66,46 @@ export const MoveInsightCard = ({ stats }) => {
               ) : '...'}
             </span>
           </div>
+          
           {currentMoveQuality && (
-            <div
-              className="current-move-valuation"
-              style={{ color: EVAL_CONFIG[currentMoveQuality.label]?.color || '#fff' }}
-              title={currentMoveQuality.label}
-            >
-              {EVAL_CONFIG[currentMoveQuality.label]?.icon || '?'}
+            <div className="quality-indicator" title={currentMoveQuality.label}>
+              <span className="quality-icon" style={{ color: EVAL_CONFIG[currentMoveQuality.label]?.color }}>
+                {EVAL_CONFIG[currentMoveQuality.label]?.icon || '?'}
+              </span>
             </div>
           )}
         </div>
       </div>
 
       {(stats || topLabels.length > 0) && (
-        <div className="insight-history-compact">
-          <div className="history-stats-row">
-            <Database size={12} className="db-icon" />
-            <span className="stat-item">{totalGames} partidas registradas</span>
+        <div className="historical-stats-bar">
+          <div className="db-summary">
+            <Database size={11} className="db-mini-icon" />
+            <span className="db-count"><strong>{totalGames.toLocaleString()}</strong> partidas</span>
             {stats?.avgEval !== undefined && (
-              <>
-                <span className="stat-separator">•</span>
-                <span className="stat-item">
-                  Eval histórica: <span className={stats.avgEval > 0 ? 'pos' : 'neg'}>{stats.avgEval > 0 ? '+' : ''}{stats.avgEval}</span>
-                </span>
-              </>
+              <span className="db-avg-eval">
+                Avg: <span className={stats.avgEval > 0 ? 'pos' : 'neg'}>{stats.avgEval > 0 ? '+' : ''}{stats.avgEval}</span>
+              </span>
             )}
           </div>
 
-          {topLabels.length > 0 ? (
-            <div className="top-valuations">
-              {topLabels.map(([label, count]) => {
+          <div className="common-errors-row">
+            {topLabels.length > 0 ? (
+              topLabels.map(([label, count]) => {
                 const config = EVAL_CONFIG[label] || SPECIAL_LABELS[label];
                 return (
-                  <div key={label} className="valuation-pill-large" style={{ backgroundColor: config?.bg || 'rgba(255,255,255,0.05)' }}>
-                    <span className="v-icon" style={{ color: config?.color }}>{config?.icon || '?'}</span>
-                    <span className="v-count">{count}</span>
-                    <span className="v-label">{label}</span>
+                  <div key={label} className="error-micro-pill" title={`${count} veces: ${label}`}>
+                    <span className="e-icon" style={{ color: config?.color }}>{config?.icon}</span>
+                    <span className="e-count">{count}</span>
                   </div>
                 );
-              })}
-            </div>
-          ) : (
-            <div className="no-errors-msg">
-              <span className="v-icon" style={{ color: '#4caf50' }}>✓</span>
-              Sin errores graves frecuentes en esta posición
-            </div>
-          )}
+              })
+            ) : (
+              <div className="clean-pos-indicator">
+                <span className="check-icon">✓</span> Posición sólida
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

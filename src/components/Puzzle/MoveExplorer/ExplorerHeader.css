@@ -1,11 +1,11 @@
-/* ── Cabecera ─────────────────────────────────────────────────────────────── */
+/* ── Cabecera Premium ───────────────────────────────────────────────────────── */
 .move-explorer-view .explorer-header {
   display: flex;
   flex-direction: column;
-  padding: 10px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 14px 20px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   flex-shrink: 0;
-  background: rgba(0, 0, 0, 0.1);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2), transparent);
 }
 
 .move-explorer-view .header-top {
@@ -17,108 +17,123 @@
 .move-explorer-view .explorer-title-area {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 4px;
 }
 
 .move-explorer-view .explorer-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--accent-primary);
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 900;
+  color: #fff;
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.1em;
+  opacity: 0.9;
 }
 
-/* ── Información de apertura compacta ────────────────────────────────────── */
+.move-explorer-view .text-accent {
+  color: var(--accent-primary);
+  filter: drop-shadow(0 0 4px var(--accent-primary));
+}
+
+/* ── Información de apertura refinada ── */
 .move-explorer-view .opening-info-compact {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
 }
 
 .move-explorer-view .eco-badge {
-  font-size: 0.58rem;
-  font-weight: 800;
-  background: rgba(255, 255, 255, 0.05);
-  color: #888;
-  padding: 1px 4px;
-  border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.6rem;
+  font-weight: 900;
+  background: rgba(var(--accent-primary-rgb), 0.1);
+  color: var(--accent-primary);
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--accent-primary-rgb), 0.2);
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .move-explorer-view .opening-name {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #777;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #aaa;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 160px;
+  max-width: 180px;
+  letter-spacing: -0.01em;
 }
 
-
-/* ── Acciones del header ──────────────────────────────────────────────────── */
+/* ── Acciones del header ── */
 .move-explorer-view .header-actions {
   display: flex;
   align-items: center;
   gap: 12px;
 }
 
-/* ── Toggle de perspectiva W / B ──────────────────────────────────────────── */
+/* ── Toggle de perspectiva W / B (Moderno) ── */
 .move-explorer-view .perspective-toggle {
   display: flex;
-  background: rgba(255, 255, 255, 0.04);
-  padding: 2px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
 }
 
 .move-explorer-view .toggle-btn {
   background: transparent;
   border: none;
-  color: #555;
-  width: 24px;
-  height: 22px;
-  font-size: 0.65rem;
-  font-weight: 800;
+  color: #666;
+  width: 28px;
+  height: 24px;
+  font-size: 0.7rem;
+  font-weight: 900;
   cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  border-radius: 6px;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .move-explorer-view .toggle-btn.active {
-  background: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 
+              inset 0 1px 1px rgba(255, 255, 255, 0.1);
 }
 
-/* ── Botón de Acción del Explorador (Quick Analysis) ─────────────────────── */
+.move-explorer-view .toggle-btn:hover:not(.active) {
+  color: #999;
+}
+
+/* ── Botón de Acción del Explorador ── */
 .move-explorer-view .explorer-action-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #777;
-  width: 28px;
-  height: 22px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #666;
+  width: 32px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s ease;
 }
 
 .move-explorer-view .explorer-action-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--accent-primary);
-  border-color: var(--accent-glow);
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .move-explorer-view .explorer-action-btn.analyzing {
   color: var(--accent-primary);
-  background: var(--accent-glow);
+  border-color: var(--accent-primary);
+  background: rgba(var(--accent-primary-rgb), 0.1);
+  box-shadow: 0 0 10px rgba(var(--accent-primary-rgb), 0.2);
 }

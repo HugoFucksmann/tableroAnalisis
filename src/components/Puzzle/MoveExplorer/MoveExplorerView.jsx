@@ -249,7 +249,6 @@ export const MoveExplorerView = ({ onBack }) => {
             setHoveredExplorerMove={setHoveredExplorerMove}
           />
 
-          <div className="explorer-divider-soft" />
 
           <MoveSection
             moves={mastersData}

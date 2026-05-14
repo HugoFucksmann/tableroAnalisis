@@ -5,60 +5,61 @@
 }
 
 .move-explorer-view .explorer-section:not(:last-child) {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
-/* ── Cabecera de sección ──────────────────────────────────────────────────── */
+/* ── Cabecera de sección ── */
 .move-explorer-view .section-header {
-  padding: 12px 16px 8px;
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: var(--text-muted);
+  padding: 16px 20px 8px;
+  font-size: 0.65rem;
+  font-weight: 900;
+  color: #444;
   text-transform: uppercase;
-  letter-spacing: 1px;
+  letter-spacing: 0.1em;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: rgba(255, 255, 255, 0.01);
+  background: transparent;
 }
 
-/* ── Estado vacío / cargando ──────────────────────────────────────────────── */
+/* ── Estado vacío / cargando ── */
 .move-explorer-view .explorer-placeholder {
-  padding: 40px 16px;
+  padding: 30px 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 12px;
-  color: #444;
+  color: #333;
   text-align: center;
 }
 
 .move-explorer-view .explorer-placeholder span {
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
 }
 
-/* ── Lista de movimientos ─────────────────────────────────────────────────── */
+/* ── Lista de movimientos ── */
 .move-explorer-view .moves-list {
   display: flex;
   flex-direction: column;
-  padding: 4px 0;
+  padding: 4px 0 12px;
 }
 
 .move-explorer-view .move-row {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 4px 16px;
+  padding: 6px 20px;
   cursor: pointer;
-  transition: all 0.1s ease;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
-  min-height: 32px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.01);
+  min-height: 36px;
 }
 
 .move-explorer-view .move-row:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(255, 255, 255, 0.02);
+  padding-left: 24px;
 }
 
 .move-explorer-view .move-main-info {
@@ -73,23 +74,24 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 70px;
+  width: 65px;
   flex-shrink: 0;
 }
 
 .move-explorer-view .move-san {
-  font-weight: 800;
-  color: #fff;
-  font-size: 0.85rem;
+  font-weight: 900;
+  color: #eee;
+  font-size: 0.9rem;
   display: flex;
   align-items: center;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .move-explorer-view .piece-icon-not {
   font-size: 1.1rem;
-  margin-right: 1px;
+  margin-right: 2px;
   color: var(--accent-primary);
-  opacity: 0.9;
+  opacity: 0.8;
   line-height: 0.8;
 }
 
@@ -97,36 +99,38 @@
   flex: 1;
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
 .move-explorer-view .win-rate-bar-compact {
-  height: 4px;
+  height: 3px;
   flex: 1;
   display: flex;
-  border-radius: 2px;
+  border-radius: 10px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.move-explorer-view .bar-seg.w { background: #4caf50; }
-.move-explorer-view .bar-seg.d { background: #777; }
-.move-explorer-view .bar-seg.l { background: #f44336; }
+.move-explorer-view .bar-seg.w { background: #43a047; opacity: 0.8; }
+.move-explorer-view .bar-seg.d { background: #616161; opacity: 0.6; }
+.move-explorer-view .bar-seg.l { background: #e53935; opacity: 0.8; }
 
 .move-explorer-view .wr-val {
   font-size: 0.65rem;
-  font-weight: 700;
-  color: #666;
+  font-weight: 800;
+  color: #555;
   width: 32px;
   text-align: right;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .move-explorer-view .eval-mini {
-  font-size: 0.65rem;
-  font-weight: 800;
-  min-width: 35px;
+  font-size: 0.7rem;
+  font-weight: 900;
+  min-width: 38px;
   text-align: right;
+  font-family: 'JetBrains Mono', monospace;
 }
 
 .move-explorer-view .eval-mini.pos { color: #4caf50; }
@@ -136,15 +140,15 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: 90px;
+  width: 80px;
   justify-content: flex-end;
   flex-shrink: 0;
 }
 
 .move-explorer-view .count-number {
-  font-size: 0.75rem;
-  font-weight: 800;
-  color: #555;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #333;
   min-width: 30px;
   text-align: right;
 }

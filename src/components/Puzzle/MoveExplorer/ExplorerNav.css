@@ -1,20 +1,20 @@
-/* ── Barra de navegación ──────────────────────────────────────────────────── */
+/* ── Barra de navegación Minimalista ────────────────────────────────────────── */
 .move-explorer-view .explorer-nav {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 8px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  background: rgba(255, 255, 255, 0.01);
+  gap: 2px;
+  padding: 6px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  background: transparent;
 }
 
-/* ── Botones de navegación ────────────────────────────────────────────────── */
+/* ── Botones de navegación ── */
 .move-explorer-view .nav-btn {
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: #777;
-  width: 32px;
-  height: 28px;
+  background: transparent;
+  border: none;
+  color: #555;
+  width: 30px;
+  height: 24px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -24,20 +24,26 @@
 }
 
 .move-explorer-view .nav-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
   color: #fff;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .move-explorer-view .nav-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.1;
   cursor: not-allowed;
 }
 
-/* ── Contador de jugadas (nav) ────────────────────────────────────────────── */
+/* ── Contador de jugadas ── */
 .move-explorer-view .move-count-info {
   margin-left: auto;
   font-size: 0.65rem;
-  font-weight: 700;
-  color: #555;
+  font-weight: 800;
+  color: #444;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.move-explorer-view .move-count-info strong {
+  color: var(--accent-primary);
+  opacity: 0.8;
 }

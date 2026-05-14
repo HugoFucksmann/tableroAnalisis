@@ -1,151 +1,192 @@
-/* ── Move Insight Card (Detalle de la posición) ───────────────────── */
-.move-explorer-view .move-insight-card {
-  margin: 12px 16px;
-  padding: 12px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+/* ── Move Insight Card Modern (Detalle de la posición) ───────────────────── */
+.move-explorer-view .move-insight-card-modern {
+  margin: 0;
+  padding: 16px 20px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.02), transparent);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
 }
 
-.move-explorer-view .insight-header {
+.move-explorer-view .insight-main-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.move-explorer-view .insight-san-box {
+/* ── Current Move Display ── */
+.move-explorer-view .current-move-display {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.move-explorer-view .move-target-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(var(--accent-primary-rgb), 0.05);
+}
+
+.move-explorer-view .target-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  box-shadow: 0 0 8px var(--accent-primary);
+}
+
+.move-explorer-view .move-info-text {
   display: flex;
   flex-direction: column;
+  line-height: 1.1;
 }
 
-.move-explorer-view .insight-label {
-  font-size: 0.55rem;
+.move-explorer-view .move-san-large {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+
+.move-explorer-view .move-context-label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
   text-transform: uppercase;
-  color: #555;
-  font-weight: 800;
   letter-spacing: 0.05em;
+  opacity: 0.8;
 }
 
-.move-explorer-view .insight-san {
+/* ── Engine Status Area ── */
+.move-explorer-view .engine-status-area {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.move-explorer-view .engine-score-capsule {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 10px;
+  border-radius: 100px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.move-explorer-view .engine-score-capsule.pos {
+  color: #4caf50;
+  border-color: rgba(76, 175, 80, 0.2);
+}
+
+.move-explorer-view .engine-score-capsule.neg {
+  color: #f44336;
+  border-color: rgba(244, 67, 54, 0.2);
+}
+
+.move-explorer-view .cpu-icon {
+  opacity: 0.6;
+}
+
+.move-explorer-view .quality-indicator {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.move-explorer-view .quality-icon {
   font-size: 1.3rem;
   font-weight: 900;
-  color: var(--accent-primary);
-  line-height: 1;
+  filter: drop-shadow(0 0 4px rgba(0,0,0,0.5));
 }
 
-/* ── Engine Live Stats ── */
-.move-explorer-view .insight-live-engine {
+/* ── Historical Stats Bar ── */
+.move-explorer-view .historical-stats-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.move-explorer-view .db-summary {
   display: flex;
   align-items: center;
   gap: 8px;
-}
-
-.move-explorer-view .engine-eval-badge {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  background: var(--bg-tertiary);
-  padding: 4px 10px;
-  border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  font-weight: 800;
-  font-size: 0.95rem;
-}
-
-.move-explorer-view .engine-eval-badge.pos {
-  color: var(--accent-primary);
-}
-
-.move-explorer-view .engine-eval-badge.neg {
-  color: #f44336;
-}
-
-.move-explorer-view .engine-icon {
-  color: var(--text-muted);
-}
-
-.move-explorer-view .current-move-valuation {
-  font-size: 1.1rem;
-  font-weight: 900;
-}
-
-/* ── Historical Stats ── */
-.move-explorer-view .insight-history-compact {
-  padding-top: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.03);
-}
-
-.move-explorer-view .history-stats-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 0.7rem;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-  font-weight: 600;
-}
-
-.move-explorer-view .db-icon {
+  font-size: 0.72rem;
   color: #888;
 }
 
-.move-explorer-view .stat-separator {
-  color: #444;
+.move-explorer-view .db-mini-icon {
+  opacity: 0.5;
 }
 
-.move-explorer-view .stat-item .pos {
-  color: var(--accent-primary);
+.move-explorer-view .db-count strong {
+  color: #bbb;
 }
 
-.move-explorer-view .stat-item .neg {
-  color: #f44336;
+.move-explorer-view .db-avg-eval {
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.move-explorer-view .top-valuations {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
+.move-explorer-view .db-avg-eval .pos { color: #4caf50; }
+.move-explorer-view .db-avg-eval .neg { color: #f44336; }
 
-.move-explorer-view .valuation-pill-large {
+.move-explorer-view .common-errors-row {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 4px 10px;
-  border-radius: 6px;
+}
+
+.move-explorer-view .error-micro-pill {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   background: rgba(0, 0, 0, 0.2);
+  padding: 2px 6px;
+  border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-.move-explorer-view .v-icon {
-  font-size: 1.1rem;
+.move-explorer-view .e-icon {
+  font-size: 0.85rem;
   font-weight: 900;
-  line-height: 1;
 }
 
-.move-explorer-view .v-count {
-  font-size: 0.9rem;
+.move-explorer-view .e-count {
+  font-size: 0.7rem;
   font-weight: 800;
-  color: #fff;
+  color: #777;
 }
 
-.move-explorer-view .v-label {
+.move-explorer-view .clean-pos-indicator {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 0.65rem;
+  color: #555;
   font-weight: 700;
-  color: #777;
   text-transform: uppercase;
   letter-spacing: 0.02em;
 }
 
-.move-explorer-view .no-errors-msg {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 0.75rem;
-  color: #666;
-  font-weight: 600;
-  font-style: italic;
+.move-explorer-view .check-icon {
+  color: #4caf50;
+  font-weight: 900;
 }
