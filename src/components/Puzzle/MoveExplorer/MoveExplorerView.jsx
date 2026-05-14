@@ -3,6 +3,7 @@ import { useGameStore } from '../../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { backendService } from '../../../services/backendService';
 import { analysisBridge } from '../../../services/analysisBridge';
+import { lichessExplorerService } from '../../../services/lichessExplorerService';
 
 import { ExplorerHeader } from './ExplorerHeader';
 import { ExplorerNav } from './ExplorerNav';
@@ -73,9 +74,9 @@ export const MoveExplorerView = ({ onBack }) => {
     if (history.length > 0 && currentMoveIndex >= 0) {
       const lastMove = history[currentMoveIndex];
       const perspective = lastMove.color === 'w' ? explorerData?.whitePerspective : explorerData?.blackPerspective;
-      const stats = perspective?.userMoves?.find(m => m.san === lastMove.san) || 
-                    perspective?.opponentMoves?.find(m => m.san === lastMove.san);
-      
+      const stats = perspective?.userMoves?.find(m => m.san === lastMove.san) ||
+        perspective?.opponentMoves?.find(m => m.san === lastMove.san);
+
       if (stats) {
         setLastMoveStats({ ...stats, color: lastMove.color });
       }
@@ -102,37 +103,35 @@ export const MoveExplorerView = ({ onBack }) => {
     updatePlayerNames(playerColor);
   }, [updatePlayerNames, playerColor]);
 
-  const fetchExplorerData = useCallback(() => {
+  const fetchExplorerData = useCallback(async () => {
     if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
     setLoading(true);
     setIsStale(true);
 
-    const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
-    const requestId = Math.random().toString(36).substring(7);
-    backendService.getMoveExplorer(cleanFen, requestId);
+    // Esperar a que el backend esté conectado si no lo está (max 5s)
+    let attempts = 0;
+    while (!backendService.isConnected && attempts < 50) {
+      await new Promise(r => setTimeout(r, 100));
+      attempts++;
+    }
 
     loadingTimerRef.current = setTimeout(() => {
       setLoading(false);
       setIsStale(false);
     }, 10000);
+
+    const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
+    const requestId = Math.random().toString(36).substring(7);
+    backendService.getMoveExplorer(cleanFen, requestId);
   }, [fen]);
 
   const fetchMastersData = useCallback(async () => {
     const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
     setLoadingMasters(true);
     try {
-      const headers = {};
-      if (lichessToken) {
-        headers['Authorization'] = `Bearer ${lichessToken}`;
-      }
+      const data = await lichessExplorerService.fetchMastersData(fen, lichessToken);
 
-      const response = await fetch(
-        `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`,
-        { headers }
-      );
-      if (!response.ok) throw new Error(`API Error: ${response.status}`);
-      const data = await response.json();
-      
+
       if (data.opening) {
         setOpeningName(data.opening.name);
         setEcoCode(data.opening.eco);
@@ -224,7 +223,7 @@ export const MoveExplorerView = ({ onBack }) => {
 
   return (
     <div className="move-explorer-view" onWheel={handleWheel}>
-      <ExplorerHeader 
+      <ExplorerHeader
         ecoCode={ecoCode}
         openingName={openingName}
         currentMoveIndex={currentMoveIndex}
@@ -232,7 +231,7 @@ export const MoveExplorerView = ({ onBack }) => {
         handleSetColor={handleSetColor}
       />
 
-      <ExplorerNav 
+      <ExplorerNav
         currentMoveIndex={currentMoveIndex}
         historyLength={history.length}
         goToMove={goToMove}
@@ -240,19 +239,19 @@ export const MoveExplorerView = ({ onBack }) => {
 
       <div className={`explorer-content premium-scroll ${isStale ? 'stale-overlay' : ''}`}>
         <MoveInsightCard stats={lastMoveStats} />
-        
+
         <div className="explorer-grids">
-          <MoveSection 
+          <MoveSection
             moves={isUserTurn ? userMoves : opponentMoves}
             title={isUserTurn ? `Mis Jugadas (${playerColor === 'white' ? 'W' : 'B'})` : 'Jugadas Rival'}
             isLoading={loading}
             onMoveClick={handleMoveClick}
             setHoveredExplorerMove={setHoveredExplorerMove}
           />
-          
+
           <div className="explorer-divider-soft" />
 
-          <MoveSection 
+          <MoveSection
             moves={mastersData}
             title="Maestros (Lichess)"
             isMaster={true}

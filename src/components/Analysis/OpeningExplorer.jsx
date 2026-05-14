@@ -4,6 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Loader, AlertCircle, BookOpen, Globe } from 'lucide-react';
 import { backendService } from '../../services/backendService';
 import { getPieceIcon } from '../../utils/chessUtils';
+import { lichessExplorerService } from '../../services/lichessExplorerService';
 import './OpeningExplorer.css';
 
 function sanToArrow(san, chessInstance, color = 'var(--arrow-explorer-hover)') {
@@ -34,11 +35,11 @@ const MoveRow = ({ move, type, turn, onHover, onLeave, onPlay }) => (
     <div className="win-rate-bar-container">
       <div className="win-rate-bar">
         {type === 'offline' ? <div className="bar-segment tsv-freq" style={{ width: `${move.freq}%` }} /> : (
-          <><div className="bar-segment white" style={{ width: `${move.white}%` }} /><div className="bar-segment draw"  style={{ width: `${move.draw}%` }} /><div className="bar-segment black" style={{ width: `${move.black}%` }} /></>
+          <><div className="bar-segment white" style={{ width: `${move.white}%` }} /><div className="bar-segment draw" style={{ width: `${move.draw}%` }} /><div className="bar-segment black" style={{ width: `${move.black}%` }} /></>
         )}
       </div>
     </div>
-    <div className="games-count">{type === 'offline' ? <span className="count-label">Off</span> : (move.games >= 1000 ? `${(move.games/1000).toFixed(1)}k` : move.games)}</div>
+    <div className="games-count">{type === 'offline' ? <span className="count-label">Off</span> : (move.games >= 1000 ? `${(move.games / 1000).toFixed(1)}k` : move.games)}</div>
   </div>
 );
 
@@ -59,21 +60,17 @@ export const OpeningExplorer = () => {
   React.useEffect(() => {
     let active = true;
     setIsStale(true); // Marcamos como "viejo" mientras cargamos lo nuevo
-    
+
     // Debounce corto para offline, más largo para online
     const offlineTimer = setTimeout(() => loadOffline(), 50);
-    const onlineTimer  = setTimeout(() => loadOnline(), 400);
+    const onlineTimer = setTimeout(() => loadOnline(), 400);
 
     async function loadOffline() {
-      if (!backendService.isConnected) {
-        setIsStale(false);
-        return;
-      }
       try {
         const result = await backendService.request('get_book_moves', { fen }, 'book_moves');
         if (!active) return;
         setBookData({ moves: result.moves || [], opening: result.opening || '' });
-        
+
         const arrows = (result.moves || []).slice(0, 2).flatMap(m => {
           const arrow = sanToArrow(m.san, game, 'var(--arrow-explorer-base)');
           return arrow ? [arrow] : [];
@@ -90,14 +87,7 @@ export const OpeningExplorer = () => {
       setLichessLoading(true);
       setLichessError(null);
       try {
-        const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
-        const url = `https://explorer.lichess.ovh/masters?fen=${encodeURIComponent(cleanFen)}`;
-        const headers = { 'Accept': 'application/json' };
-        if (lichessToken?.trim().length > 10) headers['Authorization'] = `Bearer ${lichessToken.trim()}`;
-
-        const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(`Lichess ${res.status}`);
-        const data = await res.json();
+        const data = await lichessExplorerService.fetchMastersData(fen, lichessToken);
         if (!active) return;
 
         const cleanName = (data.opening?.name || '').split(':')[0].trim();
@@ -108,7 +98,7 @@ export const OpeningExplorer = () => {
             return {
               san: m.san,
               white: total > 0 ? Math.round((m.white / total) * 100) : 0,
-              draw:  total > 0 ? Math.round((m.draws / total) * 100) : 0,
+              draw: total > 0 ? Math.round((m.draws / total) * 100) : 0,
               black: total > 0 ? Math.round((m.black / total) * 100) : 0,
               games: total,
             };
@@ -166,7 +156,7 @@ export const OpeningExplorer = () => {
         {lichessLoading && !lichessData && (
           <div className="explorer-loading-mini"><Loader className="gi-spin" size={14} /> <span>Sincronizando Lichess…</span></div>
         )}
-        
+
         {lichessError && (
           <div className="explorer-error-mini"><AlertCircle size={12} /> <span>{lichessError}</span></div>
         )}
