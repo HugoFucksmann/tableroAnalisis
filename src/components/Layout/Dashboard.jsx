@@ -10,6 +10,7 @@ import { ModeSelector } from './ModeSelector';
 import { PuzzleDashboard } from '../Puzzle/PuzzleDashboard';
 import { StatsDashboard } from '../Stats/StatsDashboard';
 import { MoveExplorerView } from '../Puzzle/MoveExplorer/MoveExplorerView';
+import { StatsDetailView } from '../Stats/StatsDetailView';
 import { backendService } from '../../services/backendService';
 import { AnalysisPanels } from '../Analysis/AnalysisPanels';
 import { usePanelManagement, useSidebarResize } from '../../hooks/useDashboardLayout';
@@ -31,7 +32,7 @@ export const Dashboard = () => {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, hasPgnEvaluations, startFullAnalysis,
     analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId,
-    setAppMode, setExplorerMode
+    setAppMode, setExplorerMode, selectedStatCategory
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -48,6 +49,7 @@ export const Dashboard = () => {
     gameId: state.gameId,
     setAppMode: state.setAppMode,
     setExplorerMode: state.setExplorerMode,
+    selectedStatCategory: state.selectedStatCategory
   })));
 
 
@@ -59,6 +61,11 @@ export const Dashboard = () => {
       }
       if (msg.type === 'full_analysis_data') {
         applyFullAnalysis(msg.data);
+        const { targetPly, setTargetPly, goToMove } = useGameStore.getState();
+        if (targetPly !== null) {
+          goToMove(targetPly);
+          setTargetPly(null);
+        }
       }
       if (msg.type === 'analyses_list') {
         if (msg.offset === 0) {
@@ -108,9 +115,13 @@ export const Dashboard = () => {
         }}
       >
         <section className="board-section glass-panel">
-          <div className="board-wrapper">
-            <Board />
-          </div>
+          {appMode === 'stats' && selectedStatCategory ? (
+            <StatsDetailView />
+          ) : (
+            <div className="board-wrapper">
+              <Board />
+            </div>
+          )}
         </section>
 
         {!isMobile && (

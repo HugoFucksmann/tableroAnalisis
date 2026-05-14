@@ -1,3 +1,6 @@
+import { Chess } from 'chess.js';
+import { replayTo } from '../../utils/chessUtils';
+
 export const createAnalysisSlice = (set, get) => ({
   evaluation: { score: 0, mate: null },
   evaluationHistory: {},
@@ -109,7 +112,7 @@ export const createAnalysisSlice = (set, get) => ({
   setAlternativeLinesForIndex: (index, lines) => set((state) => ({ alternativeLines: { ...state.alternativeLines, [index]: lines } })),
   setAnalyzing: (v) => set({ isAnalyzing: v }),
   setCanceling: (v) => set({ isCanceling: v }),
-  setAnalysisProgress: (pct, label) => set((state) => ({ 
+  setAnalysisProgress: (pct, label) => set((state) => ({
     analysisProgress: pct,
     analysisLabel: label !== undefined ? label : state.analysisLabel
   })),
@@ -145,15 +148,62 @@ export const createAnalysisSlice = (set, get) => ({
       });
     }
 
-    set({
+    // Reconstruir historial verbose de chess.js desde los SANs guardados,
+    // necesario para que goToMove / replayTo funcionen al navegar la partida.
+    let verboseHistory = [];
+    let startFen = data.startFen || null;
+    const sans = data.historySan || data.history || [];
+
+    if (sans.length > 0) {
+      try {
+        const chess = startFen ? new Chess(startFen) : new Chess();
+        for (const san of sans) {
+          const move = chess.move(san);
+          if (move) verboseHistory.push(move);
+        }
+      } catch (e) {
+        console.warn('[applyFullAnalysis] Could not reconstruct verbose history:', e.message);
+        verboseHistory = [];
+      }
+    }
+
+    const baseState = {
       accuracy: data.accuracy,
       openingName: data.opening?.name || 'Unknown',
+      ecoCode: data.opening?.eco || '',
       evaluationHistory,
       moveEvaluations: data.moveEvaluations || {},
       bestMoves: data.bestMoves || {},
       alternativeLines: data.alternativeLines || {},
       analysisReady: true,
       openingDetected: true,
-    });
+    };
+
+    if (verboseHistory.length > 0) {
+      const gameCopy = replayTo(verboseHistory, 0, startFen);
+
+      // Cargar nombres de jugadores si están disponibles en los datos guardados
+      if (data.players?.white || data.players?.black) {
+        get().setPlayers(
+          data.players.white || 'Blancas',
+          data.players.black || 'Negras'
+        );
+      }
+
+      set({
+        ...baseState,
+        history: verboseHistory,
+        startFen,
+        currentMoveIndex: 0,
+        game: gameCopy,
+        fen: gameCopy.fen(),
+        isExploreMode: false,
+        mainLineData: null,
+        arrows: [],
+      });
+    } else {
+      // Sin historial (partida vacía o datos viejos sin historySan): solo aplicar evaluaciones
+      set(baseState);
+    }
   },
 });

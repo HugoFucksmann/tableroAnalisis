@@ -1,0 +1,121 @@
+.stats-detail-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: var(--surface-1);
+    border-radius: 8px;
+    border: 1px solid var(--border-light);
+}
+
+.stats-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    border-bottom: 1px solid var(--border-light);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.back-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+}
+
+.stats-detail-header h2 {
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: var(--text-primary);
+    flex: 1;
+}
+
+.stats-detail-count {
+    font-size: 0.8rem;
+    color: var(--text-tertiary);
+    font-weight: 600;
+}
+
+.stats-detail-loading,
+.stats-detail-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: var(--text-secondary);
+    gap: 16px;
+}
+
+.stats-detail-loading p,
+.stats-detail-empty p {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.stats-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.stat-board-card {
+    background: var(--surface-2);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-board-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.stat-board-wrapper {
+    width: 100%;
+    aspect-ratio: 1;
+    pointer-events: none; /* Previene interacción con el tablero */
+}
+
+.stat-board-info {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.sbi-game {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.sbi-action {
+    font-size: 0.7rem;
+    color: var(--accent);
+    text-transform: uppercase;
+    font-weight: 800;
+}

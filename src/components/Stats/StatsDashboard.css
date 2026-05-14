@@ -880,6 +880,18 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
+.psycho-row.clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 8px 6px;
+  border-radius: 6px;
+  border-bottom: none;
+}
+
+.psycho-row.clickable:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
 .psycho-row:last-child {
   border-bottom: none;
 }

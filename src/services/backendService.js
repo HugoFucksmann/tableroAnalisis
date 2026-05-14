@@ -80,7 +80,7 @@ class BackendService {
 
     async request(type, payload, resultType) {
         const requestId = Math.random().toString(36).substring(2, 15);
-        
+
         if (!this.isConnected) {
             await new Promise(resolve => {
                 let attempts = 0;
@@ -131,12 +131,18 @@ class BackendService {
     }
 
     analyzeGame(history, currentIndex, gameId, engineConfig, startFen = null, extraInfo = {}) {
-        return this.send('analyze_game', { 
+        return this.send('analyze_game', {
             history, currentIndex, gameId, engineConfig, startFen,
             playerColor: extraInfo.playerColor,
             win: extraInfo.win,
             timeControl: extraInfo.timeControl ?? null,
+            playerWhite: extraInfo.playerWhite ?? null,
+            playerBlack: extraInfo.playerBlack ?? null,
         });
+    }
+
+    getStatDetails(category, filters = {}) {
+        return this.request('get_stat_details', { category, filters }, 'stat_details_data');
     }
 
     cancel() {
@@ -178,7 +184,7 @@ class BackendService {
     getStats(filters = {}, requestId = null) {
         return this.send('get_stats', { filters }, requestId);
     }
-    
+
     getAnalyses(offset = 0, limit = 50, requestId = null) {
         return this.send('get_analyses', { offset, limit }, requestId);
     }

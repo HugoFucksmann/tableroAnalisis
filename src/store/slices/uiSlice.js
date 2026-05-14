@@ -33,4 +33,10 @@ export const createUISlice = (set, get) => ({
 
   explorerMode: false,
   setExplorerMode: (v) => set({ explorerMode: v }),
+
+  selectedStatCategory: null,
+  setSelectedStatCategory: (cat) => set({ selectedStatCategory: cat }),
+
+  targetPly: null,
+  setTargetPly: (ply) => set({ targetPly: ply }),
 });

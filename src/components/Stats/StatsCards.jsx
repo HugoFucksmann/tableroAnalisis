@@ -1,6 +1,7 @@
 import React from 'react';
 import { m } from 'framer-motion';
 import { Zap, Target, BookOpen, AlertTriangle, Clock, Brain, Timer, ShieldAlert, Award } from 'lucide-react';
+import { useGameStore } from '../../store/useGameStore';
 
 export const ColorStatsCard = ({ stats }) => (
   <div className="stats-card-modern">
@@ -143,6 +144,8 @@ export const DangerousOpeningsCard = ({ stats }) => {
 };
 
 export const PsychologicalProfileCard = ({ stats }) => {
+  const setSelectedStatCategory = useGameStore(state => state.setSelectedStatCategory);
+
   if (!stats.advancedStats) return null;
   const { convertedAdvantages, blownAdvantages, comebackWins, savedDraws, failedComebacks, tiltEvents } = stats.advancedStats;
   
@@ -158,7 +161,11 @@ export const PsychologicalProfileCard = ({ stats }) => {
       
       <div className="psycho-list-modern">
         {/* Row 1: Conversión */}
-        <div className="psycho-row">
+        <div 
+            className="psycho-row clickable" 
+            onClick={() => setSelectedStatCategory('blown_advantage')}
+            title="Ver ventajas desperdiciadas"
+        >
           <div className="psycho-info">
             <span className="psycho-label">Conversión de Ventaja</span>
             <span className="psycho-sub">{convertedAdvantages} ganadas de {totalAdvantages} oportunidades</span>
@@ -172,7 +179,11 @@ export const PsychologicalProfileCard = ({ stats }) => {
         </div>
 
         {/* Row 2: Remontadas */}
-        <div className="psycho-row">
+        <div 
+            className="psycho-row clickable" 
+            onClick={() => setSelectedStatCategory('comeback')}
+            title="Ver remontadas y empates salvados"
+        >
           <div className="psycho-info">
             <span className="psycho-label">Resiliencia</span>
             <span className="psycho-sub">{comebackWins + savedDraws} salvadas de {totalComebackChances} crisis</span>
@@ -186,7 +197,11 @@ export const PsychologicalProfileCard = ({ stats }) => {
         </div>
 
         {/* Row 3: Tilt */}
-        <div className="psycho-row tilt-row">
+        <div 
+            className="psycho-row tilt-row clickable" 
+            onClick={() => setSelectedStatCategory('tilt')}
+            title="Ver posiciones de colapso"
+        >
           <div className="psycho-info">
             <span className="psycho-label">Control Emocional</span>
             <span className="psycho-sub">Efecto cascada (colapsos post-error)</span>
