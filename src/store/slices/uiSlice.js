@@ -6,10 +6,10 @@ export const createUISlice = (set, get) => ({
   showTokenInput: false,
   boardOrientation: 'white',
   playerColor: 'white',
-  gameId: 0,
+  // CRÍTICO SOLUCIONADO: gameId duplicado removido de uiSlice. 
+  // Ahora la única "fuente de la verdad" es gameSlice.js
 
   setShowTokenInput: (v) => set({ showTokenInput: v }),
-  setGameId: (id) => set({ gameId: id }),
   setBoardOrientation: (orientation) => set({ boardOrientation: orientation }),
   setPlayerColor: (color) => set({ playerColor: color }),
   setGamePhase: (phase) => set({ gamePhase: phase }),
@@ -22,13 +22,13 @@ export const createUISlice = (set, get) => ({
     players: { white, black },
     playerElos: { white: whiteElo, black: blackElo }
   }),
-  
+
   appMode: 'analysis',
   setAppMode: (mode) => set({ appMode: mode, explorerMode: mode === 'explorer' }),
-  
+
   puzzleState: null,
-  setPuzzleState: (updater) => set((state) => ({ 
-    puzzleState: typeof updater === 'function' ? updater(state.puzzleState) : updater 
+  setPuzzleState: (updater) => set((state) => ({
+    puzzleState: typeof updater === 'function' ? updater(state.puzzleState) : updater
   })),
 
   explorerMode: false,

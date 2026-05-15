@@ -6,18 +6,11 @@ import { fetchLichessGames, fetchChesscomGames } from '../../services/gameApi';
 import { Search, Loader, AlertCircle, ChevronLeft, Check, Target, CheckSquare, Square } from 'lucide-react';
 import './Puzzle.css';
 
-/**
- * PuzzleImporter — consume el estado compartido del librarySlice.
- * Si el usuario ya buscó partidas en GameImport, aparecen aquí sin re-fetch.
- */
 
-// ✅ FIX (use-reducer): los 5 useState locales originales se unifican en un
-// reducer. Estado relacionado que cambia junto va junto — evita renders
-// intermedios con estado inconsistente (ej: isFetching=false pero error aún vacío).
 const initialLocalState = {
   isFetching: false,
   error: '',
-  localUsername: '',     // se inicializa desde username del store en el componente
+  localUsername: '',
   localPlatform: 'lichess',
   extractionStatus: null,
 };

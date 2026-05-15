@@ -2,10 +2,14 @@ class BackendService {
     constructor() {
         this.ws = null;
         this.url = 'ws://localhost:9001';
-        this.isConnected = false;
         this.handlers = new Set();
         this._reconnectTimer = null;
         this.shouldBeConnected = false;
+        this.messageQueue = [];
+    }
+
+    get isConnected() {
+        return this.ws !== null && this.ws.readyState === WebSocket.OPEN;
     }
 
     connect() {
@@ -15,32 +19,43 @@ class BackendService {
         }
 
         console.log('[BackendService] Conectando al motor remoto...');
-        this.ws = new WebSocket(this.url);
 
-        this.ws.onopen = () => {
+        const currentWs = new WebSocket(this.url);
+        this.ws = currentWs;
+
+        currentWs.onopen = () => {
+            if (this.ws !== currentWs) {
+                currentWs.close();
+                return;
+            }
+
             console.log('[BackendService] ✅ Conectado al backend nativo');
-            this.isConnected = true;
-            this.handlers.forEach(h => h({ type: 'connection_status', connected: true }));
+            this._flushQueue();
+            this._notifyHandlers({ type: 'connection_status', connected: this.isConnected });
+
             if (this._reconnectTimer) {
                 clearInterval(this._reconnectTimer);
                 this._reconnectTimer = null;
             }
         };
 
-        this.ws.onmessage = (event) => {
+        currentWs.onmessage = (event) => {
             try {
                 const msg = JSON.parse(event.data);
-                this.handlers.forEach(h => h(msg));
+                this._notifyHandlers(msg);
             } catch (e) {
-                console.error('[BackendService] Error parseando mensaje:', e);
+                console.error('[BackendService] Error parseando mensaje JSON:', e);
             }
         };
 
-        this.ws.onclose = () => {
+        currentWs.onclose = () => {
             console.warn('[BackendService] ❌ Conexión cerrada');
-            this.isConnected = false;
-            this.ws = null;
-            this.handlers.forEach(h => h({ type: 'connection_status', connected: false }));
+
+            if (this.ws === currentWs) {
+                this.ws = null;
+            }
+
+            this._notifyHandlers({ type: 'connection_status', connected: false });
 
             if (this.shouldBeConnected && !this._reconnectTimer) {
                 console.log('[BackendService] Intentando reconectar en 5s...');
@@ -48,9 +63,26 @@ class BackendService {
             }
         };
 
-        this.ws.onerror = (err) => {
+        currentWs.onerror = (err) => {
             console.error('[BackendService] Error de WebSocket:', err);
         };
+    }
+
+    _notifyHandlers(msg) {
+        this.handlers.forEach(h => {
+            try {
+                h(msg);
+            } catch (err) {
+                console.error('[BackendService] Error en handler al procesar mensaje:', msg.type, err);
+            }
+        });
+    }
+
+    _flushQueue() {
+        while (this.messageQueue.length > 0 && this.ws && this.ws.readyState === WebSocket.OPEN) {
+            const rawMsg = this.messageQueue.shift();
+            this.ws.send(rawMsg);
+        }
     }
 
     disconnect() {
@@ -63,43 +95,36 @@ class BackendService {
             this.ws.close();
             this.ws = null;
         }
-        this.isConnected = false;
+        this.messageQueue = [];
         console.log('[BackendService] Desconectado manualmente');
     }
 
     send(type, payload, requestId = null) {
-        if (!this.isConnected) {
-            console.warn(`[BackendService] ⚠️ Mensaje '${type}' descartado: no hay conexión.`);
-            return false;
-        }
         const msg = { type, ...payload };
         if (requestId) msg.requestId = requestId;
-        this.ws.send(JSON.stringify(msg));
-        return true;
+        const rawMsg = JSON.stringify(msg);
+
+        if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.ws.send(rawMsg);
+            return true;
+        } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+            this.messageQueue.push(rawMsg);
+            return true;
+        } else if (this.shouldBeConnected) {
+            this.messageQueue.push(rawMsg);
+            return true;
+        } else {
+            console.warn(`[BackendService] ⚠️ Mensaje '${type}' descartado: no hay conexión activa.`);
+            return false;
+        }
     }
 
+    // BUG ALTO SOLUCIONADO: Se eliminó el anti-patrón de polling con setInterval.
+    // Ahora usa la cola de mensajes nativa y promesas puras.
     async request(type, payload, resultType) {
         const requestId = Math.random().toString(36).substring(2, 15);
 
-        if (!this.isConnected) {
-            await new Promise(resolve => {
-                let attempts = 0;
-                const check = setInterval(() => {
-                    attempts++;
-                    if (this.isConnected || attempts > 50) {
-                        clearInterval(check);
-                        resolve();
-                    }
-                }, 100);
-            });
-        }
-
         return new Promise((resolve, reject) => {
-            if (!this.isConnected) {
-                reject(new Error('Servidor no conectado'));
-                return;
-            }
-
             const timeout = setTimeout(() => {
                 cleanup();
                 reject(new Error('Timeout esperando respuesta del servidor'));
@@ -117,7 +142,13 @@ class BackendService {
                 }
             });
 
-            this.send(type, payload, requestId);
+            // Si no hay conexión pero se solicitó, send() lo encolará y enviará al conectar.
+            const sent = this.send(type, payload, requestId);
+            if (!sent) {
+                clearTimeout(timeout);
+                cleanup();
+                reject(new Error('No se pudo enviar la petición: servidor no conectado'));
+            }
         });
     }
 
@@ -134,7 +165,7 @@ class BackendService {
         return this.send('analyze_game', {
             history, currentIndex, gameId, engineConfig, startFen,
             playerColor: extraInfo.playerColor,
-            win: extraInfo.win,
+            win: extraInfo.win ?? null,
             timeControl: extraInfo.timeControl ?? null,
             playerWhite: extraInfo.playerWhite ?? null,
             playerBlack: extraInfo.playerBlack ?? null,

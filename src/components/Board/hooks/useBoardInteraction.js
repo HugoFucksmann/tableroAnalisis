@@ -10,7 +10,8 @@ export const useBoardInteraction = (makeMove) => {
 
         if (!targetSquare || sourceSquare === targetSquare) return false;
 
-        const isPawn = piece ? piece[1] === 'P' : true;
+        // BUG MEDIO SOLUCIONADO: Si piece es undefined, ahora es false en lugar de true
+        const isPawn = piece ? piece[1] === 'P' : false;
         const isPromotionRank = targetSquare[1] === '8' || targetSquare[1] === '1';
 
         if (isPawn && isPromotionRank) {

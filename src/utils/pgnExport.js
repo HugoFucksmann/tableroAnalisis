@@ -1,15 +1,6 @@
 import { Chess } from 'chess.js';
 
-/**
- * Genera un PGN anotado a partir del historial completo de la partida.
- *
- * @param {Array}  history              - history[] del store (array de movimientos verbose)
- * @param {Object} moveEvaluations      - { moveIndex: label }
- * @param {Array}  evaluationHistory    - [{ moveIndex, score }]
- * @param {Object} engineConfig         - { depth, ... }
- * @param {Object} originalHeaders      - headers guardados al importar (White, Black, WhiteElo, etc.)
- * @param {Object} pgnCommentsByIndex   - { moveIndex: commentString } con [%clk] y otros datos originales
- */
+
 export const generateAnnotatedPgn = (
     history,
     moveEvaluations,

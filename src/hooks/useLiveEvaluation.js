@@ -4,15 +4,11 @@ import { analysisBridge } from '../services/analysisBridge';
 import { backendService } from '../services/backendService';
 
 export const useLiveEvaluation = () => {
+    // Extraemos solo el estado puro
     const fen = useGameStore(state => state.fen);
     const currentMoveIndex = useGameStore(state => state.currentMoveIndex);
-
-    const setAnalyzing = useGameStore(state => state.setAnalyzing);
-    const setEvaluation = useGameStore(state => state.setEvaluation);
-    const setBestMoveForIndex = useGameStore(state => state.setBestMoveForIndex);
-    const setAlternativeLinesForIndex = useGameStore(state => state.setAlternativeLinesForIndex);
     const appMode = useGameStore(state => state.appMode);
-    
+
     const [isConnected, setIsConnected] = useState(backendService.isConnected);
 
     useEffect(() => {
@@ -35,12 +31,23 @@ export const useLiveEvaluation = () => {
         let isActive = true;
 
         analysisBridge.analyzePosition(fen, currentMoveIndex, {
-            onStatus: setAnalyzing,
+            onStatus: state.setAnalyzing,
             onResult: (result) => {
                 if (!isActive) return;
-                if (result.score !== undefined) setEvaluation({ score: result.score, mate: result.mate }, result.moveIndex);
-                if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
-                if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
+
+                // BUG ALTO SOLUCIONADO: Se extraen los setters de getState() aquí 
+                // para evitar ponerlos en el array de deps de useEffect y evitar renders innecesarios.
+                const currentState = useGameStore.getState();
+
+                if (result.score !== undefined) {
+                    currentState.setEvaluation({ score: result.score, mate: result.mate }, result.moveIndex);
+                }
+                if (result.bestMove) {
+                    currentState.setBestMoveForIndex(result.moveIndex, result.bestMove);
+                }
+                if (result.lines?.length) {
+                    currentState.setAlternativeLinesForIndex(result.moveIndex, result.lines);
+                }
             },
         });
 
@@ -48,5 +55,6 @@ export const useLiveEvaluation = () => {
             isActive = false;
             analysisBridge.cancel();
         };
-    }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing, appMode, isConnected]);
+        // Array limpio, sin setters de estado
+    }, [fen, currentMoveIndex, appMode, isConnected]);
 };

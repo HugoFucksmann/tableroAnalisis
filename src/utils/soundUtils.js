@@ -1,7 +1,3 @@
-/**
- * soundUtils.js
- * Utilidad para reproducir sonidos de ajedrez.
- */
 
 const SOUNDS = {
   move: 'https://lichess1.org/assets/sound/standard/Move.ogg',
@@ -20,12 +16,12 @@ export const playChessSound = (type) => {
     if (!audioCache[type]) {
       audioCache[type] = new Audio(url);
     }
-    
+
     const audio = audioCache[type];
     audio.currentTime = 0;
     audio.play().catch(e => {
-        // Fallback si el navegador bloquea el audio (interacción requerida)
-        console.warn('Audio play blocked or failed', e);
+
+      console.warn('Audio play blocked or failed', e);
     });
   } catch (err) {
     console.error('Error playing sound:', err);

@@ -19,11 +19,13 @@ export const useGameStore = create(
         // UI preferences
         boardOrientation: state.boardOrientation,
         engineConfig: state.engineConfig,
-        // Library — search preferences only (not the game list itself)
+        // BUG BAJO SOLUCIONADO: Se persiste appMode para evitar confusión de UI al recargar
+        appMode: state.appMode,
+        // Library — search preferences only
         searchUsername: state.searchUsername,
         searchPlatform: state.searchPlatform,
         lichessToken: state.lichessToken,
       }),
     }
   )
-);
+);

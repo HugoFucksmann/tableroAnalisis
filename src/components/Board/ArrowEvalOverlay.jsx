@@ -4,10 +4,7 @@ import './ArrowEvalOverlay.css';
 import { squareToPct } from '../../utils/boardUtils';
 import { formatDelta } from '../../utils/arrowUtils';
 
-/**
- * Overlay para mostrar badges de evaluación (motor) y conteo (explorador) 
- * sobre las flechas del tablero.
- */
+
 export const ArrowEvalOverlay = React.memo(({ arrowsWithDelta, orientation }) => {
     if (!arrowsWithDelta?.length) return null;
 

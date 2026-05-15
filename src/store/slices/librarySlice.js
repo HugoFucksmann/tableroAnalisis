@@ -1,34 +1,26 @@
-/**
- * librarySlice — "Game Library" centralized state.
- *
- * Responsabilidad única: todo lo relacionado a la librería de partidas
- * importadas desde plataformas externas y su estado de selección múltiple.
- *
- * Migrado desde: uiSlice (importedGames, searchUsername, searchPlatform, lichessToken)
- *                analysisSlice (analyses, setAnalyses, appendAnalyses, removeAnalyses)
- */
+
 export const createLibrarySlice = (set, get) => ({
-  // ── Search & Fetch ──────────────────────────────────────────────
+
   searchUsername: 'elcolof',
   searchPlatform: 'lichess',
   lichessToken: import.meta.env.VITE_TOKEN_LICHESS || '',
 
-  // Lista de partidas traidas de la API (Lichess / Chess.com)
+
   importedGames: [],
 
-  // Paginación por plataforma
+
   lastTimestamp: null,       // Lichess cursor
   chesscomPagination: null,  // Chess.com cursor
   hasMoreGames: false,
 
-  // ── Multi-selection ─────────────────────────────────────────────
-  // Stored as array for Zustand persist compatibility (Sets no son serializables)
+
+
   selectedGameIds: [],
 
-  // ── Analyses cache (desde el backend SQLite) ────────────────────
+
   analyses: [],
 
-  // ── Batch progress ──────────────────────────────────────────────
+
   batchStatus: null, // null | { current, total, label }
 
   // ── Actions: Search ─────────────────────────────────────────────
@@ -70,7 +62,7 @@ export const createLibrarySlice = (set, get) => ({
     set((state) => {
       const analysedIds = new Set(state.analyses.map((a) => String(a.gameId)));
       const unanalysed = state.importedGames.filter((g) => !analysedIds.has(String(g.id)));
-      
+
       // Priorizar partidas no analizadas. Si no hay ninguna nueva, seleccionar todas.
       const targetGames = unanalysed.length > 0 ? unanalysed : state.importedGames;
       return { selectedGameIds: targetGames.map((g) => g.id) };

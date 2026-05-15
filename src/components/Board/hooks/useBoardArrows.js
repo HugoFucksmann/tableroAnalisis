@@ -2,18 +2,12 @@ import { useMemo } from 'react';
 import { computeDelta } from '../../../utils/arrowUtils';
 import { uciToArrow, sanToArrow } from '../../../utils/boardUtils';
 
-/**
- * Hook para gestionar la lógica unificada de flechas del tablero.
- * Maneja prioridades, colores y fusión de metadatos (Análisis + Explorador).
- */
+
 export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrows, activeColor, explorerMode, explorerData, game, playerColor, hoveredExplorerMove, mastersData) => {
     return useMemo(() => {
         const arrowMap = new Map();
 
-        /**
-         * Añade o fusiona una flecha en el mapa.
-         * Si ya existe una flecha para las mismas casillas, se fusionan sus metadatos.
-         */
+
         const addArrow = (arrow, metadata) => {
             if (!arrow) return;
             const key = `${arrow.startSquare}-${arrow.endSquare}`;
@@ -23,11 +17,11 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
                 // Fusionar flags de tipo
                 if (metadata.isEngineArrow) existing.isEngineArrow = true;
                 if (metadata.isExplorerArrow) existing.isExplorerArrow = true;
-                
+
                 // Actualizar valores de evaluación si vienen del motor
                 if (metadata.delta !== undefined) existing.delta = metadata.delta;
                 if (metadata.mate !== undefined) existing.mate = metadata.mate;
-                
+
                 // Actualizar conteo si viene del explorador
                 if (metadata.count !== undefined) existing.count = metadata.count;
 
@@ -58,8 +52,8 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
                 else if (isMaster) colorVar = '--arrow-master';
 
                 addArrow(sanToArrow(hoveredExplorerMove, game, `var(${colorVar})`), { isExplorerArrow: true, count: '' });
-            } 
-            
+            }
+
             // Caso B: Flechas persistentes (Top 3 jugadas de la base de datos)
             if (explorerData) {
                 const isPlayerTurn = activeColor === playerColor;
@@ -68,9 +62,9 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
                 const colorVar = isPlayerTurn ? '--arrow-user' : '--arrow-opponent';
 
                 movesToShow.slice(0, 3).forEach((move) => {
-                    addArrow(sanToArrow(move.san, game, `var(${colorVar})`), { 
-                        count: move.count, 
-                        isExplorerArrow: true 
+                    addArrow(sanToArrow(move.san, game, `var(${colorVar})`), {
+                        count: move.count,
+                        isExplorerArrow: true
                     });
                 });
             }
@@ -113,7 +107,7 @@ export const useBoardArrows = (currentLines, currentBestMove, currentEval, arrow
             arrowsWithDelta: entries,
         };
     }, [
-        currentLines, currentBestMove, arrows, currentEval, activeColor, 
+        currentLines, currentBestMove, arrows, currentEval, activeColor,
         explorerMode, explorerData, game, playerColor, hoveredExplorerMove, mastersData
     ]);
 };

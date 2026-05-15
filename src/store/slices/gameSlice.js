@@ -8,9 +8,6 @@ function evalFromEntry(evalObj) {
   return { score: evalObj.score ?? 0, mate: evalObj.mate ?? null };
 }
 
-// BUG #5 CORREGIDO: se añaden explorerData y mastersData a GAME_RESET para
-// que al resetear la partida o cargar un PGN nuevo los datos del explorador
-// de la sesión anterior no persistan en el store.
 const GAME_RESET = {
   arrows: [],
   highlights: {},
@@ -21,6 +18,7 @@ const GAME_RESET = {
   startFen: null,
   explorerData: null,
   mastersData: null,
+  gameId: 0,
 };
 
 export const createGameSlice = (set, get) => ({
@@ -31,6 +29,9 @@ export const createGameSlice = (set, get) => ({
   gameHeaders: {},
   pgnCommentsByIndex: {},
   ...GAME_RESET,
+
+  // BUG SOLUCIONADO: Faltaba exponer el setter de gameId en este slice
+  setGameId: (id) => set({ gameId: id }),
 
   setArrows: (arrows) => set({ arrows }),
   setHighlights: (highlights) => set({ highlights }),
@@ -44,20 +45,36 @@ export const createGameSlice = (set, get) => ({
   mastersData: null,
   setMastersData: (data) => set({ mastersData: data }),
 
+  // BUG MEDIO SOLUCIONADO: setGame ahora resetea análisis, guarda headers y PGN
   setGame: (newGame) => {
+    const state = get();
+
+    // 1. Limpiar caché de análisis anterior
+    if (state.gameId) analysisBridge.clearCache(state.gameId);
+    if (get().resetAnalysisState) get().resetAnalysisState();
+
     const headers = newGame.header();
     const verboseHistory = newGame.history({ verbose: true });
     const targetIdx = verboseHistory.length > 0 ? 0 : -1;
     const startFen = headers.FEN || null;
+
     const gameCopy = replayTo(verboseHistory, targetIdx, startFen);
     if (startFen && targetIdx === -1) gameCopy.load(startFen);
+
+    const comments = newGame.getComments();
+    const { pgnCommentsByIndex } = extractPgnData(verboseHistory, comments);
 
     set({
       game: gameCopy,
       fen: gameCopy.fen(),
       history: verboseHistory,
       currentMoveIndex: targetIdx,
+      ...GAME_RESET,
       startFen,
+      gameHeaders: headers,
+      pgnCommentsByIndex: pgnCommentsByIndex || {},
+      hasPgnEvaluations: false,
+      gameId: Date.now() // Forzamos un nuevo ID de partida
     });
   },
 
@@ -100,7 +117,7 @@ export const createGameSlice = (set, get) => ({
       ];
 
       analysisBridge.cancel();
-      get().trimAnalysisState(state.currentMoveIndex);
+      if (get().trimAnalysisState) get().trimAnalysisState(state.currentMoveIndex);
 
       set({
         game: gameCopy,
@@ -156,7 +173,7 @@ export const createGameSlice = (set, get) => ({
         currentMoveIndex: safeIndex,
         arrows: []
       });
-      get().setEvaluationDirect(evalFromEntry(evalObj));
+      if (get().setEvaluationDirect) get().setEvaluationDirect(evalFromEntry(evalObj));
       playChessSound('move');
     } catch (e) {
       console.error('goToMove error:', e);
@@ -166,7 +183,7 @@ export const createGameSlice = (set, get) => ({
   resetGame: () => {
     const state = get();
     if (state.gameId) analysisBridge.clearCache(state.gameId);
-    get().resetAnalysisState();
+    if (get().resetAnalysisState) get().resetAnalysisState();
 
     set({
       game: new Chess(),
@@ -183,7 +200,7 @@ export const createGameSlice = (set, get) => ({
       const state = get();
       const newGame = new Chess(fenStr);
       if (state.gameId) analysisBridge.clearCache(state.gameId);
-      get().resetAnalysisState();
+      if (get().resetAnalysisState) get().resetAnalysisState();
 
       set({
         game: newGame,
@@ -213,12 +230,14 @@ export const createGameSlice = (set, get) => ({
       if (state.gameId) analysisBridge.clearCache(state.gameId);
 
       const headers = newGame.header();
-      state.setPlayers(
-        headers.White ?? 'Blancas',
-        headers.Black ?? 'Negras',
-        headers.WhiteElo ?? null,
-        headers.BlackElo ?? null
-      );
+      if (state.setPlayers) {
+        state.setPlayers(
+          headers.White ?? 'Blancas',
+          headers.Black ?? 'Negras',
+          headers.WhiteElo ?? null,
+          headers.BlackElo ?? null
+        );
+      }
 
       const blackPlayer = (headers.Black ?? '').toLowerCase();
       const whitePlayer = (headers.White ?? '').toLowerCase();
@@ -230,8 +249,8 @@ export const createGameSlice = (set, get) => ({
         else if (whitePlayer === currentUser) detectedColor = 'white';
       }
 
-      state.setBoardOrientation(detectedColor);
-      state.setPlayerColor(detectedColor);
+      if (state.setBoardOrientation) state.setBoardOrientation(detectedColor);
+      if (state.setPlayerColor) state.setPlayerColor(detectedColor);
 
       let gameId = providedId;
       if (!gameId) {
@@ -242,7 +261,6 @@ export const createGameSlice = (set, get) => ({
         }
       }
       if (!gameId) gameId = Date.now();
-      console.log('[loadPgn] gameId resolved:', gameId, '| providedId was:', providedId);
 
       const verboseHistory = newGame.history({ verbose: true });
       const comments = newGame.getComments();
@@ -266,7 +284,7 @@ export const createGameSlice = (set, get) => ({
       if (startFen && targetIdx === -1) gameCopy.load(startFen);
 
       const evalObj = evalHistoryDict[targetIdx];
-      get().resetAnalysisState();
+      if (get().resetAnalysisState) get().resetAnalysisState();
 
       set({
         game: gameCopy,
@@ -281,12 +299,12 @@ export const createGameSlice = (set, get) => ({
         gameId,
       });
 
-      get().setEvaluationHistory(evalHistoryDict);
-      get().setMoveEvaluations(moveEvaluations);
-      get().setAnalysisReady(hasEvaluations);
-      get().setEvaluationDirect(evalFromEntry(evalObj));
+      if (get().setEvaluationHistory) get().setEvaluationHistory(evalHistoryDict);
+      if (get().setMoveEvaluations) get().setMoveEvaluations(moveEvaluations);
+      if (get().setAnalysisReady) get().setAnalysisReady(hasEvaluations);
+      if (get().setEvaluationDirect) get().setEvaluationDirect(evalFromEntry(evalObj));
 
-      state.setClocks(initialWhiteClock, initialBlackClock);
+      if (state.setClocks) state.setClocks(initialWhiteClock, initialBlackClock);
       playChessSound('notify');
       return true;
     } catch (e) {
@@ -300,7 +318,7 @@ export const createGameSlice = (set, get) => ({
   startFullAnalysis: () => {
     const state = get();
     if (state.gameId) analysisBridge.clearCache(state.gameId);
-    get().resetAnalysisState();
+    if (get().resetAnalysisState) get().resetAnalysisState();
 
     set({
       hasPgnEvaluations: false,

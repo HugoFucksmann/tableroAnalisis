@@ -4,21 +4,27 @@ export const usePanelManagement = () => {
   const [isMobile, setIsMobile] = useState(
     typeof window !== 'undefined' ? window.innerWidth <= 1100 : false
   );
+
+  // BUG MEDIO/BAJO SOLUCIONADO: Se inicializan y se independiza la sincronización
   const [isImportCollapsed, setIsImportCollapsed] = useState(isMobile);
   const [isExplorerCollapsed, setIsExplorerCollapsed] = useState(isMobile);
   const [isHistoryCollapsed, setIsHistoryCollapsed] = useState(false);
 
+  // Efecto 1: Escuchar cambios de tamaño de ventana pura y exclusivamente
   useEffect(() => {
     const handleResize = () => {
-      const currentIsMobile = window.innerWidth <= 1100;
-      if (currentIsMobile !== isMobile) {
-        setIsMobile(currentIsMobile);
-        setIsImportCollapsed(currentIsMobile);
-        setIsExplorerCollapsed(currentIsMobile);
-      }
+      setIsMobile(window.innerWidth <= 1100);
     };
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Efecto 2: Reaccionar a los cambios de isMobile para forzar el colapso correcto
+  useEffect(() => {
+    if (isMobile) {
+      setIsImportCollapsed(true);
+      setIsExplorerCollapsed(true);
+    }
   }, [isMobile]);
 
   return {
@@ -39,7 +45,7 @@ export const useSidebarResize = (isMobile) => {
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (!isResizing || isMobile) return;
-      // Calculamos el ancho desde la derecha
+
       const newWidth = window.innerWidth - e.clientX;
       if (newWidth > 320 && newWidth < 800) {
         setWidth(newWidth);

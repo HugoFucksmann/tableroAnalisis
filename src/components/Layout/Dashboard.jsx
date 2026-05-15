@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Board } from '../Board/Board';
 import { AnalysisLoadingModal } from '../Analysis/AnalysisLoadingModal';
 import { Settings } from 'lucide-react';
@@ -14,7 +14,6 @@ import { StatsDetailView } from '../Stats/StatsDetailView';
 import { backendService } from '../../services/backendService';
 import { AnalysisPanels } from '../Analysis/AnalysisPanels';
 import { usePanelManagement, useSidebarResize } from '../../hooks/useDashboardLayout';
-import { useState } from 'react';
 import './Dashboard.css';
 
 export const Dashboard = () => {
@@ -30,9 +29,9 @@ export const Dashboard = () => {
 
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
-    lichessToken, history, hasPgnEvaluations, startFullAnalysis,
-    analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId,
-    setAppMode, setExplorerMode, selectedStatCategory
+    lichessToken, history, startFullAnalysis, analysisReady,
+    appMode, applyFullAnalysis, setAnalyses, gameId,
+    setAppMode, selectedStatCategory
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
     ecoCode: state.ecoCode,
@@ -40,7 +39,6 @@ export const Dashboard = () => {
     setShowTokenInput: state.setShowTokenInput,
     lichessToken: state.lichessToken,
     history: state.history,
-    hasPgnEvaluations: state.hasPgnEvaluations,
     startFullAnalysis: state.startFullAnalysis,
     analysisReady: state.analysisReady,
     appMode: state.appMode,
@@ -48,46 +46,38 @@ export const Dashboard = () => {
     setAnalyses: state.setAnalyses,
     gameId: state.gameId,
     setAppMode: state.setAppMode,
-    setExplorerMode: state.setExplorerMode,
     selectedStatCategory: state.selectedStatCategory
   })));
 
-
-
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
+      // 1. Manejo de estado de conexión
       if (msg.type === 'connection_status' && msg.connected) {
         backendService.getAnalyses(0, 50);
       }
-      if (msg.type === 'full_analysis_data') {
-        applyFullAnalysis(msg.data);
-        const { targetPly, setTargetPly, goToMove } = useGameStore.getState();
-        if (targetPly !== null) {
-          goToMove(targetPly);
-          setTargetPly(null);
-        }
+
+      // 2. Manejo de la lista de partidas (library)
+      if (msg.type === 'analyses_data') {
+        if (setAnalyses) setAnalyses(msg.analyses);
       }
-      if (msg.type === 'analyses_list') {
-        if (msg.offset === 0) {
-          setAnalyses(msg.analyses);
-        } else {
-          setAnalyses(prev => {
-            const existingIds = new Set(prev.map(a => a.id));
-            const newItems = msg.analyses.filter(a => !existingIds.has(a.id));
-            return [...prev, ...newItems];
-          });
+
+      // BUG CRÍTICO/ALTO SOLUCIONADO: Se completó la lógica de los handlers
+      // 3. Manejo de recepción de partida completa solicitada desde miniaturas/library
+      if (msg.type === 'full_analysis_data') {
+        if (applyFullAnalysis) {
+          applyFullAnalysis(msg.data);
         }
       }
     });
 
-    if (backendService.isConnected) {
-      backendService.getAnalyses(0, 50);
-    }
+    // Pedimos las partidas apenas montamos el dashboard
+    backendService.getAnalyses(0, 50);
 
-    return () => cleanup();
+    return cleanup;
   }, [applyFullAnalysis, setAnalyses]);
 
-  const lastLoadedId = React.useRef(null);
+  // EFECTO 2: Carga del análisis individual cuando cambia gameId (ej: click en miniatura)
+  const lastLoadedId = useRef(null);
   useEffect(() => {
     if (gameId && gameId !== lastLoadedId.current) {
       lastLoadedId.current = gameId;

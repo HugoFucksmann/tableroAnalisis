@@ -18,7 +18,8 @@ export const createAnalysisSlice = (set, get) => ({
   openingName: 'Initial Position',
   openingPly: -1,
   openingDetected: false,
-  analyses: [], // kept as empty for backward compat — source of truth is librarySlice
+
+  // BUG MEDIO SOLUCIONADO: analyses[] eliminado. El source of truth real está en librarySlice
 
   engineConfig: {
     depth: 18,
@@ -128,18 +129,18 @@ export const createAnalysisSlice = (set, get) => ({
   setBestMoves: (v) => set({ bestMoves: v }),
   setAlternativeLines: (v) => set({ alternativeLines: v }),
   setEngineConfig: (config) => set({ engineConfig: config }),
-  // analyses actions moved to librarySlice — use state.setAnalyses / appendAnalyses / removeAnalyses from there
+
   applyFullAnalysis: (data) => {
     if (!data) return;
 
-    // evalResults is position-indexed (posIdx), evaluationHistory is move-indexed.
-    // posIdx 0 = initial pos (moveIndex -1), posIdx N = after move N (moveIndex N-1).
+    const currentState = get();
+
     const evaluationHistory = {};
     if (data.evaluations) {
       Object.entries(data.evaluations).forEach(([posIdxStr, evalObj]) => {
         if (!evalObj) return;
         const posIdx = parseInt(posIdxStr);
-        const moveIndex = posIdx - 1; // posIdx 0 → moveIndex -1 (initial)
+        const moveIndex = posIdx - 1;
         evaluationHistory[moveIndex] = {
           moveIndex,
           score: evalObj.score ?? 0,
@@ -148,8 +149,6 @@ export const createAnalysisSlice = (set, get) => ({
       });
     }
 
-    // Reconstruir historial verbose de chess.js desde los SANs guardados,
-    // necesario para que goToMove / replayTo funcionen al navegar la partida.
     let verboseHistory = [];
     let startFen = data.startFen || null;
     const sans = data.historySan || data.history || [];
@@ -180,21 +179,50 @@ export const createAnalysisSlice = (set, get) => ({
     };
 
     if (verboseHistory.length > 0) {
-      const gameCopy = replayTo(verboseHistory, 0, startFen);
+      let targetIndex = verboseHistory.length > 0 ? 0 : -1;
 
-      // Cargar nombres de jugadores si están disponibles en los datos guardados
+      // RESOLUCIÓN BUG NAVEGACIÓN DESDE STATS/MINIATURAS:
+      // 1. Si la UI pide ir a una jugada específica (targetPly)
+      if (currentState.targetPly !== null && currentState.targetPly !== undefined) {
+        targetIndex = Math.max(-1, Math.min(currentState.targetPly, verboseHistory.length - 1));
+        if (get().setTargetPly) get().setTargetPly(null); // Consumir el target
+      }
+      else {
+        // 2. Si no hay target específico, verificamos de forma ESTRICTA si es la misma partida.
+        // No basta con el gameId (ya que pudo cambiar microsegundos antes).
+        // Chequeamos si el primer movimiento es exactamente el mismo.
+        let isStrictlySameGame = false;
+
+        if (currentState.gameId === data.gameId) {
+          if (currentState.history.length > 0 && verboseHistory.length > 0) {
+            isStrictlySameGame = currentState.history[0].san === verboseHistory[0].san;
+          } else if (currentState.startFen === startFen) {
+            isStrictlySameGame = true;
+          }
+        }
+
+        // Si es estrictamente la misma partida (ej. análisis de fondo que terminó) conservamos la vista
+        if (isStrictlySameGame) {
+          targetIndex = Math.max(-1, Math.min(currentState.currentMoveIndex, verboseHistory.length - 1));
+        }
+      }
+
+      const gameCopy = replayTo(verboseHistory, targetIndex, startFen);
+
       if (data.players?.white || data.players?.black) {
-        get().setPlayers(
-          data.players.white || 'Blancas',
-          data.players.black || 'Negras'
-        );
+        if (get().setPlayers) {
+          get().setPlayers(
+            data.players.white || 'Blancas',
+            data.players.black || 'Negras'
+          );
+        }
       }
 
       set({
         ...baseState,
         history: verboseHistory,
         startFen,
-        currentMoveIndex: 0,
+        currentMoveIndex: targetIndex,
         game: gameCopy,
         fen: gameCopy.fen(),
         isExploreMode: false,
@@ -202,7 +230,6 @@ export const createAnalysisSlice = (set, get) => ({
         arrows: [],
       });
     } else {
-      // Sin historial (partida vacía o datos viejos sin historySan): solo aplicar evaluaciones
       set(baseState);
     }
   },
