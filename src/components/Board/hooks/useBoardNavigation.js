@@ -14,8 +14,6 @@ export const useBoardNavigation = (boardRef, currentMoveIndex, historyLength, go
         let lastScrollTime = 0;
 
         const handleWheel = (e) => {
-            e.preventDefault();
-
             const now = performance.now();
             if (now - lastScrollTime < 60) return;
 
@@ -35,7 +33,7 @@ export const useBoardNavigation = (boardRef, currentMoveIndex, historyLength, go
             }
         };
 
-        el.addEventListener('wheel', handleWheel, { passive: false });
+        el.addEventListener('wheel', handleWheel, { passive: true });
         return () => el.removeEventListener('wheel', handleWheel);
     }, [goToMove, boardRef]);
 };

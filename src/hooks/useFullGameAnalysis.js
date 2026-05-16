@@ -47,22 +47,59 @@ export const useFullGameAnalysis = () => {
             onStatus:   setAnalyzing,
             onProgress: setAnalysisProgress,
             onOpeningDetected: ({ openingName, ecoCode, openingPly, bookPlies }) => {
-                bookPlies.forEach(ply => setMoveEvaluation(ply, 'Libro'));
-                if (openingName) setOpeningName(openingName);
-                if (ecoCode)     setEcoCode(ecoCode);
-                setOpeningPly(openingPly);
-                setOpeningDetected(true);
+                // Batch opening updates
+                useGameStore.setState((state) => ({
+                    openingName: openingName || 'Unknown',
+                    ecoCode: ecoCode || '',
+                    openingPly,
+                    openingDetected: true,
+                    moveEvaluations: {
+                        ...state.moveEvaluations,
+                        ...Object.fromEntries(bookPlies.map(ply => [ply, 'Libro']))
+                    }
+                }));
             },
             onMoveResult: ({ index, score, mate, label, bestMove, lines }) => {
-                if (score !== undefined) setEvaluation({ score, mate }, index);
-                if (label)              setMoveEvaluation(index, label);
-                if (bestMove)           setBestMoveForIndex(index, bestMove);
-                if (lines?.length)      setAlternativeLinesForIndex(index, lines);
+                // Batch move results
+                useGameStore.setState((state) => {
+                    const updates = {};
+                    if (score !== undefined) {
+                        const normalized = { score, mate };
+                        updates.evaluationHistory = {
+                            ...state.evaluationHistory,
+                            [index]: { moveIndex: index, ...normalized }
+                        };
+                        if (index === state.currentMoveIndex) {
+                            updates.evaluation = normalized;
+                        }
+                    }
+                    if (label) {
+                        updates.moveEvaluations = {
+                            ...state.moveEvaluations,
+                            [index]: label
+                        };
+                    }
+                    if (bestMove) {
+                        updates.bestMoves = {
+                            ...state.bestMoves,
+                            [index]: bestMove
+                        };
+                    }
+                    if (lines?.length) {
+                        updates.alternativeLines = {
+                            ...state.alternativeLines,
+                            [index]: lines
+                        };
+                    }
+                    return updates;
+                });
             },
             onComplete: (accuracy) => {
-                setAnalysisReady(true);
-                setAnalyzing(false);
-                setAccuracy(accuracy);
+                useGameStore.setState({
+                    analysisReady: true,
+                    isAnalyzing: false,
+                    accuracy
+                });
                 backendService.getAnalyses();
             },
         });

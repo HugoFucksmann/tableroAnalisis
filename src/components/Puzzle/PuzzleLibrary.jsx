@@ -126,7 +126,7 @@ export const PuzzleLibrary = ({ onBack }) => {
 
       <div className="pl-list premium-scroll">
         {isLoading ? (
-          <div className="pl-loading">Cargando biblioteca...</div>
+          <div className="pl-loading">Cargando biblioteca…</div>
         ) : puzzles.length === 0 ? (
           <div className="pl-empty">No hay puzzles guardados. Ve a "Extraer Puzzles" para empezar.</div>
         ) : (

@@ -38,9 +38,33 @@ export const useLiveEvaluation = () => {
             onStatus: setAnalyzing,
             onResult: (result) => {
                 if (!isActive) return;
-                if (result.score !== undefined) setEvaluation({ score: result.score, mate: result.mate }, result.moveIndex);
-                if (result.bestMove) setBestMoveForIndex(result.moveIndex, result.bestMove);
-                if (result.lines?.length) setAlternativeLinesForIndex(result.moveIndex, result.lines);
+                
+                useGameStore.setState((state) => {
+                    const updates = {};
+                    if (result.score !== undefined) {
+                        const normalized = { score: result.score, mate: result.mate };
+                        updates.evaluationHistory = {
+                            ...state.evaluationHistory,
+                            [result.moveIndex]: { moveIndex: result.moveIndex, ...normalized }
+                        };
+                        if (result.moveIndex === state.currentMoveIndex) {
+                            updates.evaluation = normalized;
+                        }
+                    }
+                    if (result.bestMove) {
+                        updates.bestMoves = {
+                            ...state.bestMoves,
+                            [result.moveIndex]: result.bestMove
+                        };
+                    }
+                    if (result.lines?.length) {
+                        updates.alternativeLines = {
+                            ...state.alternativeLines,
+                            [result.moveIndex]: result.lines
+                        };
+                    }
+                    return updates;
+                });
             },
         });
 

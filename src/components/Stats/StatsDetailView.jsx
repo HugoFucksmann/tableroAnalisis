@@ -78,9 +78,9 @@ export const StatsDetailView = () => {
                 </div>
             ) : (
                 <div className="stats-detail-grid">
-                    {details.map((item, idx) => (
+                    {details.map((item) => (
                         <div 
-                            key={`${item.gameId}-${idx}`} 
+                            key={`${item.gameId}-${item.ply}`} 
                             className="stat-board-card"
                             onClick={() => handleBoardClick(item.gameId, item.ply)}
                         >

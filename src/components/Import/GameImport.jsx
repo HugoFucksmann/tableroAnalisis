@@ -49,12 +49,17 @@ export const GameImport = ({ onGameSelect }) => {
   })));
 
   // ── Local UI state ───────────────────────────────────────────────
-  const [loadingId, setLoadingId] = useState(null);
-  const [isFetching, setIsFetching] = useState(false);
-  const [isFetchingMore, setIsFetchingMore] = useState(false);
-  const [error, setError] = useState('');
-  const [customPgn, setCustomPgn] = useState('');
-  const [batchStatus, setBatchStatus] = useState(null);
+  const [uiState, setUiState] = useState({
+    loadingId: null,
+    isFetching: false,
+    isFetchingMore: false,
+    error: '',
+    customPgn: '',
+    batchStatus: null,
+  });
+
+  const { loadingId, isFetching, isFetchingMore, error, customPgn, batchStatus } = uiState;
+  const updateUi = (patch) => setUiState(prev => ({ ...prev, ...patch }));
 
   const listRef = useRef(null);
   const sentinelRef = useRef(null);
@@ -74,17 +79,17 @@ export const GameImport = ({ onGameSelect }) => {
       // Batch analysis handlers
       switch (msg.type) {
         case 'batch_analysis_started':
-          setBatchStatus({ current: 0, total: msg.total, pct: 0, label: 'Iniciando...' });
+          updateUi({ batchStatus: { current: 0, total: msg.total, pct: 0, label: 'Iniciando…' } });
           break;
         case 'batch_analysis_progress':
-          setBatchStatus(prev => ({ ...prev, current: msg.gameIndex, pct: msg.pct, label: msg.label }));
+          updateUi({ batchStatus: { ...batchStatus, current: msg.gameIndex, pct: msg.pct, label: msg.label } });
           break;
         case 'batch_analysis_game_complete':
-          setBatchStatus(prev => ({ ...prev, current: msg.gameIndex + 1, pct: 100 }));
+          updateUi({ batchStatus: { ...batchStatus, current: msg.gameIndex + 1, pct: 100 } });
           break;
         case 'batch_analysis_complete':
         case 'batch_analysis_cancelled':
-          setBatchStatus(null);
+          updateUi({ batchStatus: null });
           clearSelection();
           backendService.getAnalyses(0, 50);
           break;
@@ -98,13 +103,12 @@ export const GameImport = ({ onGameSelect }) => {
   const handlePlatformSwitch = (p) => {
     setSearchPlatform(p);
     resetGames();
-    setError('');
+    updateUi({ error: '' });
   };
 
   const performSearch = useCallback(async (targetUsername, targetPlatform) => {
     if (!targetUsername.trim()) return;
-    setIsFetching(true);
-    setError('');
+    updateUi({ isFetching: true, error: '' });
     resetGames();
 
     try {
@@ -112,24 +116,24 @@ export const GameImport = ({ onGameSelect }) => {
         const result = await fetchLichessGames(targetUsername.trim(), 15, null, lichessToken);
         setImportedGames(result.games);
         setPagination({ lastTimestamp: result.lastTimestamp, chesscomPagination: null, hasMoreGames: result.hasMore });
-        if (result.games.length === 0) setError('No se encontraron partidas recientes.');
+        if (result.games.length === 0) updateUi({ error: 'No se encontraron partidas recientes.' });
       } else if (targetPlatform === 'chesscom') {
         const result = await fetchChesscomGames(targetUsername.trim(), 15, null);
         setImportedGames(result.games);
         setPagination({ lastTimestamp: null, chesscomPagination: result.pagination, hasMoreGames: result.hasMore });
-        if (result.games.length === 0) setError('No se encontraron partidas recientes.');
+        if (result.games.length === 0) updateUi({ error: 'No se encontraron partidas recientes.' });
       }
     } catch (err) {
-      setError(err.message);
+      updateUi({ error: err.message });
       resetGames();
     } finally {
-      setIsFetching(false);
+      updateUi({ isFetching: false });
     }
   }, [lichessToken, setImportedGames, setPagination, resetGames]);
 
   const loadMore = useCallback(async () => {
     if (isFetching || isFetchingMore || !hasMoreGames || !username) return;
-    setIsFetchingMore(true);
+    updateUi({ isFetchingMore: true });
     try {
       if (platform === 'lichess') {
         const result = await fetchLichessGames(username.trim(), 15, lastTimestamp, lichessToken);
@@ -143,7 +147,7 @@ export const GameImport = ({ onGameSelect }) => {
     } catch (err) {
       console.error('Error loading more games:', err);
     } finally {
-      setIsFetchingMore(false);
+      updateUi({ isFetchingMore: false });
     }
   }, [isFetching, isFetchingMore, hasMoreGames, username, platform, lastTimestamp, chesscomPagination, lichessToken, appendImportedGames, setPagination]);
 
@@ -170,10 +174,10 @@ export const GameImport = ({ onGameSelect }) => {
   }, [username, games.length, platform, performSearch]);
 
   const handleLoadGame = (pgn, gameId) => {
-    setLoadingId(gameId);
+    updateUi({ loadingId: gameId });
     const ok = loadPgn(pgn, gameId);
     if (ok && onGameSelect) onGameSelect();
-    setLoadingId(null);
+    updateUi({ loadingId: null });
   };
 
   const handleAnalyzeBatch = () => {
@@ -231,7 +235,7 @@ export const GameImport = ({ onGameSelect }) => {
       </div>
 
       {platform === 'pgn' ? (
-        <PgnManualImport customPgn={customPgn} setCustomPgn={setCustomPgn} onLoad={(pgn) => handleLoadGame(pgn, Date.now())} />
+        <PgnManualImport customPgn={customPgn} setCustomPgn={(val) => updateUi({ customPgn: val })} onLoad={(pgn) => handleLoadGame(pgn, `${Date.now()}`)} />
       ) : (
         <>
           {error && <div className="gi-error"><AlertCircle size={13} /><span>{error}</span></div>}
@@ -265,4 +269,4 @@ export const GameImport = ({ onGameSelect }) => {
       )}
     </div>
   );
-};
+};

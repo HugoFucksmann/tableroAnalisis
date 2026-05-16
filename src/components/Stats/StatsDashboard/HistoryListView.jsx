@@ -18,6 +18,14 @@ export const HistoryListView = ({
             <div
               className={`history-select-all ${selectedIds.size === analyses.length ? 'all-selected' : ''}`}
               onClick={onToggleAll}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  onToggleAll();
+                }
+              }}
+              role="button"
+              tabIndex={0}
             >
               <div className="hi-check"><div className="hi-check-inner"></div></div>
               <span>Seleccionar todos ({analyses.length})</span>

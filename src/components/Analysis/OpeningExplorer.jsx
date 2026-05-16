@@ -30,7 +30,20 @@ const RenderMoveSAN = ({ san, turn }) => {
 };
 
 const MoveRow = ({ move, type, turn, onHover, onLeave, onPlay }) => (
-  <div className="move-stat-row" onMouseEnter={() => onHover(move.san)} onMouseLeave={onLeave} onClick={() => onPlay(move.san)}>
+  <div
+    className="move-stat-row"
+    onMouseEnter={() => onHover(move.san)}
+    onMouseLeave={onLeave}
+    onClick={() => onPlay(move.san)}
+    onKeyDown={(e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        onPlay(move.san);
+      }
+    }}
+    role="button"
+    tabIndex={0}
+  >
     <div className="move-san-container"><RenderMoveSAN san={move.san} turn={turn} /></div>
     <div className="win-rate-bar-container">
       <div className="win-rate-bar">
@@ -49,19 +62,20 @@ export const OpeningExplorer = () => {
     lichessToken: state.lichessToken, showTokenInput: state.showTokenInput, setLichessToken: state.setLichessToken,
   })));
 
-  const [bookData, setBookData] = React.useState({ moves: [], opening: '' });
-  const [lichessData, setLichessData] = React.useState(null);
-  const [lichessLoading, setLichessLoading] = React.useState(false);
-  const [lichessError, setLichessError] = React.useState(null);
-  const [isStale, setIsStale] = React.useState(false);
+  const [state, setState] = React.useState({
+    bookData: { moves: [], opening: '' },
+    lichessData: null,
+    loading: false,
+    error: null,
+    isStale: false,
+  });
 
   const turn = fen?.split(' ')[1] || 'w';
 
   React.useEffect(() => {
     let active = true;
-    setIsStale(true); // Marcamos como "viejo" mientras cargamos lo nuevo
+    setState(prev => ({ ...prev, isStale: true }));
 
-    // Debounce corto para offline, más largo para online
     const offlineTimer = setTimeout(() => loadOffline(), 50);
     const onlineTimer = setTimeout(() => loadOnline(), 400);
 
@@ -69,48 +83,50 @@ export const OpeningExplorer = () => {
       try {
         const result = await backendService.request('get_book_moves', { fen }, 'book_moves');
         if (!active) return;
-        setBookData({ moves: result.moves || [], opening: result.opening || '' });
 
         const arrows = (result.moves || []).slice(0, 2).flatMap(m => {
           const arrow = sanToArrow(m.san, game, 'var(--arrow-explorer-base)');
           return arrow ? [arrow] : [];
         });
         setArrows(arrows);
+
+        setState(prev => ({
+          ...prev,
+          bookData: { moves: result.moves || [], opening: result.opening || '' },
+          isStale: false
+        }));
       } catch (e) {
         console.warn('[OpeningExplorer] Offline load failed:', e);
-      } finally {
-        if (active) setIsStale(false);
+        if (active) setState(prev => ({ ...prev, isStale: false }));
       }
     }
 
     async function loadOnline() {
-      setLichessLoading(true);
-      setLichessError(null);
+      if (active) setState(prev => ({ ...prev, loading: true, error: null }));
       try {
         const data = await lichessExplorerService.fetchMastersData(fen, lichessToken);
         if (!active) return;
 
         const cleanName = (data.opening?.name || '').split(':')[0].trim();
-        setLichessData({
-          opening: cleanName,
-          moves: (data.moves || []).slice(0, 10).map(m => {
-            const total = (m.white || 0) + (m.draws || 0) + (m.black || 0);
-            return {
-              san: m.san,
-              white: total > 0 ? Math.round((m.white / total) * 100) : 0,
-              draw: total > 0 ? Math.round((m.draws / total) * 100) : 0,
-              black: total > 0 ? Math.round((m.black / total) * 100) : 0,
-              games: total,
-            };
-          }),
-        });
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          lichessData: {
+            opening: cleanName,
+            moves: (data.moves || []).slice(0, 10).map(m => {
+              const total = (m.white || 0) + (m.draws || 0) + (m.black || 0);
+              return {
+                san: m.san,
+                white: total > 0 ? Math.round((m.white / total) * 100) : 0,
+                draw: total > 0 ? Math.round((m.draws / total) * 100) : 0,
+                black: total > 0 ? Math.round((m.black / total) * 100) : 0,
+                games: total,
+              };
+            }),
+          },
+        }));
       } catch (err) {
-        if (active) setLichessError(err.message);
-      } finally {
-        if (active) {
-          setLichessLoading(false);
-          setIsStale(false); // Por si acaso falló el offline
-        }
+        if (active) setState(prev => ({ ...prev, loading: false, error: err.message }));
       }
     }
 
@@ -123,7 +139,7 @@ export const OpeningExplorer = () => {
   };
 
   const handleLeave = () => {
-    const sourceMoves = bookData.moves.length > 0 ? bookData.moves : (lichessData?.moves ?? []);
+    const sourceMoves = state.bookData.moves.length > 0 ? state.bookData.moves : (state.lichessData?.moves ?? []);
     const arrows = sourceMoves.slice(0, 2).flatMap(m => {
       const arrow = sanToArrow(m.san, game, 'var(--arrow-explorer-base)');
       return arrow ? [arrow] : [];
@@ -131,13 +147,15 @@ export const OpeningExplorer = () => {
     setArrows(arrows);
   };
 
+  const { bookData, lichessData, loading: lichessLoading, error: lichessError, isStale } = state;
+
   const hasAnyData = bookData.moves.length > 0 || lichessData;
 
   return (
     <div className={`explorer-container-v2 ${isStale ? 'stale' : ''}`} onMouseLeave={handleLeave}>
       {showTokenInput && (
         <div className="explorer-header-mini">
-          <input className="explorer-token-input-mini" type="password" placeholder="Lichess Token..." value={lichessToken || ''} onChange={(e) => setLichessToken(e.target.value)} />
+          <input className="explorer-token-input-mini" type="password" placeholder="Lichess Token…" value={lichessToken || ''} onChange={(e) => setLichessToken(e.target.value)} />
         </div>
       )}
 

@@ -36,7 +36,18 @@ export const AnalysisPanels = ({
       </div>
 
       <div className={`panel-container move-history-panel ${isHistoryCollapsed ? 'collapsed' : ''}`}>
-        <div className="panel-header" onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}>
+        <div
+          className="panel-header"
+          onClick={() => setIsHistoryCollapsed(!isHistoryCollapsed)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsHistoryCollapsed(!isHistoryCollapsed);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <h3>Historial</h3>
           <div className="panel-actions">
             {!isHistoryCollapsed && (
@@ -68,7 +79,18 @@ export const AnalysisPanels = ({
       </div>
 
       <div className={`panel-container explorer-panel ${isExplorerCollapsed ? 'collapsed' : ''}`}>
-        <div className="panel-header" onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}>
+        <div
+          className="panel-header"
+          onClick={() => setIsExplorerCollapsed(!isExplorerCollapsed)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsExplorerCollapsed(!isExplorerCollapsed);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <div className="panel-title-group">
             {ecoCode && !isExplorerCollapsed && <span className="panel-eco-badge">{ecoCode}</span>}
             <h3>{explorerTitle}</h3>
@@ -90,7 +112,18 @@ export const AnalysisPanels = ({
       </div>
 
       <div className={`panel-container import-panel ${isImportCollapsed ? 'collapsed' : ''}`}>
-        <div className="panel-header" onClick={() => setIsImportCollapsed(!isImportCollapsed)}>
+        <div
+          className="panel-header"
+          onClick={() => setIsImportCollapsed(!isImportCollapsed)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setIsImportCollapsed(!isImportCollapsed);
+            }
+          }}
+          role="button"
+          tabIndex={0}
+        >
           <div className="panel-title-group">
             <h3>Importar</h3>
           </div>

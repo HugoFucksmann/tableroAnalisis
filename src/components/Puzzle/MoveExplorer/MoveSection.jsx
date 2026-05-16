@@ -1,6 +1,6 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { renderSan } from './MoveInsightCard';
+import { RenderSan } from './MoveInsightCard';
 import './MoveSection.css';
 
 export const MoveRow = ({ move, isMaster, onClick, onMouseEnter, onMouseLeave }) => {
@@ -13,7 +13,7 @@ export const MoveRow = ({ move, isMaster, onClick, onMouseEnter, onMouseLeave })
     >
       <div className="move-main-info">
         <div className="move-san-group">
-          <span className="move-san">{renderSan(move.san)}</span>
+          <span className="move-san"><RenderSan san={move.san} /></span>
         </div>
 
         <div className="move-stats-row">
@@ -70,7 +70,7 @@ export const MoveSection = ({
           ))
         ) : (
           <div className="explorer-placeholder">
-            <span>{isLoading ? 'Cargando datos...' : 'No hay registros'}</span>
+            <span>{isLoading ? 'Cargando datos…' : 'No hay registros'}</span>
           </div>
         )}
       </div>

@@ -6,13 +6,22 @@ import { playChessSound } from '../../utils/soundUtils';
 import './Puzzle.css';
 
 export const PuzzleSession = ({ onBack }) => {
-  const [puzzles, setPuzzles] = useState([]);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [status, setStatus] = useState('loading'); // loading, empty, active, finished
-  const [showSolution, setShowSolution] = useState(false);
-  const [showOriginal, setShowOriginal] = useState(false);
-  const [isWrong, setIsWrong] = useState(false);
-  const [isSolved, setIsSolved] = useState(false);
+  const [state, setState] = useState({
+    puzzles: [],
+    currentIndex: 0,
+    status: 'loading', // loading, empty, active, finished
+    showSolution: false,
+    showOriginal: false,
+    isWrong: false,
+    isSolved: false,
+  });
+
+  const {
+    puzzles, currentIndex, status, showSolution,
+    showOriginal, isWrong, isSolved
+  } = state;
+
+  const updateState = (patch) => setState(prev => ({ ...prev, ...patch }));
   const opponentTimerRef = useRef(null);
 
   const {
@@ -31,11 +40,14 @@ export const PuzzleSession = ({ onBack }) => {
           retryInterval = null;
         }
         // Only set puzzles if we haven't yet (prevent infinite shuffle resets)
-        setPuzzles(prev => {
-          if (prev.length > 0) return prev;
-          return [...msg.puzzles].sort(() => Math.random() - 0.5);
+        setState(prev => {
+          if (prev.puzzles.length > 0) return prev;
+          return {
+            ...prev,
+            puzzles: msg.puzzles.toSorted(() => Math.random() - 0.5),
+            status: msg.puzzles.length > 0 ? 'active' : 'empty'
+          };
         });
-        setStatus(msg.puzzles.length > 0 ? 'active' : 'empty');
       }
     });
 
@@ -56,10 +68,12 @@ export const PuzzleSession = ({ onBack }) => {
   const initPuzzle = (p) => {
     if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
 
-    setShowSolution(false);
-    setShowOriginal(false);
-    setIsWrong(false);
-    setIsSolved(false);
+    updateState({
+      showSolution: false,
+      showOriginal: false,
+      isWrong: false,
+      isSolved: false
+    });
     setArrows([]);
 
     if (p.baseFen) {
@@ -132,7 +146,7 @@ export const PuzzleSession = ({ onBack }) => {
     if (!puzzleState || isSolved) return;
 
     if (puzzleState.isWrong) {
-      setIsWrong(true);
+      updateState({ isWrong: true });
       return;
     }
 
@@ -141,8 +155,7 @@ export const PuzzleSession = ({ onBack }) => {
 
     // Solver finished the whole sequence
     if (step >= sequence.length) {
-      setIsSolved(true);
-      setIsWrong(false);
+      updateState({ isSolved: true, isWrong: false });
       if (puzzles[currentIndex]) {
         backendService.puzzleSolved(puzzles[currentIndex].id);
       }
@@ -220,7 +233,7 @@ export const PuzzleSession = ({ onBack }) => {
 
   const handleToggleOriginal = () => {
     const nextVal = !showOriginal;
-    setShowOriginal(nextVal);
+    updateState({ showOriginal: nextVal });
     const p = puzzles[currentIndex];
     if (nextVal) {
       applySequence(p.originalContinuation || []);
@@ -231,9 +244,9 @@ export const PuzzleSession = ({ onBack }) => {
 
   const handleNext = () => {
     if (currentIndex < puzzles.length - 1) {
-      setCurrentIndex(prev => prev + 1);
+      updateState({ currentIndex: currentIndex + 1 });
     } else {
-      setStatus('finished');
+      updateState({ status: 'finished' });
       setPuzzleState(null);
     }
   };
@@ -279,7 +292,7 @@ export const PuzzleSession = ({ onBack }) => {
           <h3>Entrenar</h3>
         </div>
         <div className="ps-state">
-          {status === 'loading' && <p>Cargando puzzles...</p>}
+          {status === 'loading' && <p>Cargando puzzles…</p>}
           {status === 'empty' && <p>No hay puzzles guardados. Ve a «Extraer Puzzles» primero.</p>}
           {status === 'finished' && (
             <>
@@ -361,7 +374,7 @@ export const PuzzleSession = ({ onBack }) => {
 
         {/* Controls */}
         <div className="ps-controls">
-          <button className="ps-btn" onClick={() => setShowSolution(s => !s)}>
+          <button className="ps-btn" onClick={() => updateState({ showSolution: !showSolution })}>
             <Eye size={16} /> {showSolution ? 'Ocultar' : 'Ver Solución'}
           </button>
           <button className="ps-btn" onClick={handleNext}>
@@ -381,7 +394,7 @@ export const PuzzleSession = ({ onBack }) => {
                 const isNext = puzzleState ? i === puzzleState.currentStep && !isSolved && !showOriginal : false;
                 return (
                   <span
-                    key={`${m}-${i}`}
+                    key={`move-${i}-${m}`}
                     className={`sol-move ${(isDone || showOriginal) ? 'done' : ''} ${isNext ? 'clickable' : ''}`}
                     onClick={() => !showOriginal ? handleSolutionClick(m, i) : null}
                     title={isNext ? 'Clic para reproducir' : ''}

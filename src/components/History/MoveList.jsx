@@ -6,6 +6,43 @@ import { EVAL_CONFIG } from '../../constants/chessConstants.jsx';
 import { getPieceIcon } from '../../utils/chessUtils';
 import './MoveList.css';
 
+const RenderMove = ({ move, side, currentMoveIndex, goToMove }) => {
+  if (!move) return null;
+  const config = EVAL_CONFIG[move.eval];
+  const pieceMatch = move.san.match(/^([NBRQK])/);
+  const piece = pieceMatch ? pieceMatch[1] : null;
+  const moveText = piece ? move.san.substring(1) : move.san;
+
+  return (
+    <div
+      className={`move-item ${currentMoveIndex === move.index ? 'active' : ''} ${side}`}
+      title={move.eval || ''}
+      onClick={() => goToMove(move.index)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          goToMove(move.index);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
+      <span className="san">
+        {piece && <span className={`piece-icon ${side}`}>{getPieceIcon(piece, side)}</span>}
+        <span className="move-text">{moveText}</span>
+      </span>
+      {config && (
+        <span
+          className="eval-icon"
+          style={{ color: config.color, backgroundColor: config.bg }}
+        >
+          {config.icon}
+        </span>
+      )}
+    </div>
+  );
+};
+
 export const MoveList = () => {
   const {
     history,
@@ -49,36 +86,6 @@ export const MoveList = () => {
     return pairs;
   }, [history, moveEvaluations]);
 
-  const renderMove = (move, side) => {
-    if (!move) return null;
-    const config = EVAL_CONFIG[move.eval];
-    const pieceMatch = move.san.match(/^([NBRQK])/);
-    const piece = pieceMatch ? pieceMatch[1] : null;
-    const moveText = piece ? move.san.substring(1) : move.san;
-
-    return (
-      <div
-        key={move.index}
-        className={`move-item ${currentMoveIndex === move.index ? 'active' : ''} ${side}`}
-        title={move.eval || ''}
-        onClick={() => goToMove(move.index)}
-      >
-        <span className="san">
-          {piece && <span className={`piece-icon ${side}`}>{getPieceIcon(piece, side)}</span>}
-          <span className="move-text">{moveText}</span>
-        </span>
-        {config && (
-          <span
-            className="eval-icon"
-            style={{ color: config.color, backgroundColor: config.bg }}
-          >
-            {config.icon}
-          </span>
-        )}
-      </div>
-    );
-  };
-
   return (
     <div className="move-list-container premium-scroll">
       <div className="move-list-header">
@@ -100,8 +107,8 @@ export const MoveList = () => {
         {movePairs.map((pair) => (
           <div key={pair.round} className="move-row">
             <span className="round-num">{pair.round}.</span>
-            {renderMove(pair.white, 'white')}
-            {renderMove(pair.black, 'black')}
+            <RenderMove move={pair.white} side="white" currentMoveIndex={currentMoveIndex} goToMove={goToMove} />
+            <RenderMove move={pair.black} side="black" currentMoveIndex={currentMoveIndex} goToMove={goToMove} />
           </div>
         ))}
         {history.length === 0 && (

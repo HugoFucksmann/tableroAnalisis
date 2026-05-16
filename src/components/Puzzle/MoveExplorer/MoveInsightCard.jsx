@@ -10,7 +10,8 @@ const SPECIAL_LABELS = {
   'Time Pressure Error': { color: '#ff5722', label: 'TP' }
 };
 
-export const renderSan = (san) => {
+export const RenderSan = ({ san }) => {
+  if (!san) return null;
   const pieceIcons = {
     'N': '♘', 'B': '♗', 'R': '♖', 'Q': '♕', 'K': '♔'
   };
@@ -50,7 +51,7 @@ export const MoveInsightCard = ({ stats }) => {
             <div className="target-dot" />
           </div>
           <div className="move-info-text">
-            <span className="move-san-large">{lastMove ? renderSan(lastMove.san) : 'Inicio'}</span>
+            <span className="move-san-large">{lastMove ? <RenderSan san={lastMove.san} /> : 'Inicio'}</span>
             <span className="move-context-label">{lastMove ? 'Jugada actual' : 'Posición inicial'}</span>
           </div>
         </div>
@@ -63,7 +64,7 @@ export const MoveInsightCard = ({ stats }) => {
                 currentEval.mate
                   ? `M${Math.abs(currentEval.mate)}`
                   : `${currentEval.score > 0 ? '+' : ''}${currentEval.score.toFixed(1)}`
-              ) : '...'}
+              ) : '…'}
             </span>
           </div>
           

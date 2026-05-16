@@ -221,6 +221,14 @@ export const PuzzleImporter = ({ onBack }) => {
                   key={game.id}
                   className={`pi-game-card ${isSelected ? 'selected' : ''}`}
                   onClick={() => toggleGameSelection(game.id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      toggleGameSelection(game.id);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                 >
                   <div className="pi-card-info">
                     <span className="pi-players">{game.white} vs {game.black}</span>
@@ -256,7 +264,7 @@ export const PuzzleImporter = ({ onBack }) => {
             }}
             disabled={extractionStatus.canceling}
           >
-            {extractionStatus.canceling ? 'Cancelando...' : 'Cancelar'}
+            {extractionStatus.canceling ? 'Cancelando…' : 'Cancelar'}
           </button>
         </div>
       )}

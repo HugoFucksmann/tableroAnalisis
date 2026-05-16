@@ -60,7 +60,7 @@ export const ImportGameList = ({
                 {isFetchingMore && (
                   <div className="gi-loading-more">
                     <Loader size={18} className="gi-spin" />
-                    <span>Cargando más...</span>
+                    <span>Cargando más…</span>
                   </div>
                 )}
               </div>
