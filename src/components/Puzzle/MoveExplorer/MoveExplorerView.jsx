@@ -109,11 +109,16 @@ export const MoveExplorerView = ({ onBack }) => {
     setIsStale(true);
 
     // Esperar a que el backend esté conectado si no lo está (max 5s)
-    let attempts = 0;
-    while (!backendService.isConnected && attempts < 50) {
-      await new Promise(r => setTimeout(r, 100));
-      attempts++;
-    }
+    await new Promise(resolve => {
+      let attempts = 0;
+      const check = setInterval(() => {
+        if (backendService.isConnected || attempts >= 50) {
+          clearInterval(check);
+          resolve();
+        }
+        attempts++;
+      }, 100);
+    });
 
     loadingTimerRef.current = setTimeout(() => {
       setLoading(false);

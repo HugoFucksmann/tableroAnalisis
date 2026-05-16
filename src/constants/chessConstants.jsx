@@ -1,12 +1,4 @@
-/**
- * chessConstants.jsx  v3
- *
- * Cambios:
- *  - 'Libro' es la key canónica para Book Move (ya existía, se mantiene)
- *  - 'Genial' agregado al config (faltaba en v2 aunque se usaba en classifyMove)
- *  - BOOK_MOVE_LIMIT y MIN_GAMES_THRESHOLD exportados para OpeningExplorer
- *    (aunque ya no los usa para escribir evaluaciones, puede usarlos para UI)
- */
+
 import React from 'react';
 import { BookOpen, Star, ThumbsUp, Check, X, Zap } from 'lucide-react';
 
@@ -21,10 +13,7 @@ export const EVAL_CONFIG = {
   'Error grave': { icon: '??', color: '#fff', bg: '#b33430', label: 'Error grave' },
 };
 
-/**
- * Fuente de verdad única de labels de evaluación.
- * Deben coincidir exactamente con los que produce evaluationRules.js.
- */
+
 export const MOVE_LABELS = [
   'Error grave',
   'Error',
@@ -44,7 +33,3 @@ export const PIECE_ICONS = {
   Q: { white: '♕', black: '♛' },
   K: { white: '♔', black: '♚' },
 };
-
-// Usados por OpeningExplorer para display (ya no para escribir evaluaciones)
-export const BOOK_MOVE_LIMIT = 20;
-export const MIN_GAMES_THRESHOLD = 100;

@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { RenderSan } from './MoveInsightCard';
 import './MoveSection.css';
 
-export const MoveRow = ({ move, isMaster, onClick, onMouseEnter, onMouseLeave }) => {
+const MoveRow = ({ move, isMaster, onClick, onMouseEnter, onMouseLeave }) => {
   return (
     <div
       className="move-row"
@@ -42,10 +42,10 @@ export const MoveRow = ({ move, isMaster, onClick, onMouseEnter, onMouseLeave })
   );
 };
 
-export const MoveSection = ({ 
-  moves, 
-  title, 
-  isMaster = false, 
+export const MoveSection = ({
+  moves,
+  title,
+  isMaster = false,
   isLoading = false,
   onMoveClick,
   setHoveredExplorerMove
