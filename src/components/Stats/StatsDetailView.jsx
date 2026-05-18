@@ -1,10 +1,41 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { backendService } from '../../services/backendService';
 import { Chessboard } from 'react-chessboard';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import './StatsDetailView.css';
+
+const LazyChessboard = React.memo(({ fen }) => {
+    const [isVisible, setIsVisible] = useState(false);
+    const ref = useRef(null);
+
+    useEffect(() => {
+        const observer = new IntersectionObserver(([entry]) => {
+            if (entry.isIntersecting) {
+                setIsVisible(true);
+                observer.disconnect();
+            }
+        }, { rootMargin: '400px' });
+        
+        if (ref.current) observer.observe(ref.current);
+        return () => observer.disconnect();
+    }, []);
+
+    return (
+        <div ref={ref} style={{ width: '100%', height: '100%' }}>
+            {isVisible && (
+                <Chessboard 
+                    position={fen} 
+                    arePiecesDraggable={false}
+                    animationDuration={0}
+                    customDarkSquareStyle={{ backgroundColor: '#779556' }}
+                    customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
+                />
+            )}
+        </div>
+    );
+});
 
 export const StatsDetailView = () => {
     const { selectedStatCategory, setSelectedStatCategory, setAppMode, setGameId, setTargetPly } = useGameStore(useShallow(state => ({
@@ -78,23 +109,24 @@ export const StatsDetailView = () => {
                 </div>
             ) : (
                 <div className="stats-detail-grid">
-                    {details.map((item) => (
+                    {details.map((item, index) => (
                         <div 
-                            key={`${item.gameId}-${item.ply}`} 
+                            key={`${item.gameId}-${item.ply || 'null'}-${index}`} 
                             className="stat-board-card"
                             onClick={() => handleBoardClick(item.gameId, item.ply)}
                         >
                             <div className="stat-board-wrapper">
-                                <Chessboard 
-                                    position={item.fen} 
-                                    arePiecesDraggable={false}
-                                    animationDuration={0}
-                                    customDarkSquareStyle={{ backgroundColor: '#779556' }}
-                                    customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
-                                />
+                                <LazyChessboard fen={item.fen} />
                             </div>
                             <div className="stat-board-info">
-                                <span className="sbi-game">Partida #{item.gameId}</span>
+                                <span 
+                                    className="sbi-game" 
+                                    style={{ 
+                                        color: item.win === 1 ? '#4caf50' : item.win === -1 ? '#f44336' : '#ff9800' 
+                                    }}
+                                >
+                                    {item.win === 1 ? 'Victoria' : item.win === -1 ? 'Derrota' : 'Empate'} vs {item.opponent || 'Desconocido'}
+                                </span>
                                 <span className="sbi-action">Click para analizar</span>
                             </div>
                         </div>

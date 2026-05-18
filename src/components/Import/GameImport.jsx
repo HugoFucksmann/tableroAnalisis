@@ -21,11 +21,11 @@ export const GameImport = ({ onGameSelect }) => {
   const {
     username, platform, games, lichessToken,
     lastTimestamp, chesscomPagination, hasMoreGames,
-    selectedGameIds, analyses,
+    selectedGameIds, analysedGameIds,
     setSearchUsername, setSearchPlatform,
     setImportedGames, appendImportedGames, setPagination, resetGames,
     toggleGameSelection, selectAllGames, clearSelection,
-    setAnalyses,
+    setAnalysedGameIds,
   } = useGameStore(useShallow(state => ({
     username: state.searchUsername,
     platform: state.searchPlatform,
@@ -35,7 +35,7 @@ export const GameImport = ({ onGameSelect }) => {
     chesscomPagination: state.chesscomPagination,
     hasMoreGames: state.hasMoreGames,
     selectedGameIds: state.selectedGameIds,
-    analyses: state.analyses,
+    analysedGameIds: state.analysedGameIds,
     setSearchUsername: state.setSearchUsername,
     setSearchPlatform: state.setSearchPlatform,
     setImportedGames: state.setImportedGames,
@@ -45,7 +45,7 @@ export const GameImport = ({ onGameSelect }) => {
     toggleGameSelection: state.toggleGameSelection,
     selectAllGames: state.selectAllGames,
     clearSelection: state.clearSelection,
-    setAnalyses: state.setAnalyses,
+    setAnalysedGameIds: state.setAnalysedGameIds,
   })));
 
   // ── Local UI state ───────────────────────────────────────────────
@@ -59,21 +59,22 @@ export const GameImport = ({ onGameSelect }) => {
   });
 
   const { loadingId, isFetching, isFetchingMore, error, customPgn, batchStatus } = uiState;
-  const updateUi = (patch) => setUiState(prev => ({ ...prev, ...patch }));
+
+  // updateUi supports both plain patches and functional updaters (prevents stale closures)
+  const updateUi = useCallback(
+    (patch) => setUiState(prev => ({ ...prev, ...(typeof patch === 'function' ? patch(prev) : patch) })),
+    []
+  );
 
   const listRef = useRef(null);
   const sentinelRef = useRef(null);
 
-  // ── Sync analyses cache and batch status ─────────────────────────
+  // ── Sync analysedGameIds and batch status ────────────────────────
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
-      if (msg.type === 'analyses_list') {
-        if (msg.offset === 0) setAnalyses(msg.analyses);
-        else setAnalyses(prev => {
-          const existingIds = new Set(prev.map(a => a.id));
-          const newItems = msg.analyses.filter(a => !existingIds.has(a.id));
-          return [...prev, ...newItems];
-        });
+      // Lightweight: only gameIds needed for badge rendering
+      if (msg.type === 'analysed_ids') {
+        setAnalysedGameIds(msg.ids);
       }
 
       // Batch analysis handlers
@@ -82,22 +83,31 @@ export const GameImport = ({ onGameSelect }) => {
           updateUi({ batchStatus: { current: 0, total: msg.total, pct: 0, label: 'Iniciando…' } });
           break;
         case 'batch_analysis_progress':
-          updateUi({ batchStatus: { ...batchStatus, current: msg.gameIndex, pct: msg.pct, label: msg.label } });
+          // Use functional updater to avoid stale closure on batchStatus
+          updateUi(prev => ({
+            batchStatus: { ...prev.batchStatus, current: msg.gameIndex, pct: msg.pct, label: msg.label },
+          }));
           break;
         case 'batch_analysis_game_complete':
-          updateUi({ batchStatus: { ...batchStatus, current: msg.gameIndex + 1, pct: 100 } });
+          updateUi(prev => ({
+            batchStatus: { ...prev.batchStatus, current: msg.gameIndex + 1, pct: 100 },
+          }));
           break;
         case 'batch_analysis_complete':
         case 'batch_analysis_cancelled':
           updateUi({ batchStatus: null });
           clearSelection();
-          backendService.getAnalyses(0, 50);
+          // Refresh the full analysed IDs set after a batch completes
+          backendService.getAnalysedIds();
           break;
       }
     });
-    backendService.getAnalyses(0, 50);
+
+    // Load all analysed IDs on mount (no LIMIT, just gameId strings)
+    backendService.getAnalysedIds();
+
     return () => cleanup();
-  }, [setAnalyses, clearSelection]);
+  }, [setAnalysedGameIds, clearSelection, updateUi]);
 
   // ── Handlers ─────────────────────────────────────────────────────
   const handlePlatformSwitch = (p) => {
@@ -129,7 +139,7 @@ export const GameImport = ({ onGameSelect }) => {
     } finally {
       updateUi({ isFetching: false });
     }
-  }, [lichessToken, setImportedGames, setPagination, resetGames]);
+  }, [lichessToken, setImportedGames, setPagination, resetGames, updateUi]);
 
   const loadMore = useCallback(async () => {
     if (isFetching || isFetchingMore || !hasMoreGames || !username) return;
@@ -149,7 +159,7 @@ export const GameImport = ({ onGameSelect }) => {
     } finally {
       updateUi({ isFetchingMore: false });
     }
-  }, [isFetching, isFetchingMore, hasMoreGames, username, platform, lastTimestamp, chesscomPagination, lichessToken, appendImportedGames, setPagination]);
+  }, [isFetching, isFetchingMore, hasMoreGames, username, platform, lastTimestamp, chesscomPagination, lichessToken, appendImportedGames, setPagination, updateUi]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -165,7 +175,7 @@ export const GameImport = ({ onGameSelect }) => {
   // Auto-search logic
   const lastSearchRef = useRef({ username: '', platform: '' });
   useEffect(() => {
-    const shouldSearch = username && games.length === 0 && 
+    const shouldSearch = username && games.length === 0 &&
       (lastSearchRef.current.username !== username || lastSearchRef.current.platform !== platform);
     if (shouldSearch) {
       lastSearchRef.current = { username, platform };
@@ -183,22 +193,28 @@ export const GameImport = ({ onGameSelect }) => {
   const handleAnalyzeBatch = () => {
     const userLower = username.trim().toLowerCase();
     const selectedSet = new Set(selectedGameIds);
-    
+
     const selectedGames = games.reduce((acc, g) => {
       if (selectedSet.has(g.id)) {
         const isWhite = g.white.toLowerCase() === userLower;
         const isBlack = g.black.toLowerCase() === userLower;
         const playerColor = isWhite ? 'white' : (isBlack ? 'black' : 'white');
-        
+
         const win = g.result === '1/2-1/2' ? 0 : ((isWhite && g.result === '1-0') || (isBlack && g.result === '0-1') ? 1 : -1);
 
-        acc.push({ 
-          pgn: g.pgn, 
-          gameId: g.id, 
-          username: username.trim(), 
-          playerColor, 
-          win, 
-          timeControl: g.timeControl 
+        // Opponent is the other player name; gameDate is the real match date from the platform
+        const opponent = isWhite ? g.black : (isBlack ? g.white : '');
+        const gameDate = g.createdAt ? new Date(g.createdAt).toISOString() : null;
+
+        acc.push({
+          pgn: g.pgn,
+          gameId: g.id,
+          username: username.trim(),
+          playerColor,
+          win,
+          timeControl: g.timeControl,
+          opponent,
+          gameDate,
         });
       }
       return acc;
@@ -210,12 +226,15 @@ export const GameImport = ({ onGameSelect }) => {
   };
 
   // ── Derived ──────────────────────────────────────────────────────
-  const analysedIds = useMemo(() => new Set(analyses.map(a => String(a.gameId))), [analyses]);
-  const unanalysedIds = useMemo(() => 
+  // Build Set from the lightweight analysedGameIds (all entries, no LIMIT)
+  const analysedIds = useMemo(() => new Set(analysedGameIds), [analysedGameIds]);
+
+  const unanalysedIds = useMemo(() =>
     games.reduce((acc, g) => {
       if (!analysedIds.has(String(g.id))) acc.push(g.id);
       return acc;
     }, []), [games, analysedIds]);
+
   const allSelected = games.length > 0 && (
     (unanalysedIds.length > 0 && unanalysedIds.every(id => selectedGameIds.includes(id))) ||
     (selectedGameIds.length > 0 && selectedGameIds.length === games.length)
@@ -225,12 +244,12 @@ export const GameImport = ({ onGameSelect }) => {
     <div className="gi-root">
       <div className="gi-header-bar">
         <PlatformSelector platform={platform} onPlatformSwitch={handlePlatformSwitch} />
-        <SearchInput 
-          platform={platform} 
-          username={username} 
-          setSearchUsername={setSearchUsername} 
-          onSearch={() => performSearch(username, platform)} 
-          isFetching={isFetching} 
+        <SearchInput
+          platform={platform}
+          username={username}
+          setSearchUsername={setSearchUsername}
+          onSearch={() => performSearch(username, platform)}
+          isFetching={isFetching}
         />
       </div>
 
@@ -239,8 +258,8 @@ export const GameImport = ({ onGameSelect }) => {
       ) : (
         <>
           {error && <div className="gi-error"><AlertCircle size={13} /><span>{error}</span></div>}
-          
-          <ImportGameList 
+
+          <ImportGameList
             games={games}
             isFetching={isFetching}
             error={error}
@@ -258,12 +277,12 @@ export const GameImport = ({ onGameSelect }) => {
           />
 
           <BatchProgressOverlay batchStatus={batchStatus} onCancel={() => backendService.cancel()} />
-          
-          <BulkActionBar 
-            selectedCount={selectedGameIds.length} 
-            batchStatus={batchStatus} 
-            onAnalyze={handleAnalyzeBatch} 
-            onClear={clearSelection} 
+
+          <BulkActionBar
+            selectedCount={selectedGameIds.length}
+            batchStatus={batchStatus}
+            onAnalyze={handleAnalyzeBatch}
+            onClear={clearSelection}
           />
         </>
       )}

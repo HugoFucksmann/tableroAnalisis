@@ -31,7 +31,7 @@ export const Dashboard = () => {
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, hasPgnEvaluations, startFullAnalysis,
-    analysisReady, appMode, applyFullAnalysis, setAnalyses, gameId,
+    analysisReady, appMode, applyFullAnalysis, setAnalyses, setAnalysedGameIds, gameId,
     setAppMode, setExplorerMode, selectedStatCategory
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
@@ -46,6 +46,7 @@ export const Dashboard = () => {
     appMode: state.appMode,
     applyFullAnalysis: state.applyFullAnalysis,
     setAnalyses: state.setAnalyses,
+    setAnalysedGameIds: state.setAnalysedGameIds,
     gameId: state.gameId,
     setAppMode: state.setAppMode,
     setExplorerMode: state.setExplorerMode,
@@ -58,6 +59,7 @@ export const Dashboard = () => {
     const cleanup = backendService.addHandler((msg) => {
       if (msg.type === 'connection_status' && msg.connected) {
         backendService.getAnalyses(0, 50);
+        backendService.getAnalysedIds();
       }
       if (msg.type === 'full_analysis_data') {
         applyFullAnalysis(msg.data);
@@ -78,14 +80,19 @@ export const Dashboard = () => {
           });
         }
       }
+      // Keep lightweight badge set in sync whenever full analyses arrive
+      if (msg.type === 'analysed_ids') {
+        setAnalysedGameIds(msg.ids);
+      }
     });
 
     if (backendService.isConnected) {
       backendService.getAnalyses(0, 50);
+      backendService.getAnalysedIds();
     }
 
     return () => cleanup();
-  }, [applyFullAnalysis, setAnalyses]);
+  }, [applyFullAnalysis, setAnalyses, setAnalysedGameIds]);
 
   const lastLoadedId = React.useRef(null);
   useEffect(() => {

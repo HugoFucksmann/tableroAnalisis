@@ -25,8 +25,12 @@ export const createLibrarySlice = (set, get) => ({
   // Stored as array for Zustand persist compatibility (Sets no son serializables)
   selectedGameIds: [],
 
-  // ── Analyses cache (desde el backend SQLite) ────────────────────
+  // ── Analyses cache (objetos completos — para StatsDashboard/HistoryListView) ──
   analyses: [],
+
+  // ── Analysed IDs (solo gameIds — para marcar badges en GameImport) ──────────
+  // Array liviano de strings, sin objetos, sin LIMIT. Fuente: get_analysed_ids.
+  analysedGameIds: [],
 
   // ── Batch progress ──────────────────────────────────────────────
   batchStatus: null, // null | { current, total, label }
@@ -68,9 +72,10 @@ export const createLibrarySlice = (set, get) => ({
 
   selectAllGames: () =>
     set((state) => {
-      const analysedIds = new Set(state.analyses.map((a) => String(a.gameId)));
-      const unanalysed = state.importedGames.filter((g) => !analysedIds.has(String(g.id)));
-      
+      // Use the lightweight analysedGameIds for filtering — no LIMIT issue
+      const analysedSet = new Set(state.analysedGameIds);
+      const unanalysed = state.importedGames.filter((g) => !analysedSet.has(String(g.id)));
+
       // Priorizar partidas no analizadas. Si no hay ninguna nueva, seleccionar todas.
       const targetGames = unanalysed.length > 0 ? unanalysed : state.importedGames;
       return { selectedGameIds: targetGames.map((g) => g.id) };
@@ -80,7 +85,7 @@ export const createLibrarySlice = (set, get) => ({
 
   isGameSelected: (id) => get().selectedGameIds.includes(id),
 
-  // ── Actions: Analyses cache ──────────────────────────────────────
+  // ── Actions: Analyses cache (objetos completos — StatsDashboard/HistoryListView) ──
   setAnalyses: (v) =>
     set((state) => ({ analyses: typeof v === 'function' ? v(state.analyses) : v })),
 
@@ -90,12 +95,41 @@ export const createLibrarySlice = (set, get) => ({
   removeAnalyses: (ids) =>
     set((state) => ({ analyses: state.analyses.filter((a) => !ids.includes(a.id)) })),
 
-  // Mark a game as analyzed in the local cache (avoids full refetch)
-  markGameAnalyzed: (gameId, analysisEntry) =>
+  // ── Actions: Analysed IDs (liviano — solo para badges en GameImport) ─────────
+  setAnalysedGameIds: (ids) =>
+    set({ analysedGameIds: Array.isArray(ids) ? ids.map(String) : [] }),
+
+  addAnalysedGameId: (gameId) =>
     set((state) => {
-      const already = state.analyses.some((a) => String(a.gameId) === String(gameId));
-      if (already) return state;
-      return { analyses: [...state.analyses, analysisEntry] };
+      const id = String(gameId);
+      if (state.analysedGameIds.includes(id)) return state;
+      return { analysedGameIds: [...state.analysedGameIds, id] };
+    }),
+
+  removeAnalysedGameIds: (gameIds) =>
+    set((state) => {
+      const toRemove = new Set(gameIds.map(String));
+      return { analysedGameIds: state.analysedGameIds.filter((id) => !toRemove.has(id)) };
+    }),
+
+  // Mark a game as analyzed: updates both badge Set and (optionally) the full history cache.
+  markGameAnalyzed: (gameId, analysisEntry = null) =>
+    set((state) => {
+      const id = String(gameId);
+      const updates = {};
+
+      if (!state.analysedGameIds.includes(id)) {
+        updates.analysedGameIds = [...state.analysedGameIds, id];
+      }
+
+      if (analysisEntry) {
+        const already = state.analyses.some((a) => String(a.gameId) === id);
+        if (!already) {
+          updates.analyses = [...state.analyses, analysisEntry];
+        }
+      }
+
+      return Object.keys(updates).length ? updates : state;
     }),
 
   // ── Actions: Batch ───────────────────────────────────────────────

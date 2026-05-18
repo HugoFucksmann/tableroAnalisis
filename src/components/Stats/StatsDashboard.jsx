@@ -71,6 +71,12 @@ export const StatsDashboard = () => {
         else appendAnalyses(msg.analyses);
         dispatch({ type: 'UPDATE', payload: { hasMore: msg.analyses.length === (msg.limit || 50) } });
       }
+
+      if (msg.type === 'analyses_deleted') {
+        backendService.getAnalyses(0, PAGE_SIZE);
+        dispatch({ type: 'UPDATE', payload: { historyOffset: PAGE_SIZE } });
+        fetchStats(true);
+      }
     });
     return () => cleanup();
   }, [setAnalyses, appendAnalyses, fetchStats]);
@@ -108,18 +114,16 @@ export const StatsDashboard = () => {
       backendService.deleteAnalyses(ids);
       removeAnalyses(ids);
       dispatch({ type: 'UPDATE', payload: { selectedIds: new Set() } });
-      setTimeout(() => fetchStats(true), 100);
     }
-  }, [selectedIds, removeAnalyses, fetchStats]);
+  }, [selectedIds, removeAnalyses]);
 
   const handleSingleDelete = useCallback((id, e) => {
     e.stopPropagation();
     if (window.confirm('¿Borrar este análisis?')) {
       backendService.deleteAnalyses([id]);
       removeAnalyses([id]);
-      setTimeout(() => fetchStats(true), 100);
     }
-  }, [removeAnalyses, fetchStats]);
+  }, [removeAnalyses]);
 
   if (loading) return (
     <div className="stats-loading">

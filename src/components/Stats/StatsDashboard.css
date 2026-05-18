@@ -638,9 +638,23 @@
   color: var(--success-primary);
 }
 
+.hi-result-badge.draw {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
 .hi-result-badge.loss {
   background: var(--error-bg);
   color: var(--error-primary);
+}
+
+.hi-opponent {
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
 }
 
 .hi-acc {

@@ -189,6 +189,10 @@ class BackendService {
         return this.send('get_analyses', { offset, limit }, requestId);
     }
 
+    getAnalysedIds(requestId = null) {
+        return this.send('get_analysed_ids', {}, requestId);
+    }
+
     deleteAnalyses(ids, requestId = null) {
         return this.send('delete_analyses', { ids }, requestId);
     }

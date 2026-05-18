@@ -15,6 +15,10 @@ export async function fetchLichessGames(username, max = 15, until = null, token 
     const games = lines.reduce((acc, line) => {
       try {
         const game = JSON.parse(line);
+        const clock = game.clock;
+        const timeControl = clock
+          ? `${Math.floor(clock.initial / 60)}+${clock.increment}`
+          : (game.speed || null);
         acc.push({
           id: game.id,
           white: game.players.white.user?.name || 'Anon',
@@ -23,6 +27,7 @@ export async function fetchLichessGames(username, max = 15, until = null, token 
           date: new Date(game.createdAt).toLocaleDateString(),
           pgn: game.pgn,
           createdAt: game.createdAt,
+          timeControl,
         });
       } catch (e) {
         console.warn('Línea NDJSON corrupta ignorada (Conexión cortada por el servidor)');
@@ -112,6 +117,8 @@ export async function fetchChesscomGames(username, max = 15, pagination = null, 
         result: result,
         date: new Date(game.end_time * 1000).toLocaleDateString(),
         pgn: game.pgn,
+        createdAt: game.end_time * 1000,        // normalize to ms like Lichess
+        timeControl: game.time_control || null, // e.g. "600+5"
       };
     });
 
