@@ -162,9 +162,9 @@ export const PsychologicalProfileCard = ({ stats }) => {
       <div className="psycho-list-modern">
         {/* Row 1: Conversión */}
         <div 
-            className="psycho-row clickable" 
-            onClick={() => setSelectedStatCategory('blown_advantage')}
-            title="Ver ventajas desperdiciadas"
+            className={`psycho-row ${blownAdvantages > 0 ? 'clickable' : ''}`} 
+            onClick={() => blownAdvantages > 0 && setSelectedStatCategory('blown_advantage')}
+            title={blownAdvantages > 0 ? "Ver ventajas desperdiciadas" : "No hay ventajas desperdiciadas"}
         >
           <div className="psycho-info">
             <span className="psycho-label">Conversión de Ventaja</span>
@@ -180,9 +180,9 @@ export const PsychologicalProfileCard = ({ stats }) => {
 
         {/* Row 2: Remontadas */}
         <div 
-            className="psycho-row clickable" 
-            onClick={() => setSelectedStatCategory('comeback')}
-            title="Ver remontadas y empates salvados"
+            className={`psycho-row ${(comebackWins + savedDraws) > 0 ? 'clickable' : ''}`} 
+            onClick={() => (comebackWins + savedDraws) > 0 && setSelectedStatCategory('comeback')}
+            title={(comebackWins + savedDraws) > 0 ? "Ver remontadas y empates salvados" : "No hay remontadas"}
         >
           <div className="psycho-info">
             <span className="psycho-label">Resiliencia</span>
@@ -198,9 +198,9 @@ export const PsychologicalProfileCard = ({ stats }) => {
 
         {/* Row 3: Tilt */}
         <div 
-            className="psycho-row tilt-row clickable" 
-            onClick={() => setSelectedStatCategory('tilt')}
-            title="Ver posiciones de colapso"
+            className={`psycho-row tilt-row ${tiltEvents > 0 ? 'clickable' : ''}`} 
+            onClick={() => tiltEvents > 0 && setSelectedStatCategory('tilt')}
+            title={tiltEvents > 0 ? "Ver posiciones de colapso" : "Excelente control, sin colapsos"}
         >
           <div className="psycho-info">
             <span className="psycho-label">Control Emocional</span>

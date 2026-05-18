@@ -38,12 +38,13 @@ const LazyChessboard = React.memo(({ fen }) => {
 });
 
 export const StatsDetailView = () => {
-    const { selectedStatCategory, setSelectedStatCategory, setAppMode, setGameId, setTargetPly } = useGameStore(useShallow(state => ({
+    const { selectedStatCategory, setSelectedStatCategory, setAppMode, setGameId, setTargetPly, searchUsername } = useGameStore(useShallow(state => ({
         selectedStatCategory: state.selectedStatCategory,
         setSelectedStatCategory: state.setSelectedStatCategory,
         setAppMode: state.setAppMode,
         setGameId: state.setGameId,
-        setTargetPly: state.setTargetPly
+        setTargetPly: state.setTargetPly,
+        searchUsername: state.searchUsername
     })));
 
     const [details, setDetails] = useState([]);
@@ -55,7 +56,7 @@ export const StatsDetailView = () => {
         setLoading(true);
         // Podemos usar los mismos filtros globales de stats si estuvieran en el store, 
         // pero por simplicidad pasamos {} o los guardamos.
-        backendService.getStatDetails(selectedStatCategory, {})
+        backendService.getStatDetails(selectedStatCategory, { username: searchUsername })
             .then(res => {
                 setDetails(Array.isArray(res.details) ? res.details : []);
                 setLoading(false);
@@ -127,6 +128,14 @@ export const StatsDetailView = () => {
                                 >
                                     {item.win === 1 ? 'Victoria' : item.win === -1 ? 'Derrota' : 'Empate'} vs {item.opponent || 'Desconocido'}
                                 </span>
+                                <span className="sbi-date" style={{ fontSize: '0.8rem', color: '#888' }}>
+                                    {item.date ? new Date(item.date).toLocaleDateString() : 'Sin fecha'}
+                                </span>
+                                {item.opening && (
+                                    <span className="sbi-opening" style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {item.eco ? `${item.eco} - ` : ''}{item.opening}
+                                    </span>
+                                )}
                                 <span className="sbi-action">Click para analizar</span>
                             </div>
                         </div>
