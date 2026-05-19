@@ -1,5 +1,7 @@
 import React from 'react';
 import { Calendar, Clock, Layers } from 'lucide-react';
+import './StatsFilterBar.css';
+
 
 export const StatsFilterBar = ({ 
   timeFilter, 

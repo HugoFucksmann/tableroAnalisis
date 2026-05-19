@@ -1,5 +1,7 @@
 import React from 'react';
 import { LayoutDashboard, List, AlertTriangle } from 'lucide-react';
+import './StatsTabs.css';
+
 
 export const StatsTabs = ({ 
   activeTab, 

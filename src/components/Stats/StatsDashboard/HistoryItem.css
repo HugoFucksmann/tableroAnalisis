@@ -1,0 +1,143 @@
+.history-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.history-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.history-item.selected {
+  background: var(--accent-glow-muted);
+  border-bottom-color: var(--accent-glow);
+}
+
+.selected .hi-check {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.selected .hi-check-inner {
+  display: block;
+}
+
+.hi-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.hi-opening {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+}
+
+.hi-meta {
+  font-size: var(--text-xs);
+  color: var(--text-muted);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hi-tc {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--info-glow);
+  color: var(--info-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hi-result-badge {
+  font-size: var(--text-2xs);
+  font-weight: 800;
+  padding: 1px 4px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hi-result-badge.win {
+  background: var(--success-glow);
+  color: var(--success-primary);
+}
+
+.hi-result-badge.draw {
+  background: rgba(245, 158, 11, 0.12);
+  color: #f59e0b;
+}
+
+.hi-result-badge.loss {
+  background: var(--error-bg);
+  color: var(--error-primary);
+}
+
+.hi-opponent {
+  color: var(--text-secondary);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 120px;
+}
+
+.hi-acc {
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.hi-acc-val {
+  font-family: var(--font-main);
+  font-weight: 800;
+  font-size: var(--text-md);
+  color: var(--accent-primary);
+  line-height: 1;
+}
+
+.hi-acc-label {
+  font-size: var(--text-2xs);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: right;
+  margin-top: 2px;
+}
+
+.hi-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.hi-delete {
+  background: var(--error-bg);
+  color: var(--error-primary);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transition: var(--transition);
+}
+
+.history-item:hover .hi-delete {
+  opacity: 1;
+}

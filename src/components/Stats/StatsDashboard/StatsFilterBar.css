@@ -1,0 +1,56 @@
+.stats-filters-bar {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.filter-pill-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-pill-group:last-child {
+  border-right: none;
+}
+
+.filter-pill-group svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.stats-dropdown {
+  background: transparent;
+  color: var(--text-secondary);
+  border: none;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: pointer;
+
+  outline: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  font-family: inherit;
+  padding: 0;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stats-dropdown:hover {
+  color: var(--text-primary);
+}
+
+.stats-dropdown option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}

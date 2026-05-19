@@ -1,0 +1,21 @@
+.line-chart-wrapper {
+  width: 100%;
+  height: 200px;
+  overflow: visible;
+}
+
+.line-chart-wrapper svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.no-data-chart {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-style: italic;
+}

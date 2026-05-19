@@ -1,6 +1,8 @@
 import React from 'react';
 import { History, Filter } from 'lucide-react';
 import AccuracyLineChart from '../AccuracyLineChart';
+import './StatsSummaryView.css';
+
 import {
   ColorStatsCard,
   PhaseStatsCard,
@@ -40,16 +42,19 @@ export const StatsSummaryView = ({ stats }) => {
         <AccuracyLineChart data={stats.trend} />
       </section>
 
+      {/* Por fase debajo del gráfico */}
+      <PhaseStatsCard stats={stats} />
+
       <div className="stats-secondary-grid">
         <PsychologicalProfileCard stats={stats} />
         <TimeManagementCard stats={stats} />
         <ColorStatsCard stats={stats} />
-        <PhaseStatsCard stats={stats} />
         <QualityStatsCard stats={stats} />
         <OpeningStatsCard stats={stats} />
         <BlundersByTimeCard stats={stats} />
         <DangerousOpeningsCard stats={stats} />
       </div>
     </div>
+
   );
 };

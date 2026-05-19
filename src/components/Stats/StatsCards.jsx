@@ -1,7 +1,9 @@
 import React from 'react';
 import { m } from 'framer-motion';
-import { Zap, Target, BookOpen, AlertTriangle, Clock, Brain, Timer, ShieldAlert, Award } from 'lucide-react';
+import { Zap, Target, BookOpen, AlertTriangle, Clock, Brain, Timer } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
+import './StatsCards.css';
+
 
 export const ColorStatsCard = ({ stats }) => (
   <div className="stats-card-modern">
@@ -31,16 +33,16 @@ export const PhaseStatsCard = ({ stats }) => (
   <div className="stats-card-modern">
     <div className="card-title-modern"><Target size={13} /> Por fase</div>
     {stats.accuracyByPhase.length > 0 ? (
-      <div className="phase-minimal-list">
+      <div className="stats-list">
         {stats.accuracyByPhase.map((p, i) => (
           <div key={p.phase} className="phase-item-new">
             <div className="pi-info">
               <span>{p.phase}</span>
               <strong>{p.accuracy}%</strong>
             </div>
-            <div className="pi-bar-bg">
+            <div className="stats-progress-bar">
               <m.div
-                className="pi-bar-fill"
+                className="stats-progress-bar-fill"
                 initial={{ width: 0 }}
                 animate={{ width: `${p.accuracy}%` }}
                 style={{ background: p.color || (i === 0 ? '#4caf50' : i === 1 ? '#ff9800' : '#2196f3') }}
@@ -60,9 +62,9 @@ export const PhaseStatsCard = ({ stats }) => (
 export const OpeningStatsCard = ({ stats }) => (
   <div className="stats-card-modern">
     <div className="card-title-modern"><BookOpen size={13} /> Aperturas</div>
-    <div className="opening-modern-list premium-scroll">
+    <div className="stats-list premium-scroll" style={{ maxHeight: '240px', overflowY: 'auto', paddingRight: '4px' }}>
       {stats.openingStats.map((op) => (
-        <div key={op.name} className="op-row-modern">
+        <div key={op.name} className="stats-row-item">
           <span className="op-name-m">{op.name}</span>
           <div className="op-vals-m">
             <span title="Win Rate">W {op.wr}%</span>
@@ -79,14 +81,14 @@ export const QualityStatsCard = ({ stats }) => (
   <div className="stats-card-modern">
     <div className="card-title-modern"><AlertTriangle size={13} /> Calidad de jugadas</div>
     {stats.moveQuality.length > 0 ? (
-      <div className="tactical-modern-list">
+      <div className="stats-list">
         {stats.moveQuality.map((t) => (
           <div key={t.label} className="t-row-modern">
             <span className="t-label-m">{t.label}</span>
             <span className="t-count-m">{t.pct}%</span>
-            <div className="t-bar-m">
+            <div className="stats-progress-bar">
               <m.div
-                className="t-fill-m"
+                className="stats-progress-bar-fill"
                 initial={{ width: 0 }}
                 animate={{ width: `${t.pct}%` }}
                 style={{ background: t.color }}
@@ -125,9 +127,9 @@ export const DangerousOpeningsCard = ({ stats }) => {
   return (
     <div className="stats-card-modern">
       <div className="card-title-modern"><AlertTriangle size={13} color="#f44336" /> Aperturas críticas (Err/Game)</div>
-      <div className="dangerous-list">
+      <div className="stats-list">
         {stats.dangerousOpenings.map((op) => (
-          <div key={op.name} className="dangerous-row">
+          <div key={op.name} className="stats-row-item">
             <div className="dr-main">
               <span className="dr-eco">{op.eco || '???'}</span>
               <span className="dr-name">{op.name}</span>
@@ -159,10 +161,10 @@ export const PsychologicalProfileCard = ({ stats }) => {
     <div className="stats-card-modern">
       <div className="card-title-modern"><Brain size={13} color="#9c27b0" /> Psicología & Control</div>
       
-      <div className="psycho-list-modern">
+      <div className="stats-list" style={{ marginTop: '4px' }}>
         {/* Row 1: Conversión */}
         <div 
-            className={`psycho-row ${blownAdvantages > 0 ? 'clickable' : ''}`} 
+            className={`stats-row-item ${blownAdvantages > 0 ? 'clickable' : ''}`} 
             onClick={() => blownAdvantages > 0 && setSelectedStatCategory('blown_advantage')}
             title={blownAdvantages > 0 ? "Ver ventajas desperdiciadas" : "No hay ventajas desperdiciadas"}
         >
@@ -172,15 +174,15 @@ export const PsychologicalProfileCard = ({ stats }) => {
           </div>
           <div className="psycho-data">
             <span className="psycho-val">{conversionRate}%</span>
-            <div className="t-bar-m">
-              <m.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${conversionRate}%` }} style={{ background: '#4caf50' }} />
+            <div className="stats-progress-bar">
+              <m.div className="stats-progress-bar-fill" initial={{ width: 0 }} animate={{ width: `${conversionRate}%` }} style={{ background: '#4caf50' }} />
             </div>
           </div>
         </div>
 
         {/* Row 2: Remontadas */}
         <div 
-            className={`psycho-row ${(comebackWins + savedDraws) > 0 ? 'clickable' : ''}`} 
+            className={`stats-row-item ${(comebackWins + savedDraws) > 0 ? 'clickable' : ''}`} 
             onClick={() => (comebackWins + savedDraws) > 0 && setSelectedStatCategory('comeback')}
             title={(comebackWins + savedDraws) > 0 ? "Ver remontadas y empates salvados" : "No hay remontadas"}
         >
@@ -190,15 +192,15 @@ export const PsychologicalProfileCard = ({ stats }) => {
           </div>
           <div className="psycho-data">
             <span className="psycho-val">{resilienceRate}%</span>
-            <div className="t-bar-m">
-              <m.div className="t-fill-m" initial={{ width: 0 }} animate={{ width: `${resilienceRate}%` }} style={{ background: '#2196f3' }} />
+            <div className="stats-progress-bar">
+              <m.div className="stats-progress-bar-fill" initial={{ width: 0 }} animate={{ width: `${resilienceRate}%` }} style={{ background: '#2196f3' }} />
             </div>
           </div>
         </div>
 
         {/* Row 3: Tilt */}
         <div 
-            className={`psycho-row tilt-row ${tiltEvents > 0 ? 'clickable' : ''}`} 
+            className={`stats-row-item tilt-row ${tiltEvents > 0 ? 'clickable' : ''}`} 
             onClick={() => tiltEvents > 0 && setSelectedStatCategory('tilt')}
             title={tiltEvents > 0 ? "Ver posiciones de colapso" : "Excelente control, sin colapsos"}
         >

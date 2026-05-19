@@ -1,4 +1,6 @@
 import React, { useMemo } from 'react';
+import './AccuracyLineChart.css';
+
 
 const WIDTH = 400;
 const HEIGHT = 80;

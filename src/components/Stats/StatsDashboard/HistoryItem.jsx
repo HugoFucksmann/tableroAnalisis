@@ -1,5 +1,7 @@
 import React from 'react';
 import { AlertTriangle } from 'lucide-react';
+import './HistoryItem.css';
+
 
 export const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) => {
   const formattedDate = React.useMemo(() => {
