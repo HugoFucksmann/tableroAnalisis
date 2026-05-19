@@ -5,6 +5,9 @@ import { MoveList } from '../History/MoveList';
 import { OpeningExplorer } from './OpeningExplorer';
 import { GameImport } from '../Import/GameImport';
 import { Key, Cpu, Download } from 'lucide-react';
+import { useGameStore } from '../../store/useGameStore';
+import { useShallow } from 'zustand/react/shallow';
+import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
 
 export const AnalysisPanels = ({
   isHistoryCollapsed,
@@ -12,17 +15,35 @@ export const AnalysisPanels = ({
   isExplorerCollapsed,
   setIsExplorerCollapsed,
   isImportCollapsed,
-  setIsImportCollapsed,
-  history,
-  analysisReady,
-  startFullAnalysis,
-  handleDownloadPgn,
-  ecoCode,
-  explorerTitle,
-  lichessToken,
-  showTokenInput,
-  setShowTokenInput
+  setIsImportCollapsed
 }) => {
+  const {
+    history,
+    analysisReady,
+    startFullAnalysis,
+    ecoCode,
+    openingName,
+    lichessToken,
+    showTokenInput,
+    setShowTokenInput
+  } = useGameStore(useShallow(state => ({
+    history: state.history,
+    analysisReady: state.analysisReady,
+    startFullAnalysis: state.startFullAnalysis,
+    ecoCode: state.ecoCode,
+    openingName: state.openingName,
+    lichessToken: state.lichessToken,
+    showTokenInput: state.showTokenInput,
+    setShowTokenInput: state.setShowTokenInput
+  })));
+
+  const explorerTitle = (openingName && openingName !== 'Initial Position') ? openingName : 'Explorador';
+
+  const handleDownloadPgn = () => {
+    const { moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex } = useGameStore.getState();
+    const pgn = generateAnnotatedPgn(history, moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex);
+    downloadPgn(pgn, 'analisis_partida.pgn');
+  };
   return (
     <>
       <div className="panel-container controls-panel">
