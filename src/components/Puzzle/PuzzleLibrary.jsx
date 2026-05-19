@@ -1,11 +1,8 @@
 import React, { useReducer, useEffect } from 'react';
 import { backendService } from '../../services/backendService';
-import { ChevronLeft, Trash2, Calendar, Target, Hash } from 'lucide-react';
+import { ChevronLeft, Trash2, Calendar, Hash } from 'lucide-react';
 import './Puzzle.css';
 
-// ✅ FIX (cascading-set-state): los 4 setState del useEffect original
-// (setIsLoading x2, setPuzzles, clearInterval implícito) se unifican en un reducer.
-// Esto evita re-renders en cascada y hace el flujo de estado explícito.
 const initialState = {
   puzzles: [],
   isLoading: true,
@@ -17,9 +14,7 @@ function libraryReducer(state, action) {
       return { ...state, isLoading: true };
     case 'PUZZLES_LOADED':
       return {
-        puzzles: action.payload.slice().sort(
-          (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-        ),
+        puzzles: action.payload.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)),
         isLoading: false,
       };
     case 'PUZZLE_DELETED':
@@ -31,18 +26,58 @@ function libraryReducer(state, action) {
   }
 }
 
-// ✅ FIX (rendering-hydration-mismatch-time): new Date() se formatea en una
-// función pura llamada en render, no directamente en JSX como expresión de
-// inicialización. El valor no se usa para estado, solo para display, por lo que
-// no requiere useEffect+useState aquí — es solo presentación de un dato ya
-// guardado (p.createdAt), no la fecha actual del sistema.
 function formatDate(isoString) {
-  try {
-    return new Date(isoString).toLocaleDateString();
-  } catch {
-    return '';
-  }
+  try { return new Date(isoString).toLocaleDateString(); } catch { return ''; }
 }
+
+const PuzzleCard = ({ puzzle, onDelete }) => {
+  const label = puzzle.label || 'Táctica';
+  const cssClass = label.toLowerCase().replace(/\s+/g, '-');
+  const gameId = puzzle.gameId ? puzzle.gameId.slice(-6) : 'Manual';
+  const solvedCount = puzzle.solvedCount || 0;
+  const motifs = Array.isArray(puzzle.tacticalMotifs) ? puzzle.tacticalMotifs : [];
+
+  return (
+    <div className="pl-item">
+      <div className="pl-item-info">
+        <div className="pl-item-top">
+          <span className={`pl-label ${cssClass}`}>{label}</span>
+          <span className="pl-date">
+            <Calendar size={10} />
+            {formatDate(puzzle.createdAt)}
+          </span>
+        </div>
+        <div className="pl-item-meta">
+          <span>Partida: {gameId}</span>
+          <span>Solucionado: {solvedCount}</span>
+        </div>
+        <div className="pl-item-badges">
+          {puzzle.isOnlyMove && (
+            <span className="pl-badge only-move" title={`Gap Crítico: ${puzzle.criticalityGap}`}>
+              Only Move
+            </span>
+          )}
+          {puzzle.tensionIndex > 4 && (
+            <span className="pl-badge tension" title={`${puzzle.attackedSquares} casillas bajo ataque`}>
+              Alta Tensión ({puzzle.tensionIndex})
+            </span>
+          )}
+          {puzzle.blunderSeverity > 0.5 && (
+            <span className="pl-badge severe">
+              Severo ({puzzle.blunderSeverity.toFixed(2)})
+            </span>
+          )}
+          {motifs.map(m => (
+            <span key={m} className="pl-badge motif">{m}</span>
+          ))}
+        </div>
+      </div>
+      <button className="pl-delete-btn" onClick={() => onDelete(puzzle.id)}>
+        <Trash2 size={14} />
+      </button>
+    </div>
+  );
+};
 
 export const PuzzleLibrary = ({ onBack }) => {
   const [state, dispatch] = useReducer(libraryReducer, initialState);
@@ -54,7 +89,6 @@ export const PuzzleLibrary = ({ onBack }) => {
 
     const loadPuzzles = () => {
       dispatch({ type: 'LOADING_START' });
-
       removeHandler = backendService.addHandler((msg) => {
         if (msg.type === 'puzzle_list') {
           dispatch({ type: 'PUZZLES_LOADED', payload: msg.puzzles });
@@ -64,13 +98,8 @@ export const PuzzleLibrary = ({ onBack }) => {
           }
         }
       });
-
       backendService.getPuzzles();
-
-      // Retry every 1s if still loading (in case connection was opening)
-      retryInterval = setInterval(() => {
-        backendService.getPuzzles();
-      }, 1000);
+      retryInterval = setInterval(() => backendService.getPuzzles(), 1000);
     };
 
     loadPuzzles();
@@ -130,49 +159,7 @@ export const PuzzleLibrary = ({ onBack }) => {
         ) : puzzles.length === 0 ? (
           <div className="pl-empty">No hay puzzles guardados. Ve a "Extraer Puzzles" para empezar.</div>
         ) : (
-          puzzles.map(p => (
-            <div key={p.id} className="pl-item">
-              <div className="pl-item-info">
-                <div className="pl-item-top">
-                  <span className={`pl-label ${p.label.toLowerCase().replace(' ', '-')}`}>
-                    {p.label}
-                  </span>
-                  {/* ✅ formatDate() evita el hydration mismatch — ver función arriba */}
-                  <span className="pl-date">
-                    <Calendar size={10} />
-                    {formatDate(p.createdAt)}
-                  </span>
-                </div>
-                <div className="pl-item-meta">
-                  <span>Partida: {p.gameId.slice(-6)}</span>
-                  <span>Solucionado: {p.solvedCount || 0}</span>
-                </div>
-                <div className="pl-item-badges">
-                  {p.isOnlyMove && (
-                    <span className="pl-badge only-move" title={`Gap Crítico: ${p.criticalityGap}`}>
-                      Only Move
-                    </span>
-                  )}
-                  {p.tensionIndex > 4 && (
-                    <span className="pl-badge tension" title={`${p.attackedSquares} casillas bajo ataque`}>
-                      Alta Tensión ({p.tensionIndex})
-                    </span>
-                  )}
-                  {p.blunderSeverity > 0.5 && (
-                    <span className="pl-badge severe">
-                      Severo ({p.blunderSeverity.toFixed(2)})
-                    </span>
-                  )}
-                  {p.tacticalMotifs && p.tacticalMotifs.map(m => (
-                    <span key={m} className="pl-badge motif">{m}</span>
-                  ))}
-                </div>
-              </div>
-              <button className="pl-delete-btn" onClick={() => handleDelete(p.id)}>
-                <Trash2 size={14} />
-              </button>
-            </div>
-          ))
+          puzzles.map(p => <PuzzleCard key={p.id} puzzle={p} onDelete={handleDelete} />)
         )}
       </div>
     </div>

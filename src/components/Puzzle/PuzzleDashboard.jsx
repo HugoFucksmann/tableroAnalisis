@@ -1,84 +1,188 @@
-import React, { useState, useEffect } from 'react';
-import { PuzzleImporter } from './PuzzleImporter';
-import { PuzzleLibrary } from './PuzzleLibrary';
-import { PuzzleSession } from './PuzzleSession';
-import { MoveExplorerView } from './MoveExplorer/MoveExplorerView';
-import { Download, Play, Library, Search } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
 import { backendService } from '../../services/backendService';
-import { useGameStore } from '../../store/useGameStore';
+import { Play, Download, Trash2, Loader2 } from 'lucide-react';
+import { Chessboard } from 'react-chessboard';
+import { PuzzlePlayer } from './PuzzlePlayer';
+import { PuzzleImporter } from './PuzzleImporter';
 import './Puzzle.css';
 
-export const PuzzleDashboard = () => {
-  const [view, setView] = useState('menu'); // menu, import, train, manage, explorer
-  const [puzzleCount, setPuzzleCount] = useState(null);
-  const { setExplorerMode } = useGameStore();
-
-  const handleSetView = (newView) => {
-    setView(newView);
-    setExplorerMode(newView === 'explorer');
-  };
+const LazyChessboard = React.memo(({ fen, orientation }) => {
+  const [isVisible, setIsVisible] = useState(false);
+  const ref = useRef(null);
 
   useEffect(() => {
-    if (view === 'menu') {
-      let interval = null;
-      const removeHandler = backendService.addHandler((msg) => {
-        if (msg.type === 'puzzle_list') {
-          setPuzzleCount(msg.puzzles.length);
-          if (interval) clearInterval(interval);
-        }
-      });
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: '400px' });
 
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  return (
+    <div ref={ref} style={{ width: '100%', height: '100%' }}>
+      {isVisible && (
+        <Chessboard
+          position={fen}
+          boardOrientation={orientation}
+          arePiecesDraggable={false}
+          animationDuration={0}
+          customDarkSquareStyle={{ backgroundColor: '#779556' }}
+          customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
+        />
+      )}
+    </div>
+  );
+});
+
+export const PuzzleDashboard = () => {
+  const [view, setView] = useState('library');
+  const [puzzles, setPuzzles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [startIndex, setStartIndex] = useState(0);
+
+  const retryIntervalRef = useRef(null);
+
+  // 1. Escuchar siempre los mensajes del backend
+  useEffect(() => {
+    const removeHandler = backendService.addHandler((msg) => {
+      if (msg.type === 'puzzle_list') {
+        setPuzzles(msg.puzzles.slice().sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
+        setLoading(false);
+        // Si llegaron los datos, limpiamos el reintento
+        if (retryIntervalRef.current) {
+          clearInterval(retryIntervalRef.current);
+          retryIntervalRef.current = null;
+        }
+      }
+      if (msg.type === 'puzzle_deleted') {
+        setPuzzles(prev => prev.filter(p => p.id !== msg.id));
+      }
+      if (msg.type === 'puzzles_cleared') {
+        setPuzzles([]);
+      }
+    });
+
+    return () => removeHandler();
+  }, []);
+
+  // 2. Pedir los puzzles CADA VEZ que volvamos a la pestaña de librería
+  useEffect(() => {
+    if (view === 'library') {
       backendService.getPuzzles();
 
-      interval = setInterval(() => {
+      retryIntervalRef.current = setInterval(() => {
         backendService.getPuzzles();
       }, 1000);
 
       return () => {
-        removeHandler();
-        clearInterval(interval);
+        if (retryIntervalRef.current) {
+          clearInterval(retryIntervalRef.current);
+          retryIntervalRef.current = null;
+        }
       };
     }
   }, [view]);
 
-  return (
-    <div className="puzzle-dashboard">
-      {view === 'menu' && (
-        <div className="puzzle-menu">
-          <button
-            className="puzzle-menu-btn train"
-            onClick={() => handleSetView('train')}
-            disabled={puzzleCount === 0}
-            style={{ opacity: puzzleCount === 0 ? 0.5 : 1, cursor: puzzleCount === 0 ? 'not-allowed' : 'pointer' }}
-          >
-            <Play size={20} />
-            <div className="btn-text">
-              <span className="btn-title">Entrenar {puzzleCount !== null ? `(${puzzleCount})` : ''}</span>
-              <span className="btn-desc">{puzzleCount === 0 ? 'No hay puzzles guardados' : 'Resolver puzzles de tus errores'}</span>
-            </div>
-          </button>
+  const handleTrainAll = () => {
+    if (puzzles.length === 0) return;
+    setStartIndex(0);
+    setView('player');
+  };
 
-          <button className="puzzle-menu-btn import" onClick={() => handleSetView('import')}>
-            <Download size={20} />
-            <div className="btn-text">
-              <span className="btn-title">Extraer Puzzles</span>
-              <span className="btn-desc">Buscar errores en nuevas partidas</span>
-            </div>
+  const handleTrainSingle = (index) => {
+    setStartIndex(index);
+    setView('player');
+  };
+
+  const handleDelete = (e, id) => {
+    e.stopPropagation();
+    if (window.confirm('¿Eliminar este puzzle?')) {
+      backendService.deletePuzzle(id);
+    }
+  };
+
+  const handleClearAll = () => {
+    if (window.confirm('¿BORRAR TODA LA BIBLIOTECA? Esta acción no se puede deshacer.')) {
+      backendService.clearPuzzles();
+    }
+  };
+
+  if (view === 'player') {
+    return <PuzzlePlayer puzzles={puzzles} initialIndex={startIndex} onBack={() => setView('library')} />;
+  }
+
+  if (view === 'importer') {
+    return <PuzzleImporter onBack={() => setView('library')} />;
+  }
+
+  return (
+    <div className="puzzle-container glass-panel">
+      <div className="puzzle-header">
+        <div className="ph-title">
+          <h2>Biblioteca de Puzzles</h2>
+          <span className="ph-count">{puzzles.length} guardados</span>
+        </div>
+        <div className="ph-actions">
+          {puzzles.length > 0 && (
+            <button className="ph-icon-btn danger" onClick={handleClearAll} title="Borrar todo">
+              <Trash2 size={16} />
+            </button>
+          )}
+          <button className="ph-btn secondary" onClick={() => setView('importer')}>
+            <Download size={16} /> Extraer
           </button>
-          <button className="puzzle-menu-btn manage" onClick={() => handleSetView('manage')}>
-            <Library size={20} />
-            <div className="btn-text">
-              <span className="btn-title">Biblioteca</span>
-              <span className="btn-desc">Gestionar puzzles guardados</span>
-            </div>
+          <button className="ph-btn primary" onClick={handleTrainAll} disabled={puzzles.length === 0}>
+            <Play size={16} /> Entrenar
           </button>
         </div>
-      )}
+      </div>
 
-      {view === 'import' && <PuzzleImporter onBack={() => handleSetView('menu')} />}
-      {view === 'manage' && <PuzzleLibrary onBack={() => handleSetView('menu')} />}
-      {view === 'train' && <PuzzleSession onBack={() => handleSetView('menu')} />}
-      {view === 'explorer' && <MoveExplorerView onBack={() => handleSetView('menu')} />}
+      {loading ? (
+        <div className="puzzle-loading">
+          <Loader2 className="spinner" size={32} />
+          <p>Cargando biblioteca…</p>
+        </div>
+      ) : puzzles.length === 0 ? (
+        <div className="puzzle-empty">
+          <p>No hay puzzles guardados.</p>
+          <button className="ph-btn primary" onClick={() => setView('importer')}>
+            Extraer de mis partidas
+          </button>
+        </div>
+      ) : (
+        <div className="puzzle-grid premium-scroll">
+          {puzzles.map((p, index) => {
+            const orientation = p.playerColor === 'black' ? 'black' : 'white';
+            const label = p.label || 'Táctica';
+
+            return (
+              <div
+                key={p.id}
+                className="puzzle-card"
+                onClick={() => handleTrainSingle(index)}
+              >
+                <div className="pc-board-wrapper">
+                  <LazyChessboard fen={p.fen} orientation={orientation} />
+                  <button className="pc-delete-btn" onClick={(e) => handleDelete(e, p.id)}>
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+                <div className="pc-info">
+                  <span className="pc-label">{label}</span>
+                  <span className="pc-meta">
+                    Partida: {p.gameId ? p.gameId.slice(-6) : 'Manual'} • Resuelto: {p.solvedCount || 0}
+                  </span>
+                  <span className="pc-action">Click para entrenar</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
