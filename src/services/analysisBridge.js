@@ -126,7 +126,6 @@ class AnalysisBridge {
         const pgnHeaders = callbacks.pgnHeaders || storeState.gameHeaders || {};
         const playerColor = callbacks.playerColor || storeState.playerColor || 'white';
         
-        // Determinar si ganó el jugador
         // Determinar si ganó el jugador (1: Win, 0: Draw, -1: Loss)
         const result = pgnHeaders.Result || '*';
         let win = 1; 
@@ -135,14 +134,35 @@ class AnalysisBridge {
         else if (playerColor === 'black' && result === '1-0') win = -1;
 
         // Normalizar el TimeControl del PGN a un formato corto ('1m','3m','5m','10m','15m','30m')
-        // Si no hay header TimeControl, intentar usar el tiempo inicial del reloj
         const rawTc = pgnHeaders.TimeControl || storeState.clocks?.white || '';
         const timeControl = _normalizeTimeControl(rawTc);
+
+        // Extraer nombres de jugadores del PGN
+        const playerWhite = pgnHeaders.White || null;
+        const playerBlack = pgnHeaders.Black || null;
+
+        // Derivar oponente según el color del jugador
+        const opponent = playerColor === 'white'
+            ? (playerBlack || null)
+            : (playerWhite || null);
+
+        // Extraer fecha real de la partida desde el PGN (formato YYYY.MM.DD o ISO)
+        const rawDate = pgnHeaders.UTCDate || pgnHeaders.Date || null;
+        const rawTime = pgnHeaders.UTCTime || null;
+        let gameDate = null;
+        if (rawDate && rawDate !== '????.??.??') {
+            const datePart = rawDate.replace(/\./g, '-');
+            gameDate = rawTime ? `${datePart}T${rawTime}` : `${datePart}T00:00:00`;
+        }
 
         backendService.analyzeGame(history, currentIndex, gameId, engineConfig, startFen, {
             playerColor,
             win,
             timeControl,
+            playerWhite,
+            playerBlack,
+            opponent,
+            gameDate,
         });
     }
 
