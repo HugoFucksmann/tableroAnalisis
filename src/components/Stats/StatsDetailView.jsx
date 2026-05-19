@@ -26,11 +26,13 @@ const LazyChessboard = React.memo(({ fen }) => {
         <div ref={ref} style={{ width: '100%', height: '100%' }}>
             {isVisible && (
                 <Chessboard 
-                    position={fen} 
-                    arePiecesDraggable={false}
-                    animationDuration={0}
-                    customDarkSquareStyle={{ backgroundColor: '#779556' }}
-                    customLightSquareStyle={{ backgroundColor: '#ebecd0' }}
+                    options={{
+                        position: fen,
+                        allowDragging: false,
+                        animationDurationInMs: 0,
+                        darkSquareStyle: { backgroundColor: '#779556' },
+                        lightSquareStyle: { backgroundColor: '#ebecd0' }
+                    }}
                 />
             )}
         </div>
