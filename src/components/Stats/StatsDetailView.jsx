@@ -114,7 +114,15 @@ export const StatsDetailView = () => {
                         <div 
                             key={`${item.gameId}-${item.ply || 'null'}-${index}`} 
                             className="stat-board-card"
+                            role="button"
+                            tabIndex={0}
                             onClick={() => handleBoardClick(item.gameId, item.ply)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    handleBoardClick(item.gameId, item.ply);
+                                }
+                            }}
                         >
                             <div className="stat-board-wrapper">
                                 <LazyChessboard fen={item.fen} />

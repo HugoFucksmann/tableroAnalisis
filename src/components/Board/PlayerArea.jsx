@@ -35,6 +35,7 @@ const CapturedPieces = ({ pieces }) => {
         <div className="captured-pieces" aria-label="Captured pieces">
             {pieces.map((p, i) => {
                 const side = p === p.toUpperCase() ? 'white' : 'black';
+                // eslint-disable-next-line react/no-array-index-key
                 return (
                     <span key={`${p}-${i}`} className={`captured-piece ${side}`}>
                         {getPieceIcon(p)}

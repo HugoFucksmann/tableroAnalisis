@@ -165,7 +165,15 @@ export const PsychologicalProfileCard = ({ stats }) => {
         {/* Row 1: Conversión */}
         <div 
             className={`stats-row-item ${blownAdvantages > 0 ? 'clickable' : ''}`} 
+            role={blownAdvantages > 0 ? "button" : undefined}
+            tabIndex={blownAdvantages > 0 ? 0 : undefined}
             onClick={() => blownAdvantages > 0 && setSelectedStatCategory('blown_advantage')}
+            onKeyDown={(e) => {
+                if (blownAdvantages > 0 && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    setSelectedStatCategory('blown_advantage');
+                }
+            }}
             title={blownAdvantages > 0 ? "Ver ventajas desperdiciadas" : "No hay ventajas desperdiciadas"}
         >
           <div className="psycho-info">
@@ -183,7 +191,15 @@ export const PsychologicalProfileCard = ({ stats }) => {
         {/* Row 2: Remontadas */}
         <div 
             className={`stats-row-item ${(comebackWins + savedDraws) > 0 ? 'clickable' : ''}`} 
+            role={(comebackWins + savedDraws) > 0 ? "button" : undefined}
+            tabIndex={(comebackWins + savedDraws) > 0 ? 0 : undefined}
             onClick={() => (comebackWins + savedDraws) > 0 && setSelectedStatCategory('comeback')}
+            onKeyDown={(e) => {
+                if ((comebackWins + savedDraws) > 0 && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    setSelectedStatCategory('comeback');
+                }
+            }}
             title={(comebackWins + savedDraws) > 0 ? "Ver remontadas y empates salvados" : "No hay remontadas"}
         >
           <div className="psycho-info">
@@ -201,7 +217,15 @@ export const PsychologicalProfileCard = ({ stats }) => {
         {/* Row 3: Tilt */}
         <div 
             className={`stats-row-item tilt-row ${tiltEvents > 0 ? 'clickable' : ''}`} 
+            role={tiltEvents > 0 ? "button" : undefined}
+            tabIndex={tiltEvents > 0 ? 0 : undefined}
             onClick={() => tiltEvents > 0 && setSelectedStatCategory('tilt')}
+            onKeyDown={(e) => {
+                if (tiltEvents > 0 && (e.key === 'Enter' || e.key === ' ')) {
+                    e.preventDefault();
+                    setSelectedStatCategory('tilt');
+                }
+            }}
             title={tiltEvents > 0 ? "Ver posiciones de colapso" : "Excelente control, sin colapsos"}
         >
           <div className="psycho-info">

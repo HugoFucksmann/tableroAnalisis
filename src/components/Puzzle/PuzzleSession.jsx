@@ -392,11 +392,20 @@ export const PuzzleSession = ({ onBack }) => {
               {(showOriginal ? puzzle.originalContinuation : puzzle.solutionSequence).map((m, i) => {
                 const isDone = puzzleState ? puzzleState.currentStep > i : false;
                 const isNext = puzzleState ? i === puzzleState.currentStep && !isSolved && !showOriginal : false;
+                // eslint-disable-next-line react/no-array-index-key
                 return (
                   <span
                     key={`move-${i}-${m}`}
                     className={`sol-move ${(isDone || showOriginal) ? 'done' : ''} ${isNext ? 'clickable' : ''}`}
+                    role={isNext ? "button" : undefined}
+                    tabIndex={isNext ? 0 : undefined}
                     onClick={() => !showOriginal ? handleSolutionClick(m, i) : null}
+                    onKeyDown={(e) => {
+                      if (isNext && !showOriginal && (e.key === 'Enter' || e.key === ' ')) {
+                        e.preventDefault();
+                        handleSolutionClick(m, i);
+                      }
+                    }}
                     title={isNext ? 'Clic para reproducir' : ''}
                   >
                     {m}

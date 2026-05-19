@@ -7,7 +7,15 @@ const MoveRow = ({ move, isMaster, onClick, onMouseEnter, onMouseLeave }) => {
   return (
     <div
       className="move-row"
+      role="button"
+      tabIndex={0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
     >

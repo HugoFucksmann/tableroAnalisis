@@ -31,7 +31,7 @@ export const Dashboard = () => {
   const {
     openingName, ecoCode, showTokenInput, setShowTokenInput,
     lichessToken, history, hasPgnEvaluations, startFullAnalysis,
-    analysisReady, appMode, applyFullAnalysis, setAnalyses, setAnalysedGameIds, gameId,
+    analysisReady, appMode, gameId,
     setAppMode, setExplorerMode, selectedStatCategory
   } = useGameStore(useShallow(state => ({
     openingName: state.openingName,
@@ -44,9 +44,6 @@ export const Dashboard = () => {
     startFullAnalysis: state.startFullAnalysis,
     analysisReady: state.analysisReady,
     appMode: state.appMode,
-    applyFullAnalysis: state.applyFullAnalysis,
-    setAnalyses: state.setAnalyses,
-    setAnalysedGameIds: state.setAnalysedGameIds,
     gameId: state.gameId,
     setAppMode: state.setAppMode,
     setExplorerMode: state.setExplorerMode,
@@ -57,6 +54,8 @@ export const Dashboard = () => {
 
   useEffect(() => {
     const cleanup = backendService.addHandler((msg) => {
+      const { applyFullAnalysis, setAnalyses, setAnalysedGameIds } = useGameStore.getState();
+
       if (msg.type === 'connection_status' && msg.connected) {
         backendService.getAnalyses(0, 50);
         backendService.getAnalysedIds();
@@ -92,7 +91,7 @@ export const Dashboard = () => {
     }
 
     return () => cleanup();
-  }, [applyFullAnalysis, setAnalyses, setAnalysedGameIds]);
+  }, []);
 
   const lastLoadedId = React.useRef(null);
   useEffect(() => {
@@ -133,6 +132,8 @@ export const Dashboard = () => {
 
         {!isMobile && (
           <div
+            role="separator"
+            aria-label="Panel resizer"
             className={`resizer-handle ${isResizing ? 'active' : ''}`}
             onMouseDown={startResizing}
           />

@@ -227,15 +227,26 @@ export const MoveExplorerView = ({ onBack }) => {
     }
   }, [currentMoveIndex, history, goToMove, makeMove, explorerData, isWhiteTurn]);
 
+  const handleWheelRef = useRef(handleWheel);
+  useEffect(() => {
+    handleWheelRef.current = handleWheel;
+  }, [handleWheel]);
+
   // Register wheel listener as non-passive so preventDefault() works.
   // React's onWheel prop registers passive listeners since React 17,
   // which silently ignores preventDefault() and logs a browser warning.
+  // We use handleWheelRef to avoid tearing down the listener on every move.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => el.removeEventListener('wheel', handleWheel);
-  }, [handleWheel]);
+    const listener = (e) => {
+      if (handleWheelRef.current) {
+        handleWheelRef.current(e);
+      }
+    };
+    el.addEventListener('wheel', listener, { passive: false });
+    return () => el.removeEventListener('wheel', listener);
+  }, []);
 
   return (
     <div ref={containerRef} className="move-explorer-view">

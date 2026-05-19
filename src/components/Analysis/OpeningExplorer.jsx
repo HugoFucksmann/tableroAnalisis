@@ -80,21 +80,22 @@ export const OpeningExplorer = () => {
     const onlineTimer = setTimeout(() => loadOnline(), 400);
 
     async function loadOffline() {
+      if (!active) return;
       try {
         const result = await backendService.request('get_book_moves', { fen }, 'book_moves');
-        if (!active) return;
+        if (active) {
+          const arrows = (result.moves || []).slice(0, 2).flatMap(m => {
+            const arrow = sanToArrow(m.san, game, 'var(--arrow-explorer-base)');
+            return arrow ? [arrow] : [];
+          });
+          setArrows(arrows);
 
-        const arrows = (result.moves || []).slice(0, 2).flatMap(m => {
-          const arrow = sanToArrow(m.san, game, 'var(--arrow-explorer-base)');
-          return arrow ? [arrow] : [];
-        });
-        setArrows(arrows);
-
-        setState(prev => ({
-          ...prev,
-          bookData: { moves: result.moves || [], opening: result.opening || '' },
-          isStale: false
-        }));
+          setState(prev => ({
+            ...prev,
+            bookData: { moves: result.moves || [], opening: result.opening || '' },
+            isStale: false
+          }));
+        }
       } catch (e) {
         console.warn('[OpeningExplorer] Offline load failed:', e);
         if (active) setState(prev => ({ ...prev, isStale: false }));
@@ -102,29 +103,30 @@ export const OpeningExplorer = () => {
     }
 
     async function loadOnline() {
-      if (active) setState(prev => ({ ...prev, loading: true, error: null }));
+      if (!active) return;
+      setState(prev => ({ ...prev, loading: true, error: null }));
       try {
         const data = await lichessExplorerService.fetchMastersData(fen, lichessToken);
-        if (!active) return;
-
-        const cleanName = (data.opening?.name || '').split(':')[0].trim();
-        setState(prev => ({
-          ...prev,
-          loading: false,
-          lichessData: {
-            opening: cleanName,
-            moves: (data.moves || []).slice(0, 10).map(m => {
-              const total = (m.white || 0) + (m.draws || 0) + (m.black || 0);
-              return {
-                san: m.san,
-                white: total > 0 ? Math.round((m.white / total) * 100) : 0,
-                draw: total > 0 ? Math.round((m.draws / total) * 100) : 0,
-                black: total > 0 ? Math.round((m.black / total) * 100) : 0,
-                games: total,
-              };
-            }),
-          },
-        }));
+        if (active) {
+          const cleanName = (data.opening?.name || '').split(':')[0].trim();
+          setState(prev => ({
+            ...prev,
+            loading: false,
+            lichessData: {
+              opening: cleanName,
+              moves: (data.moves || []).slice(0, 10).map(m => {
+                const total = (m.white || 0) + (m.draws || 0) + (m.black || 0);
+                return {
+                  san: m.san,
+                  white: total > 0 ? Math.round((m.white / total) * 100) : 0,
+                  draw: total > 0 ? Math.round((m.draws / total) * 100) : 0,
+                  black: total > 0 ? Math.round((m.black / total) * 100) : 0,
+                  games: total,
+                };
+              }),
+            },
+          }));
+        }
       } catch (err) {
         if (active) setState(prev => ({ ...prev, loading: false, error: err.message }));
       }
