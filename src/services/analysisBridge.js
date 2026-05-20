@@ -199,6 +199,10 @@ class AnalysisBridge {
             if (msg.type === 'position_progress' || msg.type === 'position_result') {
                 onResult?.(msg);
             }
+            if (msg.type === 'position_result') {
+                onStatus?.(false);
+                this.isRunning = false;
+            }
             if (msg.type === 'error') {
                 onStatus?.(false);
                 this.isRunning = false;

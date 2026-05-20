@@ -4,7 +4,7 @@ import { useShallow } from 'zustand/react/shallow';
 import { Clock, Zap, Brain, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-react';
 import './TimeErrorBreakdown.css';
 
-export const TimeErrorBreakdown = () => {
+export const TimeErrorBreakdown = ({ mistakeCounts }) => {
   const { moveEvaluations, errorTimeClasses, playerColor, analysisReady, history, pgnCommentsByIndex } =
     useGameStore(useShallow(state => ({
       moveEvaluations: state.moveEvaluations,
@@ -16,11 +16,9 @@ export const TimeErrorBreakdown = () => {
     })));
 
   const hasClocks = useMemo(() => {
-    // 1. Revisar si hay algún comentario con [%clk] en el PGN
     if (pgnCommentsByIndex && Object.values(pgnCommentsByIndex).some(comment => comment && comment.includes('%clk'))) {
       return true;
     }
-    // 2. Revisar si en los errores calculados hay clases de tiempo asignadas
     if (errorTimeClasses && Object.keys(errorTimeClasses).length > 0) {
       return true;
     }
@@ -43,10 +41,10 @@ export const TimeErrorBreakdown = () => {
     Object.entries(moveEvaluations).forEach(([idxStr, type]) => {
       const idx = parseInt(idxStr, 10);
       const isPlayerMove = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
-      
+
       if (isPlayerMove && (type === 'Error' || type === 'Error grave' || type === 'Imprecisión')) {
         totalPlayerErrors++;
-        
+
         if (type === 'Error grave') blunderCount++;
         else if (type === 'Error') mistakeCount++;
         else if (type === 'Imprecisión') inaccuracyCount++;
@@ -76,8 +74,6 @@ export const TimeErrorBreakdown = () => {
     };
   }, [moveEvaluations, errorTimeClasses, playerColor, analysisReady]);
 
-  // Caso A: El análisis aún no ha sido solicitado o no está listo.
-  // Mostramos una tarjeta de invitación premium con CTA.
   if (!analysisReady) {
     if (!history || history.length === 0) {
       return null;
@@ -96,7 +92,6 @@ export const TimeErrorBreakdown = () => {
     );
   }
 
-  // Caso B: El análisis está listo pero la partida no tiene registros de tiempo (%clk)
   if (!hasClocks) {
     return (
       <div className="time-error-breakdown-wrapper no-clocks-wrapper">
@@ -116,9 +111,8 @@ export const TimeErrorBreakdown = () => {
     return null;
   }
 
-  const { timePressure, precipitation, overthinking, tactical, total, blunders, mistakes, inaccuracies } = stats;
+  const { timePressure, precipitation, overthinking, tactical, total } = stats;
 
-  // Calculamos los porcentajes relativos a "total"
   const pctPressure = total > 0 ? Math.round((timePressure / total) * 100) : 0;
   const pctPrecipitation = total > 0 ? Math.round((precipitation / total) * 100) : 0;
   const pctOverthinking = total > 0 ? Math.round((overthinking / total) * 100) : 0;
@@ -126,33 +120,57 @@ export const TimeErrorBreakdown = () => {
 
   return (
     <div className="time-error-breakdown-wrapper">
-      {/* Leyenda con números y porcentajes */}
       {total > 0 && (
         <div className="time-legend-row">
-        <div className="legend-item pressure" title="Apuros de tiempo: menos de 40s en el reloj">
-          <Clock size={11} className="legend-icon" />
-          <span className="legend-text">Apuros:</span>
-          <span className="legend-num">{timePressure} ({pctPressure}%)</span>
-        </div>
-        <div className="legend-item precipitation" title="Precipitación: jugar rápido en menos de 3s">
-          <Zap size={11} className="legend-icon" />
-          <span className="legend-text">Prisa:</span>
-          <span className="legend-num">{precipitation} ({pctPrecipitation}%)</span>
-        </div>
-        <div className="legend-item overthinking" title="Sobrepensar: pensar más de 30s">
-          <Brain size={11} className="legend-icon" />
-          <span className="legend-text">Duda:</span>
-          <span className="legend-num">{overthinking} ({pctOverthinking}%)</span>
-        </div>
-        <div className="legend-item tactical" title="Tácticos: errores de cálculo no relacionados al reloj">
-          <Sparkles size={11} className="legend-icon" />
-          <span className="legend-text">Tácticos:</span>
-          <span className="legend-num">{tactical} ({pctTactical}%)</span>
-        </div>
+
+          {/* Blunders / Mistakes / Inaccuracies — iconos de calidad sin texto */}
+          <div className="legend-quality-icons">
+            <span
+              className="legend-quality-item"
+              style={{ color: '#e05555' }}
+              title={`Errores Graves: ${mistakeCounts?.blunders ?? 0}`}
+            >
+              ??&nbsp;{mistakeCounts?.blunders ?? 0}
+            </span>
+            <span
+              className="legend-quality-item"
+              style={{ color: '#e09a30' }}
+              title={`Errores: ${mistakeCounts?.mistakes ?? 0}`}
+            >
+              ?&nbsp;{mistakeCounts?.mistakes ?? 0}
+            </span>
+            <span
+              className="legend-quality-item"
+              style={{ color: '#c8b830' }}
+              title={`Imprecisiones: ${mistakeCounts?.inaccuracies ?? 0}`}
+            >
+              ?!&nbsp;{mistakeCounts?.inaccuracies ?? 0}
+            </span>
+          </div>
+
+          {/* Separador visual */}
+          <span className="legend-separator" />
+
+          {/* Desglose por tiempo — solo iconos con número y porcentaje */}
+          <div className="legend-item pressure" title="Apuros de tiempo: menos de 40s en el reloj">
+            <Clock size={11} className="legend-icon" />
+            <span className="legend-num">{timePressure} ({pctPressure}%)</span>
+          </div>
+          <div className="legend-item precipitation" title="Precipitación: jugar rápido en menos de 3s">
+            <Zap size={11} className="legend-icon" />
+            <span className="legend-num">{precipitation} ({pctPrecipitation}%)</span>
+          </div>
+          <div className="legend-item overthinking" title="Sobrepensar: pensar más de 30s">
+            <Brain size={11} className="legend-icon" />
+            <span className="legend-num">{overthinking} ({pctOverthinking}%)</span>
+          </div>
+          <div className="legend-item tactical" title="Tácticos: errores de cálculo no relacionados al reloj">
+            <Sparkles size={11} className="legend-icon" />
+            <span className="legend-num">{tactical} ({pctTactical}%)</span>
+          </div>
         </div>
       )}
 
-      {/* Mensaje motivacional / éxito si es partida impecable */}
       {total === 0 && (
         <div className="time-perfect-game-badge">
           <CheckCircle2 size={12} className="perfect-check-icon animate-pulse" />

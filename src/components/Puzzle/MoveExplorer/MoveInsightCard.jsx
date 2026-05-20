@@ -32,10 +32,15 @@ export const MoveInsightCard = ({ stats }) => {
   const evaluationHistory = useGameStore(state => state.evaluationHistory);
   const moveEvaluations = useGameStore(state => state.moveEvaluations);
   const history = useGameStore(state => state.history);
+  const playerColor = useGameStore(state => state.playerColor);
 
   const currentEval = evaluationHistory[currentMoveIndex];
   const currentMoveQuality = moveEvaluations[currentMoveIndex];
   const lastMove = currentMoveIndex >= 0 ? history[currentMoveIndex] : null;
+
+  const displayScore = currentEval
+    ? (playerColor === 'black' ? -currentEval.score : currentEval.score)
+    : 0;
 
   const totalGames = stats?.count || 0;
   const labels = stats?.labels || {};
@@ -57,13 +62,13 @@ export const MoveInsightCard = ({ stats }) => {
         </div>
 
         <div className="engine-status-area">
-          <div className={`engine-score-capsule ${currentEval?.score > 0 ? 'pos' : 'neg'}`}>
+          <div className={`engine-score-capsule ${displayScore >= 0 ? 'pos' : 'neg'}`}>
             <Cpu size={12} className="cpu-icon" />
             <span className="score-val">
               {currentEval ? (
-                currentEval.mate
+                currentEval.mate !== null && currentEval.mate !== undefined
                   ? `M${Math.abs(currentEval.mate)}`
-                  : `${currentEval.score > 0 ? '+' : ''}${currentEval.score.toFixed(1)}`
+                  : `${displayScore >= 0 ? '+' : ''}${displayScore.toFixed(1)}`
               ) : '…'}
             </span>
           </div>

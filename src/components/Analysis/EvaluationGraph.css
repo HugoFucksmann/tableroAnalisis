@@ -84,14 +84,32 @@
   cursor: default;
 }
 
-.graph-mistake-count {
+.graph-mistake-count-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
+  padding: 2px 8px;
   color: var(--warning-primary);
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
   font-size: var(--text-sm);
   font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.graph-mistake-count-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.graph-mistake-count-btn.filtered {
+  color: var(--accent-primary) !important;
+  background: rgba(var(--accent-primary-rgb, 168, 85, 247), 0.1);
+  border-color: var(--accent-primary);
 }
 
 .graph-title {

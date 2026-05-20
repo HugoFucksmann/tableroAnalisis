@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { ChevronLeft, ChevronRight, AlertTriangle, Clock, Zap, Brain, Sparkles } from 'lucide-react';
@@ -35,6 +35,7 @@ function getX(index, total) {
 }
 
 export const EvaluationGraph = () => {
+  const [onlyMyMistakes, setOnlyMyMistakes] = useState(false);
   const { evaluationHistory, currentMoveIndex, history, goToMove, accuracy, accuracyByPhase, isAnalyzing, moveEvaluations, errorTimeClasses, analysisReady, playerColor } =
     useGameStore(useShallow(state => ({
       evaluationHistory: state.evaluationHistory,
@@ -53,9 +54,18 @@ export const EvaluationGraph = () => {
   const total = history.length;
   const midY = getY(0);
 
+  const displayScore = useMemo(() => {
+    const currentEval = evaluationHistory?.[currentMoveIndex];
+    if (!currentEval) return 0;
+    return playerColor === 'black' ? -currentEval.score : currentEval.score;
+  }, [evaluationHistory, currentMoveIndex, playerColor]);
+
   const { sorted, areaPath, linePoints } = useMemo(() => {
     const sortedData = Object.values(evaluationHistory || {}).sort((a, b) => a.moveIndex - b.moveIndex);
-    const linePts = sortedData.map(d => `${getX(d.moveIndex, total)},${getY(d.score)}`);
+    const linePts = sortedData.map(d => {
+      const adjustedVal = playerColor === 'black' ? -d.score : d.score;
+      return `${getX(d.moveIndex, total)},${getY(adjustedVal)}`;
+    });
 
     let areaP = '';
     if (sortedData.length > 0) {
@@ -63,14 +73,17 @@ export const EvaluationGraph = () => {
       const last = sortedData[sortedData.length - 1];
       areaP = [
         `M ${getX(first.moveIndex, total)} ${midY}`,
-        ...sortedData.map(d => `L ${getX(d.moveIndex, total)} ${getY(d.score)}`),
+        ...sortedData.map(d => {
+          const adjustedVal = playerColor === 'black' ? -d.score : d.score;
+          return `L ${getX(d.moveIndex, total)} ${getY(adjustedVal)}`;
+        }),
         `L ${getX(last.moveIndex, total)} ${midY}`,
         'Z',
       ].join(' ');
     }
 
     return { sorted: sortedData, areaPath: areaP, linePoints: linePts };
-  }, [evaluationHistory, total, midY]);
+  }, [evaluationHistory, total, midY, playerColor]);
 
   const currentEval = evaluationHistory?.[currentMoveIndex];
 
@@ -81,19 +94,23 @@ export const EvaluationGraph = () => {
     return Object.entries(moveEvaluations).reduce((acc, [idxStr, type]) => {
       if (MISTAKE_TYPES_SET.has(type)) {
         const idx = parseInt(idxStr);
+        const isPlayerMove = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
+        if (onlyMyMistakes && !isPlayerMove) return acc;
+
         const evalObj = evaluationHistory?.[idx];
         const score = evalObj?.score ?? 0;
-        acc.push({ 
-          idx, 
-          type, 
-          x: getX(idx, total), 
-          y: getY(score), 
-          style: MISTAKE_STYLES[type] 
+        const adjustedVal = playerColor === 'black' ? -score : score;
+        acc.push({
+          idx,
+          type,
+          x: getX(idx, total),
+          y: getY(adjustedVal),
+          style: MISTAKE_STYLES[type]
         });
       }
       return acc;
     }, []);
-  }, [moveEvaluations, evaluationHistory, total, MISTAKE_TYPES_SET]);
+  }, [moveEvaluations, evaluationHistory, total, MISTAKE_TYPES_SET, playerColor, onlyMyMistakes]);
 
   const mistakeIndices = useMemo(() => {
     return mistakeMarkers.map(m => m.idx).sort((a, b) => a - b);
@@ -117,6 +134,7 @@ export const EvaluationGraph = () => {
   const prevMistake = mistakeIndices.filter(i => i < currentMoveIndex).at(-1) ?? null;
   const nextMistake = mistakeIndices.find(i => i > currentMoveIndex) ?? null;
 
+  // Solo muestra info especial si el movimiento actual ES uno de los errores marcados
   const currentMistakeInfo = useMemo(() => {
     if (!analysisReady || !moveEvaluations) return null;
     const type = moveEvaluations[currentMoveIndex];
@@ -124,7 +142,7 @@ export const EvaluationGraph = () => {
 
     const timeClass = errorTimeClasses?.[currentMoveIndex];
     let iconName = 'alert';
-    let color = '#e09a30'; // default warning orange
+    let color = '#e09a30';
     let label = type;
 
     if (type === 'Error grave') color = '#e05555';
@@ -132,15 +150,15 @@ export const EvaluationGraph = () => {
 
     if (timeClass === 'time_pressure') {
       iconName = 'time_pressure';
-      color = '#ef4444'; // Red
+      color = '#ef4444';
       label = `${type} - Apuros de tiempo`;
     } else if (timeClass === 'precipitation') {
       iconName = 'precipitation';
-      color = '#f59e0b'; // Amber
+      color = '#f59e0b';
       label = `${type} - Precipitación`;
     } else if (timeClass === 'overthinking') {
       iconName = 'overthinking';
-      color = '#a855f7'; // Purple
+      color = '#a855f7';
       label = `${type} - Sobrepensar`;
     } else {
       iconName = 'tactical';
@@ -150,6 +168,9 @@ export const EvaluationGraph = () => {
     return { type, timeClass, iconName, color, label };
   }, [analysisReady, moveEvaluations, errorTimeClasses, currentMoveIndex]);
 
+  // Renderiza el icono del contador de errores:
+  // - Si el movimiento actual es un error marcado → icono según su tipo
+  // - Si no → AlertTriangle neutro
   const renderMistakeIcon = () => {
     if (!currentMistakeInfo) {
       return <AlertTriangle size={15} />;
@@ -187,53 +208,54 @@ export const EvaluationGraph = () => {
     );
   }
 
+  const aboveColor = playerColor === 'black' ? 'var(--eval-black)' : 'var(--eval-white)';
+  const aboveOpacity = playerColor === 'black' ? 0.7 : 0.5;
+  const belowColor = playerColor === 'black' ? 'var(--eval-white)' : 'var(--eval-black)';
+  const belowOpacity = playerColor === 'black' ? 0.5 : 0.7;
+
   return (
     <div className="evaluation-graph-container">
       <div className="graph-header">
         <div className="graph-title-group">
           <span className="graph-title">Evaluación</span>
           {currentEval && (
-            <span className={`graph-current-eval ${currentEval.score >= 0 ? 'positive' : 'negative'}`}>
-              {currentEval.score >= 0 ? '+' : ''}{currentEval.score.toFixed(2)}
+            <span className={`graph-current-eval ${displayScore >= 0 ? 'positive' : 'negative'}`}>
+              {displayScore >= 0 ? '+' : ''}{displayScore.toFixed(2)}
             </span>
           )}
           {isAnalyzing && <span className="graph-analyzing-dot" title="Analizando..." />}
         </div>
 
+        {/* Solo navegación de errores, sin quality-overview */}
         {analysisReady && mistakeIndices.length > 0 && (
-          <div className="graph-header-actions">
-            <div className="graph-quality-overview">
-              <span style={{ color: '#e05555' }} title="Errores Graves">?? {mistakeCounts.blunders}</span>
-              <span style={{ color: '#e09a30' }} title="Errores">? {mistakeCounts.mistakes}</span>
-              <span style={{ color: '#c8b830' }} title="Inconsistencias">?! {mistakeCounts.inaccuracies}</span>
-            </div>
-            
-            <div className="graph-mistake-nav">
-              <button
-                className="graph-nav-btn"
-                title="Error anterior"
-                disabled={prevMistake === null}
-                onClick={() => goToMove(prevMistake)}
-              >
-                <ChevronLeft size={18} />
-              </button>
-              <div 
-                className="graph-mistake-count" 
-                style={currentMistakeInfo ? { color: currentMistakeInfo.color } : {}}
-                title={currentMistakeInfo ? currentMistakeInfo.label : 'Navegar errores'}
-              >
-                {renderMistakeIcon()}
-                <span>{mistakeIndices.length}</span>
-              </div>
-              <button
-                className="graph-nav-btn"
-                title="Error siguiente"
-                disabled={nextMistake === null}
-                onClick={() => goToMove(nextMistake)}
-              >
-                <ChevronRight size={18} />
-              </button>
-            </div>
+          <div className="graph-mistake-nav">
+            <button
+              className="graph-nav-btn"
+              title="Error anterior"
+              disabled={prevMistake === null}
+              onClick={() => goToMove(prevMistake)}
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              className={`graph-mistake-count-btn ${onlyMyMistakes ? 'filtered' : ''}`}
+              style={currentMistakeInfo ? { color: currentMistakeInfo.color } : {}}
+              onClick={() => setOnlyMyMistakes(prev => !prev)}
+              title={onlyMyMistakes
+                ? 'Mostrando solo tus errores. Haz clic para ver todos los errores.'
+                : 'Mostrando todos los errores de la partida. Haz clic para filtrar solo los tuyos.'}
+            >
+              {renderMistakeIcon()}
+              <span>{onlyMyMistakes ? `Mis errores: ${mistakeIndices.length}` : `Errores: ${mistakeIndices.length}`}</span>
+            </button>
+            <button
+              className="graph-nav-btn"
+              title="Error siguiente"
+              disabled={nextMistake === null}
+              onClick={() => goToMove(nextMistake)}
+            >
+              <ChevronRight size={18} />
+            </button>
           </div>
         )}
       </div>
@@ -247,13 +269,13 @@ export const EvaluationGraph = () => {
         onClick={handleSvgClick}
       >
         <defs>
-          <linearGradient id="evalGradientWhite" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="var(--eval-white)" stopOpacity="0.5" />
-            <stop offset="100%" stopColor="var(--eval-white)" stopOpacity="0.05" />
+          <linearGradient id="evalGradientAbove" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={aboveColor} stopOpacity={aboveOpacity} />
+            <stop offset="100%" stopColor={aboveColor} stopOpacity="0.05" />
           </linearGradient>
-          <linearGradient id="evalGradientBlack" x1="0" y1="1" x2="0" y2="0">
-            <stop offset="0%" stopColor="var(--eval-black)" stopOpacity="0.7" />
-            <stop offset="100%" stopColor="var(--eval-black)" stopOpacity="0.05" />
+          <linearGradient id="evalGradientBelow" x1="0" y1="1" x2="0" y2="0">
+            <stop offset="0%" stopColor={belowColor} stopOpacity={belowOpacity} />
+            <stop offset="100%" stopColor={belowColor} stopOpacity="0.05" />
           </linearGradient>
           <clipPath id="clipAbove">
             <rect x="0" y="0" width={WIDTH} height={midY} />
@@ -263,8 +285,8 @@ export const EvaluationGraph = () => {
           </clipPath>
         </defs>
 
-        <path d={areaPath} fill="url(#evalGradientWhite)" clipPath="url(#clipAbove)" />
-        <path d={areaPath} fill="url(#evalGradientBlack)" clipPath="url(#clipBelow)" />
+        <path d={areaPath} fill="url(#evalGradientAbove)" clipPath="url(#clipAbove)" />
+        <path d={areaPath} fill="url(#evalGradientBelow)" clipPath="url(#clipBelow)" />
 
         <line x1={PADDING} y1={midY} x2={WIDTH - PADDING} y2={midY} className="baseline" />
 
@@ -313,7 +335,7 @@ export const EvaluationGraph = () => {
         {currentEval && (
           <circle
             cx={getX(currentEval.moveIndex, total)}
-            cy={getY(currentEval.score)}
+            cy={getY(displayScore)}
             r="3.5"
             className="eval-dot active"
           />
@@ -360,7 +382,7 @@ export const EvaluationGraph = () => {
         </div>
       )}
 
-      {history.length > 0 && <TimeErrorBreakdown />}
+      {history.length > 0 && <TimeErrorBreakdown mistakeCounts={mistakeCounts} />}
     </div>
   );
 };
