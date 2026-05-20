@@ -140,6 +140,7 @@ class BackendService {
             playerBlack: extraInfo.playerBlack ?? null,
             opponent: extraInfo.opponent ?? null,
             gameDate: extraInfo.gameDate ?? null,
+            times: extraInfo.times ?? null,
         });
     }
 

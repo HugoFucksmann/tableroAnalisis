@@ -107,7 +107,7 @@ class AnalysisBridge {
                 case 'move_result': onMoveResult?.(msg); break;
                 case 'opening_detected': onOpeningDetected?.(msg); break;
                 case 'complete':
-                    onComplete?.(msg.accuracy);
+                    onComplete?.(msg.accuracy, msg.accuracyByPhase);
                     this.isRunning = false;
                     onStatus?.(false);
                     removeHandler();
@@ -121,6 +121,23 @@ class AnalysisBridge {
         });
 
         this.#abortController.signal.addEventListener('abort', () => removeHandler());
+
+        // Extraer tiempos de los comentarios del PGN
+        const times = [];
+        for (let i = 0; i < history.length; i++) {
+            const comment = storeState.pgnCommentsByIndex?.[i];
+            if (comment) {
+                const match = comment.match(/\[%clk\s+(\d+):(\d+):(\d+)\]/);
+                if (match) {
+                    const h = parseInt(match[1], 10);
+                    const m = parseInt(match[2], 10);
+                    const s = parseInt(match[3], 10);
+                    times.push(h * 3600 + m * 60 + s);
+                    continue;
+                }
+            }
+            times.push(null);
+        }
 
         // Extraer metadatos si vienen de PGN Headers
         const pgnHeaders = callbacks.pgnHeaders || storeState.gameHeaders || {};
@@ -163,6 +180,7 @@ class AnalysisBridge {
             playerBlack,
             opponent,
             gameDate,
+            times,
         });
     }
 

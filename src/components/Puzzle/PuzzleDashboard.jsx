@@ -176,9 +176,10 @@ export const PuzzleDashboard = () => {
                 <div className="pc-info">
                   <span className="pc-label">{label}</span>
                   <span className="pc-meta">
-                    Partida: {p.gameId ? p.gameId.slice(-6) : 'Manual'} • Resuelto: {p.solvedCount || 0}
+                    {p.opponent ? `vs ${p.opponent}` : (p.gameId ? `Partida ${p.gameId.slice(-6)}` : 'Manual')}
+                    {p.win !== undefined && p.win !== null ? (p.win === 1 ? ' (Victoria)' : p.win === 0 ? ' (Empate)' : ' (Derrota)') : ''}
+                    {p.gameDate ? ` • ${new Date(p.gameDate).toLocaleDateString()}` : ''}
                   </span>
-                  <span className="pc-action">Click para entrenar</span>
                 </div>
               </div>
             );

@@ -1,8 +1,15 @@
 import React, { useMemo } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
-import { ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, AlertTriangle, Clock, Zap, Brain, Sparkles } from 'lucide-react';
+import { TimeErrorBreakdown } from './TimeErrorBreakdown';
 import './EvaluationGraph.css';
+
+const TIME_CLASS_LABELS = {
+  time_pressure: 'Apuros de tiempo (<40s)',
+  precipitation: 'Precipitación (<3s)',
+  overthinking: 'Sobrepensar (>30s)',
+};
 
 const WIDTH = 400;
 const HEIGHT = 80;
@@ -28,16 +35,19 @@ function getX(index, total) {
 }
 
 export const EvaluationGraph = () => {
-  const { evaluationHistory, currentMoveIndex, history, goToMove, accuracy, isAnalyzing, moveEvaluations, analysisReady } =
+  const { evaluationHistory, currentMoveIndex, history, goToMove, accuracy, accuracyByPhase, isAnalyzing, moveEvaluations, errorTimeClasses, analysisReady, playerColor } =
     useGameStore(useShallow(state => ({
       evaluationHistory: state.evaluationHistory,
       currentMoveIndex: state.currentMoveIndex,
       history: state.history,
       goToMove: state.goToMove,
       accuracy: state.accuracy,
+      accuracyByPhase: state.accuracyByPhase,
       isAnalyzing: state.isAnalyzing,
       moveEvaluations: state.moveEvaluations,
+      errorTimeClasses: state.errorTimeClasses,
       analysisReady: state.analysisReady,
+      playerColor: state.playerColor,
     })));
 
   const total = history.length;
@@ -89,8 +99,75 @@ export const EvaluationGraph = () => {
     return mistakeMarkers.map(m => m.idx).sort((a, b) => a - b);
   }, [mistakeMarkers]);
 
+  const mistakeCounts = useMemo(() => {
+    if (!moveEvaluations || !playerColor) return { blunders: 0, mistakes: 0, inaccuracies: 0 };
+    let b = 0, m = 0, i = 0;
+    Object.entries(moveEvaluations).forEach(([idxStr, type]) => {
+      const idx = parseInt(idxStr, 10);
+      const isPlayerMove = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
+      if (isPlayerMove) {
+        if (type === 'Error grave') b++;
+        else if (type === 'Error') m++;
+        else if (type === 'Imprecisión') i++;
+      }
+    });
+    return { blunders: b, mistakes: m, inaccuracies: i };
+  }, [moveEvaluations, playerColor]);
+
   const prevMistake = mistakeIndices.filter(i => i < currentMoveIndex).at(-1) ?? null;
   const nextMistake = mistakeIndices.find(i => i > currentMoveIndex) ?? null;
+
+  const currentMistakeInfo = useMemo(() => {
+    if (!analysisReady || !moveEvaluations) return null;
+    const type = moveEvaluations[currentMoveIndex];
+    if (!type || !['Error grave', 'Error', 'Imprecisión'].includes(type)) return null;
+
+    const timeClass = errorTimeClasses?.[currentMoveIndex];
+    let iconName = 'alert';
+    let color = '#e09a30'; // default warning orange
+    let label = type;
+
+    if (type === 'Error grave') color = '#e05555';
+    if (type === 'Imprecisión') color = '#c8b830';
+
+    if (timeClass === 'time_pressure') {
+      iconName = 'time_pressure';
+      color = '#ef4444'; // Red
+      label = `${type} - Apuros de tiempo`;
+    } else if (timeClass === 'precipitation') {
+      iconName = 'precipitation';
+      color = '#f59e0b'; // Amber
+      label = `${type} - Precipitación`;
+    } else if (timeClass === 'overthinking') {
+      iconName = 'overthinking';
+      color = '#a855f7'; // Purple
+      label = `${type} - Sobrepensar`;
+    } else {
+      iconName = 'tactical';
+      label = `${type} - Táctico`;
+    }
+
+    return { type, timeClass, iconName, color, label };
+  }, [analysisReady, moveEvaluations, errorTimeClasses, currentMoveIndex]);
+
+  const renderMistakeIcon = () => {
+    if (!currentMistakeInfo) {
+      return <AlertTriangle size={15} />;
+    }
+    const { iconName, color, label } = currentMistakeInfo;
+    switch (iconName) {
+      case 'time_pressure':
+        return <Clock size={15} style={{ color }} title={label} />;
+      case 'precipitation':
+        return <Zap size={15} style={{ color }} title={label} />;
+      case 'overthinking':
+        return <Brain size={15} style={{ color }} title={label} />;
+      case 'tactical':
+        return <Sparkles size={15} style={{ color }} title={label} />;
+      default:
+        return <AlertTriangle size={15} style={{ color }} title={label} />;
+    }
+  };
 
   const handleSvgClick = (e) => {
     if (total <= 1) return;
@@ -124,27 +201,39 @@ export const EvaluationGraph = () => {
         </div>
 
         {analysisReady && mistakeIndices.length > 0 && (
-          <div className="graph-mistake-nav">
-            <button
-              className="graph-nav-btn"
-              title="Error anterior"
-              disabled={prevMistake === null}
-              onClick={() => goToMove(prevMistake)}
-            >
-              <ChevronLeft size={18} />
-            </button>
-            <div className="graph-mistake-count">
-              <AlertTriangle size={15} />
-              <span>{mistakeIndices.length}</span>
+          <div className="graph-header-actions">
+            <div className="graph-quality-overview">
+              <span style={{ color: '#e05555' }} title="Errores Graves">?? {mistakeCounts.blunders}</span>
+              <span style={{ color: '#e09a30' }} title="Errores">? {mistakeCounts.mistakes}</span>
+              <span style={{ color: '#c8b830' }} title="Inconsistencias">?! {mistakeCounts.inaccuracies}</span>
             </div>
-            <button
-              className="graph-nav-btn"
-              title="Error siguiente"
-              disabled={nextMistake === null}
-              onClick={() => goToMove(nextMistake)}
-            >
-              <ChevronRight size={18} />
-            </button>
+            
+            <div className="graph-mistake-nav">
+              <button
+                className="graph-nav-btn"
+                title="Error anterior"
+                disabled={prevMistake === null}
+                onClick={() => goToMove(prevMistake)}
+              >
+                <ChevronLeft size={18} />
+              </button>
+              <div 
+                className="graph-mistake-count" 
+                style={currentMistakeInfo ? { color: currentMistakeInfo.color } : {}}
+                title={currentMistakeInfo ? currentMistakeInfo.label : 'Navegar errores'}
+              >
+                {renderMistakeIcon()}
+                <span>{mistakeIndices.length}</span>
+              </div>
+              <button
+                className="graph-nav-btn"
+                title="Error siguiente"
+                disabled={nextMistake === null}
+                onClick={() => goToMove(nextMistake)}
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
           </div>
         )}
       </div>
@@ -185,12 +274,15 @@ export const EvaluationGraph = () => {
 
         {mistakeMarkers.map(({ idx, x, y, style, type }) => {
           const isCurrent = idx === currentMoveIndex;
+          const timeClass = errorTimeClasses?.[idx];
+          const timeLabel = timeClass ? ` - ${TIME_CLASS_LABELS[timeClass] || timeClass}` : '';
           return (
             <g
               key={`mistake-${idx}`}
               className="mistake-marker-group"
               onClick={(e) => { e.stopPropagation(); goToMove(idx); }}
             >
+              <title>{`${type} (${style.symbol})${timeLabel}`}</title>
               <line
                 x1={x} y1={HEIGHT - PADDING}
                 x2={x} y2={HEIGHT - PADDING - 5}
@@ -247,6 +339,28 @@ export const EvaluationGraph = () => {
           </div>
         )
       )}
+
+      {analysisReady && accuracyByPhase && accuracyByPhase.length > 0 && (
+        <div className="phase-accuracy-minimal-row">
+          {accuracyByPhase.map((p) => {
+            let phaseVar = 'var(--text-muted)';
+            const lowerPhase = p.phase.toLowerCase();
+            if (lowerPhase.includes('apertura')) phaseVar = 'var(--success-primary)';
+            else if (lowerPhase.includes('medio') || lowerPhase.includes('juego')) phaseVar = 'var(--warning-primary)';
+            else if (lowerPhase.includes('final')) phaseVar = 'var(--info-primary)';
+
+            return (
+              <div className="phase-accuracy-minimal-item" key={p.phase} title={`Precisión en ${p.phase}`}>
+                <span className="phase-accuracy-dot" style={{ backgroundColor: phaseVar }} />
+                <span className="phase-accuracy-name">{p.phase}</span>
+                <span className="phase-accuracy-val">{p.accuracy}%</span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {history.length > 0 && <TimeErrorBreakdown />}
     </div>
   );
 };

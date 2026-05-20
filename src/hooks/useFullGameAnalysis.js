@@ -59,7 +59,7 @@ export const useFullGameAnalysis = () => {
                     }
                 }));
             },
-            onMoveResult: ({ index, score, mate, label, bestMove, lines }) => {
+            onMoveResult: ({ index, score, mate, label, bestMove, lines, errorTimeClass }) => {
                 // Batch move results
                 useGameStore.setState((state) => {
                     const updates = {};
@@ -79,6 +79,12 @@ export const useFullGameAnalysis = () => {
                             [index]: label
                         };
                     }
+                    if (errorTimeClass) {
+                        updates.errorTimeClasses = {
+                            ...state.errorTimeClasses,
+                            [index]: errorTimeClass
+                        };
+                    }
                     if (bestMove) {
                         updates.bestMoves = {
                             ...state.bestMoves,
@@ -94,11 +100,12 @@ export const useFullGameAnalysis = () => {
                     return updates;
                 });
             },
-            onComplete: (accuracy) => {
+            onComplete: (accuracy, accuracyByPhase) => {
                 useGameStore.setState({
                     analysisReady: true,
                     isAnalyzing: false,
-                    accuracy
+                    accuracy,
+                    accuracyByPhase
                 });
                 backendService.getAnalyses();
             },

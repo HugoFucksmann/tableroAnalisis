@@ -7,13 +7,15 @@ export const createAnalysisSlice = (set, get) => ({
   moveEvaluations: {},
   bestMoves: {},
   alternativeLines: {},
+  errorTimeClasses: {},
   isAnalyzing: false,
   isCanceling: false,
   analysisProgress: 0,
   analysisLabel: '',
-  analysisReady: false,
+   analysisReady: false,
   analysisRequestId: null,
   accuracy: null,
+  accuracyByPhase: null,
   ecoCode: '',
   openingName: 'Initial Position',
   openingPly: -1,
@@ -35,6 +37,7 @@ export const createAnalysisSlice = (set, get) => ({
     moveEvaluations: {},
     bestMoves: {},
     alternativeLines: {},
+    errorTimeClasses: {},
     isAnalyzing: false,
     isCanceling: false,
     analysisProgress: 0,
@@ -42,6 +45,7 @@ export const createAnalysisSlice = (set, get) => ({
     analysisReady: false,
     analysisRequestId: null,
     accuracy: null,
+    accuracyByPhase: null,
     ecoCode: '',
     openingName: 'Initial Position',
     openingPly: -1,
@@ -53,6 +57,7 @@ export const createAnalysisSlice = (set, get) => ({
     const newMoveEvaluations = { ...state.moveEvaluations };
     const newAlternativeLines = { ...state.alternativeLines };
     const newEvaluationHistory = { ...state.evaluationHistory };
+    const newErrorTimeClasses = { ...state.errorTimeClasses };
 
     for (const key of Object.keys(newBestMoves)) {
       if (parseInt(key) >= currentMoveIndex + 1) delete newBestMoves[key];
@@ -66,12 +71,16 @@ export const createAnalysisSlice = (set, get) => ({
     for (const key of Object.keys(newEvaluationHistory)) {
       if (parseInt(key) > currentMoveIndex) delete newEvaluationHistory[key];
     }
+    for (const key of Object.keys(newErrorTimeClasses)) {
+      if (parseInt(key) >= currentMoveIndex + 1) delete newErrorTimeClasses[key];
+    }
 
     return {
       bestMoves: newBestMoves,
       moveEvaluations: newMoveEvaluations,
       alternativeLines: newAlternativeLines,
       evaluationHistory: newEvaluationHistory,
+      errorTimeClasses: newErrorTimeClasses,
       evaluation: { score: 0, mate: null },
       isAnalyzing: false,
       isCanceling: false,
@@ -127,6 +136,8 @@ export const createAnalysisSlice = (set, get) => ({
   setMoveEvaluations: (v) => set({ moveEvaluations: v }),
   setBestMoves: (v) => set({ bestMoves: v }),
   setAlternativeLines: (v) => set({ alternativeLines: v }),
+  setErrorTimeClass: (index, type) => set((state) => ({ errorTimeClasses: { ...state.errorTimeClasses, [index]: type } })),
+  setErrorTimeClasses: (v) => set({ errorTimeClasses: v }),
   setEngineConfig: (config) => set({ engineConfig: config }),
   // analyses actions moved to librarySlice — use state.setAnalyses / appendAnalyses / removeAnalyses from there
   applyFullAnalysis: (data) => {
@@ -169,10 +180,12 @@ export const createAnalysisSlice = (set, get) => ({
 
     const baseState = {
       accuracy: data.accuracy,
+      accuracyByPhase: data.accuracyByPhase || null,
       openingName: data.opening?.name || 'Unknown',
       ecoCode: data.opening?.eco || '',
       evaluationHistory,
       moveEvaluations: data.moveEvaluations || {},
+      errorTimeClasses: data.errorTimeClasses || {},
       bestMoves: data.bestMoves || {},
       alternativeLines: data.alternativeLines || {},
       analysisReady: true,

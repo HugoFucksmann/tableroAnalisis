@@ -1,0 +1,224 @@
+/* TimeErrorBreakdown.css - Segmented layout */
+
+.time-error-breakdown-wrapper {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.time-error-breakdown-wrapper.success-wrapper {
+  padding: 6px 10px;
+  background: rgba(16, 185, 129, 0.02);
+  border: 1px solid rgba(16, 185, 129, 0.05);
+  border-radius: var(--border-radius);
+  margin-top: var(--space-3);
+}
+
+/* Legend row layout */
+.time-legend-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.time-legend-row.success-row {
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+  cursor: help;
+  padding: 2px 4px;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.legend-item:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.legend-icon {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.legend-item:hover .legend-icon {
+  transform: scale(1.15);
+}
+
+.legend-item.pressure {
+  color: #ef4444;
+}
+
+.legend-item.precipitation {
+  color: #f59e0b;
+}
+
+.legend-item.overthinking {
+  color: #a78bfa;
+}
+
+.legend-item.tactical {
+  color: #94a3b8;
+}
+
+.legend-text {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.legend-num {
+  font-family: monospace;
+  font-weight: 700;
+  margin-left: 2px;
+}
+
+/* Success layout */
+.legend-item-success {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.success-icon-sparkle {
+  color: var(--success-primary);
+  flex-shrink: 0;
+}
+
+.success-icon-check {
+  color: var(--success-primary);
+  flex-shrink: 0;
+}
+
+.good-decision {
+  color: var(--text-primary);
+}
+
+.good-decision .success-icon-check {
+  color: var(--warning-primary);
+}
+
+.success-text {
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.animate-pulse {
+  animation: pulse-icon 2s infinite ease-in-out;
+}
+
+@keyframes pulse-icon {
+
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
+}
+
+/* Preview Card - Premium layout with deep purple/blue glass effect */
+.time-error-breakdown-wrapper.preview-wrapper {
+  padding: 8px 12px;
+  background: rgba(139, 92, 246, 0.03);
+  border: 1px dashed rgba(139, 92, 246, 0.2);
+  border-radius: var(--border-radius);
+  margin-top: var(--space-3);
+  transition: all 0.3s ease;
+}
+
+.time-error-breakdown-wrapper.preview-wrapper:hover {
+  background: rgba(139, 92, 246, 0.05);
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.legend-item-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.preview-icon {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.preview-text {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.preview-text strong {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+/* No Clocks Card - Clean, subtle warning/neutral border */
+.time-error-breakdown-wrapper.no-clocks-wrapper {
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.01);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: var(--border-radius);
+  margin-top: var(--space-3);
+}
+
+.legend-item-no-clocks {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+
+.no-clocks-icon {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.no-clocks-text {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* Perfect game motivational badge */
+.time-perfect-game-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.1);
+  border-radius: var(--border-radius);
+  margin-top: var(--space-2);
+}
+
+.perfect-check-icon {
+  color: var(--success-primary);
+  flex-shrink: 0;
+}
+
+.perfect-text {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}

@@ -34,6 +34,22 @@
   gap: var(--space-3);
 }
 
+.graph-header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.graph-quality-overview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  font-size: var(--text-xs);
+  font-family: monospace;
+  font-weight: 800;
+  opacity: 0.9;
+}
+
 .graph-mistake-nav {
   display: flex;
   align-items: center;
@@ -229,4 +245,40 @@
   50% {
     opacity: 1;
   }
+}
+
+/* ── Phase Accuracy Widget ───────────────────────────────────────── */
+.phase-accuracy-minimal-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-5);
+  margin-top: var(--space-2);
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+
+.phase-accuracy-minimal-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.phase-accuracy-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.phase-accuracy-name {
+  color: var(--text-muted);
+  font-weight: 600;
+}
+
+.phase-accuracy-val {
+  color: var(--text-primary);
+  font-weight: 700;
 }
