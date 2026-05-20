@@ -21,6 +21,8 @@ const MISTAKE_STYLES = {
   'Imprecisión': { color: '#c8b830', symbol: '?!' },
 };
 
+const MISTAKE_TYPES = new Set(['Error grave', 'Error', 'Imprecisión']);
+
 function clampScore(s) {
   return Math.max(-5, Math.min(5, s ?? 0));
 }
@@ -36,35 +38,40 @@ function getX(index, total) {
 
 export const EvaluationGraph = () => {
   const [onlyMyMistakes, setOnlyMyMistakes] = useState(false);
-  const { evaluationHistory, currentMoveIndex, history, goToMove, accuracy, accuracyByPhase, isAnalyzing, moveEvaluations, errorTimeClasses, analysisReady, playerColor } =
-    useGameStore(useShallow(state => ({
-      evaluationHistory: state.evaluationHistory,
-      currentMoveIndex: state.currentMoveIndex,
-      history: state.history,
-      goToMove: state.goToMove,
-      accuracy: state.accuracy,
-      accuracyByPhase: state.accuracyByPhase,
-      isAnalyzing: state.isAnalyzing,
-      moveEvaluations: state.moveEvaluations,
-      errorTimeClasses: state.errorTimeClasses,
-      analysisReady: state.analysisReady,
-      playerColor: state.playerColor,
-    })));
+
+  const {
+    evaluationHistory, currentMoveIndex, history, goToMove,
+    accuracy, accuracyByPhase, isAnalyzing,
+    moveEvaluations, errorTimeClasses, analysisReady, playerColor,
+  } = useGameStore(useShallow(state => ({
+    evaluationHistory: state.evaluationHistory,
+    currentMoveIndex: state.currentMoveIndex,
+    history: state.history,
+    goToMove: state.goToMove,
+    accuracy: state.accuracy,
+    accuracyByPhase: state.accuracyByPhase,
+    isAnalyzing: state.isAnalyzing,
+    moveEvaluations: state.moveEvaluations,
+    errorTimeClasses: state.errorTimeClasses,
+    analysisReady: state.analysisReady,
+    playerColor: state.playerColor,
+  })));
 
   const total = history.length;
   const midY = getY(0);
 
   const displayScore = useMemo(() => {
-    const currentEval = evaluationHistory?.[currentMoveIndex];
-    if (!currentEval) return 0;
-    return playerColor === 'black' ? -currentEval.score : currentEval.score;
+    const e = evaluationHistory?.[currentMoveIndex];
+    if (!e) return 0;
+    return playerColor === 'black' ? -e.score : e.score;
   }, [evaluationHistory, currentMoveIndex, playerColor]);
 
   const { sorted, areaPath, linePoints } = useMemo(() => {
     const sortedData = Object.values(evaluationHistory || {}).sort((a, b) => a.moveIndex - b.moveIndex);
+
     const linePts = sortedData.map(d => {
-      const adjustedVal = playerColor === 'black' ? -d.score : d.score;
-      return `${getX(d.moveIndex, total)},${getY(adjustedVal)}`;
+      const val = playerColor === 'black' ? -d.score : d.score;
+      return `${getX(d.moveIndex, total)},${getY(val)}`;
     });
 
     let areaP = '';
@@ -74,8 +81,8 @@ export const EvaluationGraph = () => {
       areaP = [
         `M ${getX(first.moveIndex, total)} ${midY}`,
         ...sortedData.map(d => {
-          const adjustedVal = playerColor === 'black' ? -d.score : d.score;
-          return `L ${getX(d.moveIndex, total)} ${getY(adjustedVal)}`;
+          const val = playerColor === 'black' ? -d.score : d.score;
+          return `L ${getX(d.moveIndex, total)} ${getY(val)}`;
         }),
         `L ${getX(last.moveIndex, total)} ${midY}`,
         'Z',
@@ -87,42 +94,33 @@ export const EvaluationGraph = () => {
 
   const currentEval = evaluationHistory?.[currentMoveIndex];
 
-  const MISTAKE_TYPES_SET = useMemo(() => new Set(['Error grave', 'Error', 'Imprecisión']), []);
-
   const mistakeMarkers = useMemo(() => {
     if (!moveEvaluations || total === 0) return [];
     return Object.entries(moveEvaluations).reduce((acc, [idxStr, type]) => {
-      if (MISTAKE_TYPES_SET.has(type)) {
-        const idx = parseInt(idxStr);
-        const isPlayerMove = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
-        if (onlyMyMistakes && !isPlayerMove) return acc;
+      if (!MISTAKE_TYPES.has(type)) return acc;
+      const idx = parseInt(idxStr);
+      const isPlayerMove = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
+      if (onlyMyMistakes && !isPlayerMove) return acc;
 
-        const evalObj = evaluationHistory?.[idx];
-        const score = evalObj?.score ?? 0;
-        const adjustedVal = playerColor === 'black' ? -score : score;
-        acc.push({
-          idx,
-          type,
-          x: getX(idx, total),
-          y: getY(adjustedVal),
-          style: MISTAKE_STYLES[type]
-        });
-      }
+      const score = evaluationHistory?.[idx]?.score ?? 0;
+      const val = playerColor === 'black' ? -score : score;
+      acc.push({ idx, type, x: getX(idx, total), y: getY(val), style: MISTAKE_STYLES[type] });
       return acc;
     }, []);
-  }, [moveEvaluations, evaluationHistory, total, MISTAKE_TYPES_SET, playerColor, onlyMyMistakes]);
+  }, [moveEvaluations, evaluationHistory, total, playerColor, onlyMyMistakes]);
 
-  const mistakeIndices = useMemo(() => {
-    return mistakeMarkers.map(m => m.idx).sort((a, b) => a - b);
-  }, [mistakeMarkers]);
+  const mistakeIndices = useMemo(
+    () => mistakeMarkers.map(m => m.idx).sort((a, b) => a - b),
+    [mistakeMarkers],
+  );
 
   const mistakeCounts = useMemo(() => {
     if (!moveEvaluations || !playerColor) return { blunders: 0, mistakes: 0, inaccuracies: 0 };
     let b = 0, m = 0, i = 0;
     Object.entries(moveEvaluations).forEach(([idxStr, type]) => {
       const idx = parseInt(idxStr, 10);
-      const isPlayerMove = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
-      if (isPlayerMove) {
+      const isPlayer = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
+      if (isPlayer) {
         if (type === 'Error grave') b++;
         else if (type === 'Error') m++;
         else if (type === 'Imprecisión') i++;
@@ -134,59 +132,33 @@ export const EvaluationGraph = () => {
   const prevMistake = mistakeIndices.filter(i => i < currentMoveIndex).at(-1) ?? null;
   const nextMistake = mistakeIndices.find(i => i > currentMoveIndex) ?? null;
 
-  // Solo muestra info especial si el movimiento actual ES uno de los errores marcados
   const currentMistakeInfo = useMemo(() => {
     if (!analysisReady || !moveEvaluations) return null;
     const type = moveEvaluations[currentMoveIndex];
-    if (!type || !['Error grave', 'Error', 'Imprecisión'].includes(type)) return null;
+    if (!MISTAKE_TYPES.has(type)) return null;
 
     const timeClass = errorTimeClasses?.[currentMoveIndex];
-    let iconName = 'alert';
-    let color = '#e09a30';
+    let iconName = 'tactical';
+    let color = type === 'Error grave' ? '#e05555' : type === 'Imprecisión' ? '#c8b830' : '#e09a30';
     let label = type;
 
-    if (type === 'Error grave') color = '#e05555';
-    if (type === 'Imprecisión') color = '#c8b830';
-
-    if (timeClass === 'time_pressure') {
-      iconName = 'time_pressure';
-      color = '#ef4444';
-      label = `${type} - Apuros de tiempo`;
-    } else if (timeClass === 'precipitation') {
-      iconName = 'precipitation';
-      color = '#f59e0b';
-      label = `${type} - Precipitación`;
-    } else if (timeClass === 'overthinking') {
-      iconName = 'overthinking';
-      color = '#a855f7';
-      label = `${type} - Sobrepensar`;
-    } else {
-      iconName = 'tactical';
-      label = `${type} - Táctico`;
-    }
+    if (timeClass === 'time_pressure') { iconName = 'time_pressure'; color = '#ef4444'; label = `${type} - Apuros de tiempo`; }
+    else if (timeClass === 'precipitation') { iconName = 'precipitation'; color = '#f59e0b'; label = `${type} - Precipitación`; }
+    else if (timeClass === 'overthinking') { iconName = 'overthinking'; color = '#a855f7'; label = `${type} - Sobrepensar`; }
+    else { label = `${type} - Táctico`; }
 
     return { type, timeClass, iconName, color, label };
   }, [analysisReady, moveEvaluations, errorTimeClasses, currentMoveIndex]);
 
-  // Renderiza el icono del contador de errores:
-  // - Si el movimiento actual es un error marcado → icono según su tipo
-  // - Si no → AlertTriangle neutro
   const renderMistakeIcon = () => {
-    if (!currentMistakeInfo) {
-      return <AlertTriangle size={15} />;
-    }
+    if (!currentMistakeInfo) return <AlertTriangle size={15} />;
     const { iconName, color, label } = currentMistakeInfo;
     switch (iconName) {
-      case 'time_pressure':
-        return <Clock size={15} style={{ color }} title={label} />;
-      case 'precipitation':
-        return <Zap size={15} style={{ color }} title={label} />;
-      case 'overthinking':
-        return <Brain size={15} style={{ color }} title={label} />;
-      case 'tactical':
-        return <Sparkles size={15} style={{ color }} title={label} />;
-      default:
-        return <AlertTriangle size={15} style={{ color }} title={label} />;
+      case 'time_pressure': return <Clock size={15} style={{ color }} title={label} />;
+      case 'precipitation': return <Zap size={15} style={{ color }} title={label} />;
+      case 'overthinking': return <Brain size={15} style={{ color }} title={label} />;
+      case 'tactical': return <Sparkles size={15} style={{ color }} title={label} />;
+      default: return <AlertTriangle size={15} style={{ color }} title={label} />;
     }
   };
 
@@ -226,7 +198,7 @@ export const EvaluationGraph = () => {
           {isAnalyzing && <span className="graph-analyzing-dot" title="Analizando..." />}
         </div>
 
-        {/* Solo navegación de errores, sin quality-overview */}
+        {/* Navegación de errores — sin caja/botón switch, solo contador y flechas */}
         {analysisReady && mistakeIndices.length > 0 && (
           <div className="graph-mistake-nav">
             <button
@@ -237,17 +209,19 @@ export const EvaluationGraph = () => {
             >
               <ChevronLeft size={18} />
             </button>
-            <button
-              className={`graph-mistake-count-btn ${onlyMyMistakes ? 'filtered' : ''}`}
+
+            <span
+              className={`graph-mistake-label ${onlyMyMistakes ? 'filtered' : ''}`}
               style={currentMistakeInfo ? { color: currentMistakeInfo.color } : {}}
               onClick={() => setOnlyMyMistakes(prev => !prev)}
               title={onlyMyMistakes
-                ? 'Mostrando solo tus errores. Haz clic para ver todos los errores.'
-                : 'Mostrando todos los errores de la partida. Haz clic para filtrar solo los tuyos.'}
+                ? 'Mostrando solo tus errores. Clic para ver todos.'
+                : 'Mostrando todos los errores. Clic para filtrar solo los tuyos.'}
             >
               {renderMistakeIcon()}
-              <span>{onlyMyMistakes ? `Mis errores: ${mistakeIndices.length}` : `Errores: ${mistakeIndices.length}`}</span>
-            </button>
+              <span>{onlyMyMistakes ? `Mis: ${mistakeIndices.length}` : mistakeIndices.length}</span>
+            </span>
+
             <button
               className="graph-nav-btn"
               title="Error siguiente"
@@ -324,10 +298,8 @@ export const EvaluationGraph = () => {
 
         {currentMoveIndex >= 0 && (
           <line
-            x1={getX(currentMoveIndex, total)}
-            y1={PADDING}
-            x2={getX(currentMoveIndex, total)}
-            y2={HEIGHT - PADDING}
+            x1={getX(currentMoveIndex, total)} y1={PADDING}
+            x2={getX(currentMoveIndex, total)} y2={HEIGHT - PADDING}
             className="current-marker"
           />
         )}
@@ -337,7 +309,7 @@ export const EvaluationGraph = () => {
             cx={getX(currentEval.moveIndex, total)}
             cy={getY(displayScore)}
             r="3.5"
-            className="eval-dot active"
+            className="eval-dot"
           />
         )}
       </svg>
@@ -345,12 +317,12 @@ export const EvaluationGraph = () => {
       {analysisReady && (
         accuracy ? (
           <div className="accuracy-row">
-            <div className="accuracy-chip white">
+            <div className="accuracy-chip">
               <span className="chip-color-dot" style={{ background: 'var(--eval-white)' }} />
               <span>{accuracy.white}%</span>
             </div>
             <span className="accuracy-label-center">precisión</span>
-            <div className="accuracy-chip black">
+            <div className="accuracy-chip">
               <span>{accuracy.black}%</span>
               <span className="chip-color-dot" style={{ background: 'var(--eval-black)' }} />
             </div>
@@ -362,18 +334,17 @@ export const EvaluationGraph = () => {
         )
       )}
 
-      {analysisReady && accuracyByPhase && accuracyByPhase.length > 0 && (
+      {analysisReady && accuracyByPhase?.length > 0 && (
         <div className="phase-accuracy-minimal-row">
           {accuracyByPhase.map((p) => {
-            let phaseVar = 'var(--text-muted)';
-            const lowerPhase = p.phase.toLowerCase();
-            if (lowerPhase.includes('apertura')) phaseVar = 'var(--success-primary)';
-            else if (lowerPhase.includes('medio') || lowerPhase.includes('juego')) phaseVar = 'var(--warning-primary)';
-            else if (lowerPhase.includes('final')) phaseVar = 'var(--info-primary)';
-
+            const lp = p.phase.toLowerCase();
+            const color = lp.includes('apertura') ? 'var(--success-primary)'
+              : (lp.includes('medio') || lp.includes('juego')) ? 'var(--warning-primary)'
+                : lp.includes('final') ? 'var(--info-primary)'
+                  : 'var(--text-muted)';
             return (
               <div className="phase-accuracy-minimal-item" key={p.phase} title={`Precisión en ${p.phase}`}>
-                <span className="phase-accuracy-dot" style={{ backgroundColor: phaseVar }} />
+                <span className="phase-accuracy-dot" style={{ backgroundColor: color }} />
                 <span className="phase-accuracy-name">{p.phase}</span>
                 <span className="phase-accuracy-val">{p.accuracy}%</span>
               </div>

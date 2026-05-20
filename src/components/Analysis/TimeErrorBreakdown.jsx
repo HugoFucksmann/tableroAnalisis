@@ -16,77 +16,42 @@ export const TimeErrorBreakdown = ({ mistakeCounts }) => {
     })));
 
   const hasClocks = useMemo(() => {
-    if (pgnCommentsByIndex && Object.values(pgnCommentsByIndex).some(comment => comment && comment.includes('%clk'))) {
-      return true;
-    }
-    if (errorTimeClasses && Object.keys(errorTimeClasses).length > 0) {
-      return true;
-    }
+    if (pgnCommentsByIndex && Object.values(pgnCommentsByIndex).some(c => c?.includes('%clk'))) return true;
+    if (errorTimeClasses && Object.keys(errorTimeClasses).length > 0) return true;
     return false;
   }, [pgnCommentsByIndex, errorTimeClasses]);
 
   const stats = useMemo(() => {
-    if (!analysisReady || !moveEvaluations) {
-      return null;
-    }
+    if (!analysisReady || !moveEvaluations) return null;
 
-    let timePressureCount = 0;
-    let precipitationCount = 0;
-    let overthinkingCount = 0;
-    let totalPlayerErrors = 0;
-    let blunderCount = 0;
-    let mistakeCount = 0;
-    let inaccuracyCount = 0;
+    let timePressure = 0, precipitation = 0, overthinking = 0, total = 0;
 
     Object.entries(moveEvaluations).forEach(([idxStr, type]) => {
       const idx = parseInt(idxStr, 10);
-      const isPlayerMove = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
+      const isPlayer = (idx % 2 === 0) ? (playerColor === 'white') : (playerColor === 'black');
+      if (!isPlayer || !['Error grave', 'Error', 'Imprecisión'].includes(type)) return;
 
-      if (isPlayerMove && (type === 'Error' || type === 'Error grave' || type === 'Imprecisión')) {
-        totalPlayerErrors++;
-
-        if (type === 'Error grave') blunderCount++;
-        else if (type === 'Error') mistakeCount++;
-        else if (type === 'Imprecisión') inaccuracyCount++;
-
-        const timeClass = errorTimeClasses?.[idx];
-        if (timeClass === 'time_pressure') {
-          timePressureCount++;
-        } else if (timeClass === 'precipitation') {
-          precipitationCount++;
-        } else if (timeClass === 'overthinking') {
-          overthinkingCount++;
-        }
-      }
+      total++;
+      const tc = errorTimeClasses?.[idx];
+      if (tc === 'time_pressure') timePressure++;
+      else if (tc === 'precipitation') precipitation++;
+      else if (tc === 'overthinking') overthinking++;
     });
 
-    const tacticalCount = totalPlayerErrors - (timePressureCount + precipitationCount + overthinkingCount);
-
-    return {
-      timePressure: timePressureCount,
-      precipitation: precipitationCount,
-      overthinking: overthinkingCount,
-      tactical: tacticalCount,
-      total: totalPlayerErrors,
-      blunders: blunderCount,
-      mistakes: mistakeCount,
-      inaccuracies: inaccuracyCount,
-    };
+    const tactical = total - (timePressure + precipitation + overthinking);
+    return { timePressure, precipitation, overthinking, tactical, total };
   }, [moveEvaluations, errorTimeClasses, playerColor, analysisReady]);
 
+  /* ── Estados previos al análisis ── */
   if (!analysisReady) {
-    if (!history || history.length === 0) {
-      return null;
-    }
+    if (!history?.length) return null;
     return (
       <div className="time-error-breakdown-wrapper preview-wrapper">
-        <div className="time-legend-row preview-row">
-          <div className="legend-item-preview" title="Análisis de gestión de tiempo disponible">
-            <Clock size={12} className="preview-icon animate-pulse" />
-            <span className="preview-text">
-              ¿Quieres ver cómo afectó el reloj a tus jugadas? <strong>Analiza la partida</strong> para ver el desglose de errores por tiempo de reflexión.
-            </span>
-          </div>
+        <div className="legend-item-preview" title="Análisis de gestión de tiempo disponible">
+          <Clock size={12} className="preview-icon animate-pulse" />
+          <span className="preview-text">
+            ¿Quieres ver cómo afectó el reloj a tus jugadas? <strong>Analiza la partida</strong> para ver el desglose de errores por tiempo de reflexión.
+          </span>
         </div>
       </div>
     );
@@ -95,78 +60,64 @@ export const TimeErrorBreakdown = ({ mistakeCounts }) => {
   if (!hasClocks) {
     return (
       <div className="time-error-breakdown-wrapper no-clocks-wrapper">
-        <div className="time-legend-row no-clocks-row">
-          <div className="legend-item-no-clocks" title="Sin datos de reloj">
-            <AlertCircle size={12} className="no-clocks-icon" />
-            <span className="no-clocks-text">
-              Esta partida no contiene registros de tiempo en el reloj para analizar la gestión del tiempo.
-            </span>
-          </div>
+        <div className="legend-item-no-clocks" title="Sin datos de reloj">
+          <AlertCircle size={12} className="no-clocks-icon" />
+          <span className="no-clocks-text">
+            Esta partida no contiene registros de tiempo en el reloj para analizar la gestión del tiempo.
+          </span>
         </div>
       </div>
     );
   }
 
-  if (!stats) {
-    return null;
-  }
+  if (!stats) return null;
 
   const { timePressure, precipitation, overthinking, tactical, total } = stats;
 
-  const pctPressure = total > 0 ? Math.round((timePressure / total) * 100) : 0;
-  const pctPrecipitation = total > 0 ? Math.round((precipitation / total) * 100) : 0;
-  const pctOverthinking = total > 0 ? Math.round((overthinking / total) * 100) : 0;
-  const pctTactical = total > 0 ? Math.max(0, 100 - (pctPressure + pctPrecipitation + pctOverthinking)) : 0;
+  const pct = (n) => (total > 0 ? Math.round((n / total) * 100) : 0);
+  const pctPressure = pct(timePressure);
+  const pctPrecipitation = pct(precipitation);
+  const pctOverthinking = pct(overthinking);
+  const pctTactical = total > 0 ? Math.max(0, 100 - pctPressure - pctPrecipitation - pctOverthinking) : 0;
 
   return (
     <div className="time-error-breakdown-wrapper">
       {total > 0 && (
         <div className="time-legend-row">
 
-          {/* Blunders / Mistakes / Inaccuracies — iconos de calidad sin texto */}
+          {/* Calidad: blunders / mistakes / inaccuracies — izquierda */}
           <div className="legend-quality-icons">
-            <span
-              className="legend-quality-item"
-              style={{ color: '#e05555' }}
-              title={`Errores Graves: ${mistakeCounts?.blunders ?? 0}`}
-            >
+            <span className="legend-quality-item" style={{ color: '#e05555' }} title={`Errores Graves: ${mistakeCounts?.blunders ?? 0}`}>
               ??&nbsp;{mistakeCounts?.blunders ?? 0}
             </span>
-            <span
-              className="legend-quality-item"
-              style={{ color: '#e09a30' }}
-              title={`Errores: ${mistakeCounts?.mistakes ?? 0}`}
-            >
+            <span className="legend-quality-item" style={{ color: '#e09a30' }} title={`Errores: ${mistakeCounts?.mistakes ?? 0}`}>
               ?&nbsp;{mistakeCounts?.mistakes ?? 0}
             </span>
-            <span
-              className="legend-quality-item"
-              style={{ color: '#c8b830' }}
-              title={`Imprecisiones: ${mistakeCounts?.inaccuracies ?? 0}`}
-            >
+            <span className="legend-quality-item" style={{ color: '#c8b830' }} title={`Imprecisiones: ${mistakeCounts?.inaccuracies ?? 0}`}>
               ?!&nbsp;{mistakeCounts?.inaccuracies ?? 0}
             </span>
           </div>
 
-          {/* Separador visual */}
           <span className="legend-separator" />
 
-          {/* Desglose por tiempo — solo iconos con número y porcentaje */}
-          <div className="legend-item pressure" title="Apuros de tiempo: menos de 40s en el reloj">
-            <Clock size={11} className="legend-icon" />
-            <span className="legend-num">{timePressure} ({pctPressure}%)</span>
-          </div>
-          <div className="legend-item precipitation" title="Precipitación: jugar rápido en menos de 3s">
-            <Zap size={11} className="legend-icon" />
-            <span className="legend-num">{precipitation} ({pctPrecipitation}%)</span>
-          </div>
-          <div className="legend-item overthinking" title="Sobrepensar: pensar más de 30s">
-            <Brain size={11} className="legend-icon" />
-            <span className="legend-num">{overthinking} ({pctOverthinking}%)</span>
-          </div>
-          <div className="legend-item tactical" title="Tácticos: errores de cálculo no relacionados al reloj">
-            <Sparkles size={11} className="legend-icon" />
-            <span className="legend-num">{tactical} ({pctTactical}%)</span>
+          {/* Tipos de error por tiempo — derecha */}
+          <div className="legend-time-icons">
+            <div className="legend-item pressure" title="Apuros de tiempo: menos de 40s en el reloj">
+              <Clock size={11} className="legend-icon" />
+              <span className="legend-num">{timePressure} ({pctPressure}%)</span>
+            </div>
+            <div className="legend-item precipitation" title="Precipitación: jugar rápido en menos de 3s">
+              <Zap size={11} className="legend-icon" />
+              <span className="legend-num">{precipitation} ({pctPrecipitation}%)</span>
+            </div>
+            <div className="legend-item overthinking" title="Sobrepensar: pensar más de 30s">
+              <Brain size={11} className="legend-icon" />
+              <span className="legend-num">{overthinking} ({pctOverthinking}%)</span>
+            </div>
+            <div className="legend-item tactical" title="Tácticos: errores de cálculo no relacionados al reloj">
+              <Sparkles size={11} className="legend-icon" />
+              <span className="legend-num">{tactical} ({pctTactical}%)</span>
+            </div>
           </div>
         </div>
       )}

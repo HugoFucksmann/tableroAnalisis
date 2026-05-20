@@ -1,7 +1,58 @@
 import React from 'react';
-import { AlertTriangle } from 'lucide-react';
 import './HistoryItem.css';
 
+const formatTimeControl = (tc) => {
+  if (!tc) return '';
+  tc = String(tc).trim();
+  if (tc === '-' || tc === '?') return '';
+
+  // Si tiene formato de tiempo HH:MM:SS o MM:SS
+  if (tc.includes(':')) {
+    const parts = tc.split(':').map(Number);
+    let totalSeconds = 0;
+    if (parts.length === 3) {
+      totalSeconds = parts[0] * 3600 + parts[1] * 60 + parts[2];
+    } else if (parts.length === 2) {
+      totalSeconds = parts[0] * 60 + parts[1];
+    }
+    if (!isNaN(totalSeconds) && totalSeconds > 0) {
+      const mins = Math.floor(totalSeconds / 60);
+      const secs = totalSeconds % 60;
+      return secs === 0 ? `${mins}m` : `${mins}m ${secs}s`;
+    }
+    return tc;
+  }
+
+  // Si tiene un formato tipo "segundos+incremento" o "minutos+incremento"
+  const plusIndex = tc.indexOf('+');
+  if (plusIndex !== -1) {
+    const baseStr = tc.substring(0, plusIndex);
+    const incStr = tc.substring(plusIndex + 1);
+    const baseVal = parseInt(baseStr, 10);
+    const incVal = parseInt(incStr, 10);
+
+    if (!isNaN(baseVal)) {
+      // Si la base es >= 60, asumimos que son segundos (ej. 300+5, 600+0)
+      if (baseVal >= 60) {
+        const mins = Math.floor(baseVal / 60);
+        return isNaN(incVal) ? `${mins}m` : `${mins}+${incVal}`;
+      }
+      // Si la base es < 60, ya está en minutos (ej. 5+0, 10+5)
+      return tc;
+    }
+  } else {
+    // Es un valor simple (ej. "300", "600", "blitz", "5m")
+    const val = parseInt(tc, 10);
+    if (!isNaN(val)) {
+      if (val >= 60) {
+        return `${Math.floor(val / 60)}m`;
+      }
+      return `${val}m`;
+    }
+  }
+
+  return tc;
+};
 
 export const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) => {
   const formattedDate = React.useMemo(() => {
@@ -13,6 +64,10 @@ export const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) =
       return '—';
     }
   }, [item.gameDate, item.date]);
+
+  const formattedTC = React.useMemo(() => {
+    return formatTimeControl(item.timeControl);
+  }, [item.timeControl]);
 
   // win is stored as integer: 1=win, 0=draw, -1=loss
   const resultLabel = item.win === 1 ? 'Victoria' : item.win === 0 ? 'Empate' : 'Derrota';
@@ -45,8 +100,8 @@ export const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) =
             <span className="hi-opponent" title="Rival">vs {opponent}</span>
           )}
           <span>{item.moveCount} jugadas</span>
-          {item.timeControl && (
-            <span className="hi-tc">{item.timeControl}</span>
+          {formattedTC && (
+            <span className="hi-tc">{formattedTC}</span>
           )}
           <span className={`hi-result-badge ${resultClass}`}>
             {resultLabel}
@@ -61,15 +116,6 @@ export const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) =
           {item.color === 'white' ? item.white?.accuracy : item.black?.accuracy}%
         </div>
         <div className="hi-acc-label">precisión</div>
-      </div>
-      <div className="hi-actions">
-        <button
-          className="hi-delete"
-          onClick={(e) => onDelete(item.id, e)}
-          title="Borrar"
-        >
-          <AlertTriangle size={13} />
-        </button>
       </div>
     </div>
   );

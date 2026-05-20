@@ -3,7 +3,7 @@ export async function fetchLichessGames(username, max = 15, until = null, token 
     const headers = { 'Accept': 'application/x-ndjson' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    let url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${max}&pgnInJson=true`;
+    let url = `https://lichess.org/api/games/user/${encodeURIComponent(username)}?max=${max}&pgnInJson=true&clocks=true`;
     if (until) url += `&until=${until}`;
 
     const res = await fetch(url, { headers, signal });

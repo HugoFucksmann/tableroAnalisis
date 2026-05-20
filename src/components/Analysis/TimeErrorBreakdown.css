@@ -9,28 +9,14 @@
   gap: var(--space-2);
 }
 
-.time-error-breakdown-wrapper.success-wrapper {
-  padding: 6px 10px;
-  background: rgba(16, 185, 129, 0.02);
-  border: 1px solid rgba(16, 185, 129, 0.05);
-  border-radius: var(--border-radius);
-  margin-top: var(--space-3);
-}
-
-/* Legend row layout */
+/* ── Legend row ──────────────────────────────────────────────────── */
 .time-legend-row {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   gap: var(--space-2);
-  flex-wrap: wrap;
 }
 
-.time-legend-row.success-row {
-  justify-content: center;
-}
-
-/* Quality icons group (?? ? ?!) */
+/* Calidad (??/?/?!) — izquierda */
 .legend-quality-icons {
   display: flex;
   align-items: center;
@@ -50,7 +36,7 @@
   opacity: 1;
 }
 
-/* Separador vertical entre grupos */
+/* Separador vertical */
 .legend-separator {
   display: inline-block;
   width: 1px;
@@ -59,7 +45,15 @@
   flex-shrink: 0;
 }
 
-/* Time-class items */
+/* Tipos de error por tiempo — derecha, empuja con margin-left: auto */
+.legend-time-icons {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+
+/* Item individual de tiempo */
 .legend-item {
   display: flex;
   align-items: center;
@@ -101,69 +95,12 @@
   color: #94a3b8;
 }
 
-.legend-text {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
 .legend-num {
   font-family: monospace;
   font-weight: 700;
-  margin-left: 2px;
 }
 
-/* Success layout */
-.legend-item-success {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.success-icon-sparkle {
-  color: var(--success-primary);
-  flex-shrink: 0;
-}
-
-.success-icon-check {
-  color: var(--success-primary);
-  flex-shrink: 0;
-}
-
-.good-decision {
-  color: var(--text-primary);
-}
-
-.good-decision .success-icon-check {
-  color: var(--warning-primary);
-}
-
-.success-text {
-  color: var(--text-secondary);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-}
-
-.animate-pulse {
-  animation: pulse-icon 2s infinite ease-in-out;
-}
-
-@keyframes pulse-icon {
-
-  0%,
-  100% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-
-  50% {
-    opacity: 1;
-    transform: scale(1.1);
-  }
-}
-
-/* Preview Card */
+/* ── Preview card ────────────────────────────────────────────────── */
 .time-error-breakdown-wrapper.preview-wrapper {
   padding: 8px 12px;
   background: rgba(139, 92, 246, 0.03);
@@ -202,7 +139,7 @@
   font-weight: 700;
 }
 
-/* No Clocks Card */
+/* ── No clocks card ──────────────────────────────────────────────── */
 .time-error-breakdown-wrapper.no-clocks-wrapper {
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.01);
@@ -230,7 +167,7 @@
   font-weight: 500;
 }
 
-/* Perfect game motivational badge */
+/* ── Perfect game badge ──────────────────────────────────────────── */
 .time-perfect-game-badge {
   display: flex;
   align-items: center;
@@ -239,7 +176,6 @@
   background: rgba(16, 185, 129, 0.05);
   border: 1px solid rgba(16, 185, 129, 0.1);
   border-radius: var(--border-radius);
-  margin-top: var(--space-2);
 }
 
 .perfect-check-icon {
@@ -251,4 +187,23 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 600;
+}
+
+/* ── Animaciones ─────────────────────────────────────────────────── */
+.animate-pulse {
+  animation: pulse-icon 2s infinite ease-in-out;
+}
+
+@keyframes pulse-icon {
+
+  0%,
+  100% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }

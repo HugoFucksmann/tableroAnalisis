@@ -54,9 +54,6 @@
 .hi-tc {
   font-size: var(--text-2xs);
   font-weight: 800;
-  padding: 1px 4px;
-  border-radius: 3px;
-  background: var(--info-glow);
   color: var(--info-primary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -65,24 +62,19 @@
 .hi-result-badge {
   font-size: var(--text-2xs);
   font-weight: 800;
-  padding: 1px 4px;
-  border-radius: 3px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .hi-result-badge.win {
-  background: var(--success-glow);
   color: var(--success-primary);
 }
 
 .hi-result-badge.draw {
-  background: rgba(245, 158, 11, 0.12);
   color: #f59e0b;
 }
 
 .hi-result-badge.loss {
-  background: var(--error-bg);
   color: var(--error-primary);
 }
 
@@ -117,27 +109,4 @@
   margin-top: 2px;
 }
 
-.hi-actions {
-  display: flex;
-  gap: 6px;
-  flex-shrink: 0;
-}
 
-.hi-delete {
-  background: var(--error-bg);
-  color: var(--error-primary);
-  border: none;
-  width: 28px;
-  height: 28px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  opacity: 0;
-  transition: var(--transition);
-}
-
-.history-item:hover .hi-delete {
-  opacity: 1;
-}
