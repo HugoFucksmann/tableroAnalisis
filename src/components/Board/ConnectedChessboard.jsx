@@ -1,7 +1,7 @@
 import React from 'react';
 import { Chessboard } from 'react-chessboard';
 import { ArrowEvalOverlay } from './ArrowEvalOverlay';
-import { useBoardArrows } from './hooks';
+import { useBoardArrows } from './hooks/useBoardArrows';
 import { getActiveColor } from '../../utils/boardUtils';
 import { useArrows } from '../../store/selectors/gameSelectors';
 import {

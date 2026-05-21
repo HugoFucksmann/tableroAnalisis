@@ -12,7 +12,7 @@ const DEFAULT_CONFIG = {
   liveDepth: 16,
   liveMultiPv: 3,
   threads: 2,
-  hash: 32,
+  hash: 512,
 };
 
 export const EngineConfigModal = ({ onClose }) => {
@@ -49,7 +49,12 @@ export const EngineConfigModal = ({ onClose }) => {
   const maxThreads = Math.max(1, (navigator.hardwareConcurrency ?? 4) - 1);
 
   return createPortal(
-    <div className="ecm-backdrop" onClick={handleBackdrop}>
+    <div
+      className="ecm-backdrop"
+      role="presentation"
+      onClick={handleBackdrop}
+      onKeyDown={(e) => { if (e.key === 'Escape') onClose(); }}
+    >
       <div className="ecm-modal premium-scroll" role="dialog" aria-modal="true" aria-label="Configuración del motor">
 
         <div className="ecm-header">
@@ -101,7 +106,7 @@ export const EngineConfigModal = ({ onClose }) => {
                 label="Memoria Hash"
                 description="Memoria total repartida entre instancias nativas"
                 value={config.hash}
-                min={16}
+                min={256}
                 max={8192}
                 step={256}
                 onChange={(v) => handleChange('hash', v)}

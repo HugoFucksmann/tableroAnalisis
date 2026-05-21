@@ -115,13 +115,6 @@
   border-color: rgba(139, 92, 246, 0.3);
 }
 
-.legend-item-preview {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-size: var(--text-sm);
-  line-height: 1.4;
-}
 
 .preview-icon {
   color: var(--accent-primary);
@@ -129,15 +122,7 @@
   margin-top: 2px;
 }
 
-.preview-text {
-  color: var(--text-secondary);
-  font-weight: 500;
-}
 
-.preview-text strong {
-  color: var(--accent-primary);
-  font-weight: 700;
-}
 
 /* ── No clocks card ──────────────────────────────────────────────── */
 .time-error-breakdown-wrapper.no-clocks-wrapper {

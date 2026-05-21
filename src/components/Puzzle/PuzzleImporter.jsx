@@ -73,7 +73,10 @@ export const PuzzleImporter = ({ onBack }) => {
 
   const handleStartExtraction = () => {
     const selectedSet = new Set(selectedGameIds);
-    const selectedGames = games.filter(g => selectedSet.has(g.id)).map(g => ({ pgn: g.pgn, gameId: g.id }));
+    const selectedGames = games.reduce((acc, g) => {
+      if (selectedSet.has(g.id)) acc.push({ pgn: g.pgn, gameId: g.id });
+      return acc;
+    }, []);
     if (selectedGames.length > 0) backendService.extractPuzzles(selectedGames, engineConfig);
   };
 
@@ -153,7 +156,15 @@ export const PuzzleImporter = ({ onBack }) => {
                     <div
                       key={game.id}
                       className={`pi-card glass-panel ${isSelected ? 'selected' : ''}`}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => toggleGameSelection(game.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleGameSelection(game.id);
+                        }
+                      }}
                     >
                       <div className="pi-card-content">
                         <span className="pi-players">{game.white} <span className="pi-vs">vs</span> {game.black}</span>

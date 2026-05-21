@@ -42,20 +42,7 @@ export const TimeErrorBreakdown = ({ mistakeCounts }) => {
     return { timePressure, precipitation, overthinking, tactical, total };
   }, [moveEvaluations, errorTimeClasses, playerColor, analysisReady]);
 
-  /* ── Estados previos al análisis ── */
-  if (!analysisReady) {
-    if (!history?.length) return null;
-    return (
-      <div className="time-error-breakdown-wrapper preview-wrapper">
-        <div className="legend-item-preview" title="Análisis de gestión de tiempo disponible">
-          <Clock size={12} className="preview-icon animate-pulse" />
-          <span className="preview-text">
-            ¿Quieres ver cómo afectó el reloj a tus jugadas? <strong>Analiza la partida</strong> para ver el desglose de errores por tiempo de reflexión.
-          </span>
-        </div>
-      </div>
-    );
-  }
+
 
   if (!hasClocks) {
     return (

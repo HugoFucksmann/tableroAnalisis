@@ -104,7 +104,7 @@ export const StatsDetailView = () => {
             {loading ? (
                 <div className="stats-detail-loading">
                     <Loader2 className="spinner" size={32} />
-                    <p>Analizando historial de posiciones...</p>
+                    <p>Analizando historial de posiciones…</p>
                 </div>
             ) : details.length === 0 ? (
                 <div className="stats-detail-empty">
@@ -114,7 +114,7 @@ export const StatsDetailView = () => {
                 <div className="stats-detail-grid">
                     {details.map((item, index) => (
                         <div 
-                            key={`${item.gameId}-${item.ply || 'null'}-${index}`} 
+                            key={`${item.gameId}-${item.ply ?? 'null'}`} 
                             className="stat-board-card"
                             role="button"
                             tabIndex={0}

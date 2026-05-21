@@ -93,6 +93,10 @@ export const PuzzlePlayer = ({ puzzles, initialIndex, onBack }) => {
                 makeMove(oppMove);
             }, 600);
         }
+
+        return () => {
+            if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
+        };
     }, [puzzleState?.currentStep, puzzleState?.isWrong]);
 
     useEffect(() => {

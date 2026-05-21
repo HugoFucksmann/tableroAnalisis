@@ -36,6 +36,18 @@ function getX(index, total) {
   return (index / (total - 1)) * (WIDTH - 2 * PADDING) + PADDING;
 }
 
+const MistakeIcon = ({ mistakeInfo }) => {
+  if (!mistakeInfo) return <AlertTriangle size={15} />;
+  const { iconName, color, label } = mistakeInfo;
+  switch (iconName) {
+    case 'time_pressure': return <Clock size={15} style={{ color }} title={label} />;
+    case 'precipitation': return <Zap size={15} style={{ color }} title={label} />;
+    case 'overthinking': return <Brain size={15} style={{ color }} title={label} />;
+    case 'tactical': return <Sparkles size={15} style={{ color }} title={label} />;
+    default: return <AlertTriangle size={15} style={{ color }} title={label} />;
+  }
+};
+
 export const EvaluationGraph = () => {
   const [onlyMyMistakes, setOnlyMyMistakes] = useState(false);
 
@@ -150,18 +162,6 @@ export const EvaluationGraph = () => {
     return { type, timeClass, iconName, color, label };
   }, [analysisReady, moveEvaluations, errorTimeClasses, currentMoveIndex]);
 
-  const renderMistakeIcon = () => {
-    if (!currentMistakeInfo) return <AlertTriangle size={15} />;
-    const { iconName, color, label } = currentMistakeInfo;
-    switch (iconName) {
-      case 'time_pressure': return <Clock size={15} style={{ color }} title={label} />;
-      case 'precipitation': return <Zap size={15} style={{ color }} title={label} />;
-      case 'overthinking': return <Brain size={15} style={{ color }} title={label} />;
-      case 'tactical': return <Sparkles size={15} style={{ color }} title={label} />;
-      default: return <AlertTriangle size={15} style={{ color }} title={label} />;
-    }
-  };
-
   const handleSvgClick = (e) => {
     if (total <= 1) return;
     const rect = e.currentTarget.getBoundingClientRect();
@@ -211,14 +211,17 @@ export const EvaluationGraph = () => {
             </button>
 
             <span
+              role="button"
+              tabIndex={0}
               className={`graph-mistake-label ${onlyMyMistakes ? 'filtered' : ''}`}
               style={currentMistakeInfo ? { color: currentMistakeInfo.color } : {}}
               onClick={() => setOnlyMyMistakes(prev => !prev)}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') setOnlyMyMistakes(prev => !prev); }}
               title={onlyMyMistakes
                 ? 'Mostrando solo tus errores. Clic para ver todos.'
                 : 'Mostrando todos los errores. Clic para filtrar solo los tuyos.'}
             >
-              {renderMistakeIcon()}
+              <MistakeIcon mistakeInfo={currentMistakeInfo} />
               <span>{onlyMyMistakes ? `Mis: ${mistakeIndices.length}` : mistakeIndices.length}</span>
             </span>
 
@@ -329,7 +332,7 @@ export const EvaluationGraph = () => {
           </div>
         ) : (
           <div className="accuracy-row accuracy-loading">
-            <span className="accuracy-loading-text">Calculando precisión...</span>
+            <span className="accuracy-loading-text">Calculando precisión…</span>
           </div>
         )
       )}

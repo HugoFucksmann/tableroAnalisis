@@ -18,7 +18,8 @@ import { useLiveEvaluation } from '../../hooks/useLiveEvaluation';
 import { useClockSync } from '../../hooks/useClockSync';
 import { useEvaluationNavigation } from '../../hooks/useEvaluationNavigation';
 
-import { useBoardInteraction, useBoardNavigation } from './hooks';
+import { useBoardInteraction } from './hooks/useBoardInteraction';
+import { useBoardNavigation } from './hooks/useBoardNavigation';
 import { useGameStore } from '../../store/useGameStore';
 import { playChessSound } from '../../utils/soundUtils';
 

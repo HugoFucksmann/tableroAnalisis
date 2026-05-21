@@ -165,7 +165,15 @@ export const PuzzleDashboard = () => {
               <div
                 key={p.id}
                 className="puzzle-card"
+                role="button"
+                tabIndex={0}
                 onClick={() => handleTrainSingle(index)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleTrainSingle(index);
+                  }
+                }}
               >
                 <div className="pc-board-wrapper">
                   <LazyChessboard fen={p.fen} orientation={orientation} />
@@ -175,7 +183,7 @@ export const PuzzleDashboard = () => {
                 </div>
                 <div className="pc-info">
                   <span className="pc-label">{label}</span>
-                  <span className="pc-meta">
+                  <span className="pc-meta" suppressHydrationWarning>
                     {p.opponent ? `vs ${p.opponent}` : (p.gameId ? `Partida ${p.gameId.slice(-6)}` : 'Manual')}
                     {p.win !== undefined && p.win !== null ? (p.win === 1 ? ' (Victoria)' : p.win === 0 ? ' (Empate)' : ' (Derrota)') : ''}
                     {p.gameDate ? ` • ${new Date(p.gameDate).toLocaleDateString()}` : ''}

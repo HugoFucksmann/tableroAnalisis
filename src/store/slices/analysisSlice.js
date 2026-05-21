@@ -28,7 +28,7 @@ export const createAnalysisSlice = (set, get) => ({
     liveDepth: 16,
     liveMultiPv: 3,
     threads: 2,
-    hash: 32,
+    hash: 512,
   },
 
   resetAnalysisState: () => set({
