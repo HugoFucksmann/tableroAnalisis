@@ -100,12 +100,13 @@ export const useFullGameAnalysis = () => {
                     return updates;
                 });
             },
-            onComplete: (accuracy, accuracyByPhase) => {
+            onComplete: (accuracy, accuracyByPhase, win) => {
                 useGameStore.setState({
                     analysisReady: true,
                     isAnalyzing: false,
                     accuracy,
-                    accuracyByPhase
+                    accuracyByPhase,
+                    gameResult: win !== undefined ? win : null,
                 });
                 backendService.getAnalyses();
             },

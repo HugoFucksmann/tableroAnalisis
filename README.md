@@ -1,92 +1,111 @@
-# ♟️ Tablero de Análisis de Ajedrez Pro
+# ♟️ Chess Analysis Platform — Frontend
 
-[![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black&style=flat-square)](https://react.dev/)
-[![Vite 8](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&style=flat-square)](https://vitejs.dev/)
-[![Node.js](https://img.shields.io/badge/Node.js-20+-339933?logo=node.js&logoColor=white&style=flat-square)](https://nodejs.org/)
-[![Zustand](https://img.shields.io/badge/Zustand-5-443E38?style=flat-square)](https://github.com/pmndrs/zustand)
-[![Stockfish](https://img.shields.io/badge/Stockfish-18-000000?logo=chess.com&logoColor=white&style=flat-square)](https://stockfishchess.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
+> Aplicación web SPA de alta fidelidad optimizada para el análisis interactivo de partidas de ajedrez, visualización de estadísticas avanzadas y gestión de repertorios tácticos mediante comunicación en tiempo real con motores de evaluación.
 
-Una plataforma de análisis de ajedrez de **alto rendimiento**, diseñada para ofrecer la potencia de un software de escritorio con la elegancia y accesibilidad de la web moderna. Optimizado para el análisis masivo de datos y la mejora técnica del jugador.
+<p align="left">
+  <img src="https://img.shields.io/badge/React_19-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React 19" />
+  <img src="https://img.shields.io/badge/Vite_8-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite 8" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=flat-square&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Zustand_5-443E38?style=flat-square&logo=react&logoColor=white" alt="Zustand 5" />
+  <img src="https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=flat-square&logo=tailwind-css&logoColor=white" alt="Tailwind CSS" />
+  <img src="https://img.shields.io/badge/Framer_Motion-F024B6?style=flat-square&logo=framer&logoColor=white" alt="Framer Motion" />
+</p>
 
-
-## ✨ Características de Vanguardia
-
-- **🚀 Arquitectura Backend-Driven**: Procesamiento pesado delegada a un motor nativo vía WebSockets para un rendimiento sin precedentes, superando las limitaciones del navegador.
-- **📊 Análisis de Precisión (Clasificación Chess.com Style)**: Algoritmo avanzado que categoriza cada movimiento:
-  - 💎 **Brillante**: El único movimiento que mantiene o gana ventaja, a menudo difícil de encontrar.
-  - 🌟 **Genial**: Movimientos excelentes que consolidan la posición.
-  - ✅ **Mejor/Excelente**: Movimientos teóricos o sólidos.
-  - ⚠️ **Inexactitud / Error / Blunder**: Identificación precisa basada en la pérdida de WinProb y evaluación absoluta.
-- **🧩 Academia de Puzzles Dinámica**: Generación automática de problemas tácticos basados exclusivamente en **tus propios errores** detectados durante el análisis.
-- **📈 Dashboard de Estadísticas "Big Data"**: Visualización de tendencias de rendimiento, precisión por apertura y detección de patrones de errores temporales (apuros de tiempo).
-- **📥 Importación Universal e Inteligente**: Sincronización instantánea con **Lichess** y **Chess.com**. Soporte para carga masiva de archivos PGN y detección inteligente de color de jugador.
-- **📝 Exportación de PGN Anotado**: Genera y descarga archivos PGN enriquecidos con comentarios del motor, evaluaciones de precisión y símbolos de jugadas (!!, ?, etc.).
-- **📖 Explorador de Teoría Integrado**: Consulta la Master Database para comparar tus líneas con la teoría de Grandes Maestros en tiempo real.
-- **🎨 Estética Premium y Flexible**: Interfaz moderna basada en *Glassmorphism*, animaciones fluidas con Framer Motion y un panel lateral ajustable para optimizar tu espacio de trabajo.
-
-## 🛠️ Stack Tecnológico
-
-| Capa | Tecnología | Rol Principal |
-| :--- | :--- | :--- |
-| **Frontend** | React 19 (Fiber) | Interfaz reactiva y renderizado de alta frecuencia. |
-| **Estado** | Zustand 5 | Gestión de estado atómica y persistencia de análisis. |
-| **Comunicación** | WebSockets (Socket.io) | Puente de baja latencia con el motor de análisis nativo. |
-| **Motor** | Stockfish 18 | Motor de ajedrez líder mundial para evaluaciones precisas. |
-| **Persistencia** | SQLite (Backend) | Almacenamiento eficiente de millones de jugadas analizadas. |
-| **Visualización** | Framer Motion & CSS3 | Animaciones de UI y sistema de diseño dinámico. |
-| **Lógica** | Chess.js v1.4 | Validación de movimientos y gestión de estado FEN/PGN. |
-
-## 🚀 Instalación y Configuración
-
-### 1. Requisitos Previos
-- Node.js 20 o superior.
-- [Backend de Análisis](https://github.com/HugoFucksmann/backendTablero) clonado y ejecutándose (necesario para el análisis remoto).
-
-### 2. Clonar e Instalar
-```bash
-# Clonar el repositorio
-git clone https://github.com/HugoFucksmann/tableroAnalisis.git
-cd tableroAnalisis
-
-# Instalar dependencias
-npm install
-```
-
-### 3. Variables de Entorno
-Crea un archivo `.env` en la raíz (opcional, para configuraciones personalizadas):
-```env
-VITE_BACKEND_URL=ws://localhost:9001
-```
-
-### 4. Iniciar Desarrollo
-```bash
-npm run dev
-```
-
-## 🏗️ Arquitectura del Sistema
-
-El proyecto implementa un patrón de **Análisis Mutex** gestionado por un `analysisBridge`. Esto asegura que:
-1. Solo una tarea de análisis (Live o Full Game) se ejecute a la vez.
-2. Las peticiones de análisis sean cancelables de forma segura (prevención de condiciones de carrera).
-3. El frontend permanezca ligero, actuando principalmente como un visualizador de los datos procesados en el backend.
-
-## 🛡️ Rendimiento y Seguridad (COOP/COEP)
-
-Para maximizar el rendimiento, la aplicación utiliza configuraciones de aislamiento de origen cruzado. Esto permite que el motor (si se usa en modo fallback WASM) aproveche múltiples hilos de CPU. 
-
-Configuraciones incluidas para despliegue en:
-- **Netlify**: `netlify.toml`
-- **Vercel**: `vercel.json`
-
-## 🛤️ Hoja de Ruta (Roadmap)
-
-- [ ] Integración de análisis de profundidad variable (Iterative Deepening).
-- [ ] Soporte para variantes de ajedrez (960, etc.).
-- [ ] Modo Multijugador local con análisis post-partida automático.
-- [ ] Exportación avanzada a PDF con diagramas de momentos críticos.
+Esta interfaz web traslada la potencia de una herramienta de análisis de escritorio al navegador web, controlando flujos de datos bidireccionales de alta frecuencia y asegurando un renderizado de tablero de alto rendimiento y baja latencia.
 
 ---
 
-Diseñado y desarrollado con pasión por el ajedrez por **Hugo Fucksmann (ElColof)**. 
-¿Tienes alguna sugerencia? ¡Los Pull Requests son bienvenidos! ♟️🔥
+## 〉 Arquitectura del Sistema y Desafíos Técnicos
+
+El desarrollo de la plataforma se centró en la optimización del rendimiento en el navegador y el manejo concurrente de estados complejos de juego:
+
+*   **Sincronización mediante Puente de Análisis (Analysis Bridge):** Se implementó un patrón de diseño tipo *Mutex* gestionado por el cliente. Esto garantiza que las solicitudes de análisis en tiempo real (Live Engine) y análisis de partidas completas (Full Game) no interfieran entre sí, cancelando procesos previos de forma segura y evitando condiciones de carrera (*race conditions*).
+*   **Aislamiento de Origen Cruzado (COOP/COEP):** Para permitir la ejecución del motor Stockfish en fallback local vía WebAssembly (WASM) multihilo, la aplicación expone cabeceras seguras (`Cross-Origin-Opener-Policy` y `Cross-Origin-Embedder-Policy`). Esto habilita al navegador el acceso a búferes de memoria compartida (`SharedArrayBuffer`), maximizando el aprovechamiento de la CPU local.
+*   **Gestión de Estado Atómica con Zustand 5:** La manipulación de árboles de variantes y evaluaciones se gestiona mediante almacenes de datos atómicos. El uso de selectores optimizados evita renderizados en cascada en el tablero táctico ante actualizaciones de centipawns de alta frecuencia generadas por el WebSocket.
+*   **Interoperabilidad Universal:** Módulos de integración con las APIs públicas de **Lichess** y **Chess.com** para importación inmediata de historiales, emparejado con un motor de parsing de PGN robusto capaz de reconstruir variantes secundarias y comentarios analíticos.
+
+---
+
+## 〉 Stack Tecnológico
+
+| Capa | Tecnología | Implementación / Rol |
+| :--- | :--- | :--- |
+| **Frontend** | React 19 (Fiber) | Reconciliación de UI ágil y manejo de ciclo de vida del tablero |
+| **Estado Global** | Zustand 5 | Estado atómico para variantes de jugadas, configuraciones y UI |
+| **Comunicación** | WebSockets (Socket.io-client) | Consumo de flujos de análisis de subprocesos externos |
+| **Visualización** | Tailwind CSS & Framer Motion | Animaciones de interfaz, transformaciones del tablero y Glassmorphism |
+| **Lógica de Ajedrez** | Chess.js (v1.4) | Motor de reglas, generación de movimientos legales y estado PGN/FEN |
+| **Optimización** | COOP/COEP Config | Soporte nativo para hilos compartidos WASM en despliegues estáticos |
+
+---
+
+## 〉 Flujo de Renderizado y Sincronización Mutex
+
+```text
+[ Interfaz de Usuario ] ──▶ [ Intento de Movimiento ] ──▶ [ Validación Legal (Chess.js) ]
+         ▲                                                             │
+         │                                                             ▼
+         │                                               [ Cancelación de Análisis Activo ]
+         │                                                             │
+         │                                                             ▼
+  [ Dibujar Tablero ] ◀─── [ WebSocket Event: Progress ] ◀─── [ Enviar FEN por Socket ]
+```
+
+---
+
+## 〉 Estructura del Proyecto
+
+La base de código prioriza el desacoplamiento de la lógica del tablero del estado visual de la aplicación, facilitando su escalabilidad y testing:
+
+```text
+tableroAnalisis/
+├── public/                 # Recursos estáticos (sonidos de piezas, assets gráficos)
+├── src/
+│   ├── api/                # Integraciones HTTP con plataformas externas (Chess.com, Lichess)
+│   ├── components/         # Componentes de interfaz estructurados por contexto
+│   │   ├── board/          # Renderizador de tablero y controles tácticos de entrada
+│   │   ├── dashboard/      # Paneles gráficos de rendimiento y visualización de Big Data
+│   │   └── sidebar/        # Configuración del motor, hilos, profundidad y líneas múltiples
+│   ├── hooks/              # Custom hooks de control (WebSockets, atajos de teclado, audio)
+│   ├── lib/                # Utilidades de conversión de formatos, parseo de PGN y comentarios
+│   ├── store/              # Almacenes de Zustand divididos por dominio (game, engine, UI)
+│   ├── App.jsx             # Punto de entrada de renderizado reactivo
+│   └── main.jsx            # Configuración de inicialización y wrappers globales
+├── vercel.json             # Cabeceras de seguridad COOP/COEP para despliegues en Vercel
+└── netlify.toml            # Cabeceras de seguridad COOP/COEP para despliegues en Netlify
+```
+
+---
+
+## 〉 Características Funcionales Destacadas
+
+*   **Dashboard Estadístico Avanzado:** Gráficos e indicadores interactivos que exponen métricas clave del jugador: precisión de juego agregada, efectividad por apertura, distribución de tipos de error y patrones de errores asociados a la gestión del tiempo.
+*   **Academia de Puzzles Integrada:** El cliente filtra localmente los análisis guardados en base de datos para identificar jugadas fallidas, aislando el tablero y proponiendo problemas de resolución interactiva basados en los errores reales del usuario.
+*   **Anotación Automática y Exportación:** Módulo de exportación que analiza las evaluaciones de Stockfish y compila un archivo PGN estándar enriquecido con la nomenclatura internacional de anotación de ajedrez (e.g., `!!` Excelente, `??` Error Grave) junto con evaluaciones numéricas adjuntas en formato de comentario.
+
+---
+
+## 〉 Configuración e Instalación
+
+### Requisitos Previos
+*   Node.js v20 o superior
+*   Instancia del [backend de análisis](https://github.com/HugoFucksmann/backendTablero) ejecutándose localmente o en un servidor accesible.
+
+### Pasos de Instalación
+
+1.  Clonar el repositorio e instalar dependencias del proyecto:
+    ```bash
+    git clone https://github.com/HugoFucksmann/tableroAnalisis.git
+    cd tableroAnalisis
+    npm install
+    ```
+2.  Configurar la URL de conexión WebSocket creando un archivo `.env` en el directorio raíz:
+    ```env
+    VITE_BACKEND_URL=ws://localhost:9001
+    ```
+3.  Iniciar el entorno local de desarrollo:
+    ```bash
+    npm run dev
+    ```
+
+La aplicación compilará los módulos de forma optimizada y levantará el cliente web, conectándose de manera asíncrona al servicio de análisis configurado.

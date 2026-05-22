@@ -107,7 +107,7 @@ class AnalysisBridge {
                 case 'move_result': onMoveResult?.(msg); break;
                 case 'opening_detected': onOpeningDetected?.(msg); break;
                 case 'complete':
-                    onComplete?.(msg.accuracy, msg.accuracyByPhase);
+                    onComplete?.(msg.accuracy, msg.accuracyByPhase, msg.win ?? null);
                     this.isRunning = false;
                     onStatus?.(false);
                     removeHandler();

@@ -53,7 +53,7 @@ export const EvaluationGraph = () => {
 
   const {
     evaluationHistory, currentMoveIndex, history, goToMove,
-    accuracy, accuracyByPhase, isAnalyzing,
+    accuracy, accuracyByPhase, gameResult, isAnalyzing,
     moveEvaluations, errorTimeClasses, analysisReady, playerColor,
   } = useGameStore(useShallow(state => ({
     evaluationHistory: state.evaluationHistory,
@@ -62,6 +62,7 @@ export const EvaluationGraph = () => {
     goToMove: state.goToMove,
     accuracy: state.accuracy,
     accuracyByPhase: state.accuracyByPhase,
+    gameResult: state.gameResult,
     isAnalyzing: state.isAnalyzing,
     moveEvaluations: state.moveEvaluations,
     errorTimeClasses: state.errorTimeClasses,
@@ -339,6 +340,13 @@ export const EvaluationGraph = () => {
 
       {analysisReady && accuracyByPhase?.length > 0 && (
         <div className="phase-accuracy-minimal-row">
+          {gameResult !== null && gameResult !== undefined && (
+            <span className={`game-result-badge game-result-badge--${
+              gameResult === 1 ? 'win' : gameResult === 0 ? 'draw' : 'loss'
+            }`}>
+              {gameResult === 1 ? 'Victoria' : gameResult === 0 ? 'Tablas' : 'Derrota'}
+            </span>
+          )}
           {accuracyByPhase.map((p) => {
             const lp = p.phase.toLowerCase();
             const color = lp.includes('apertura') ? 'var(--success-primary)'

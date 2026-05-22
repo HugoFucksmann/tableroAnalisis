@@ -16,6 +16,7 @@ export const createAnalysisSlice = (set, get) => ({
   analysisRequestId: null,
   accuracy: null,
   accuracyByPhase: null,
+  gameResult: null,
   ecoCode: '',
   openingName: 'Initial Position',
   openingPly: -1,
@@ -46,6 +47,7 @@ export const createAnalysisSlice = (set, get) => ({
     analysisRequestId: null,
     accuracy: null,
     accuracyByPhase: null,
+    gameResult: null,
     ecoCode: '',
     openingName: 'Initial Position',
     openingPly: -1,
@@ -181,6 +183,7 @@ export const createAnalysisSlice = (set, get) => ({
     const baseState = {
       accuracy: data.accuracy,
       accuracyByPhase: data.accuracyByPhase || null,
+      gameResult: data.win !== undefined ? data.win : null,
       openingName: data.opening?.name || 'Unknown',
       ecoCode: data.opening?.eco || '',
       evaluationHistory,
@@ -201,6 +204,12 @@ export const createAnalysisSlice = (set, get) => ({
           data.players.white || 'Blancas',
           data.players.black || 'Negras'
         );
+      }
+
+      // Restaurar color del jugador (perspectiva del tablero) desde los datos guardados
+      if (data.playerColor) {
+        get().setPlayerColor(data.playerColor);
+        get().setBoardOrientation(data.playerColor);
       }
 
       set({
