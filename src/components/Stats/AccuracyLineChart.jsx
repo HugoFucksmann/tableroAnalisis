@@ -1,31 +1,47 @@
 import React, { useMemo } from 'react';
 import './AccuracyLineChart.css';
 
-
 const WIDTH = 400;
 const HEIGHT = 80;
 const PADDING = 6;
 
+// Función de Media Móvil para suavizar el gráfico reduciendo el ruido visual
+const aplicarMediaMovil = (datos, ventana = 5) => {
+  if (!datos) return [];
+  return datos.map((d, index) => {
+    const inicio = Math.max(0, index - Math.floor(ventana / 2));
+    const fin = Math.min(datos.length, inicio + ventana);
+    const subConjunto = datos.slice(inicio, fin);
+
+    const suma = subConjunto.reduce((acc, curr) => acc + curr.accuracy, 0);
+    const promedio = suma / subConjunto.length;
+
+    return {
+      ...d,
+      accuracy: promedio // Reemplazamos por el valor suavizado
+    };
+  });
+};
+
 const AccuracyLineChart = ({ data }) => {
-  // ✅ FIX (rules-of-hooks): useMemo debe llamarse siempre, en el mismo orden,
-  // sin importar las condiciones. Se movió ANTES de cualquier return condicional.
-  // Internamente retorna null cuando no hay datos.
   const chartData = useMemo(() => {
     if (!data || data.length === 0) return null;
 
-    const total = data.length;
+    // Suavizamos los datos antes de calcular las coordenadas x, y
+    // Podés subir el número (ej. 7 u 8) si querés que sea todavía más curvo/suave
+    const smoothedData = aplicarMediaMovil(data, 15);
+    const total = smoothedData.length;
+
     const getY = (acc) => HEIGHT - ((acc / 100) * (HEIGHT - 2 * PADDING)) - PADDING;
     const getX = (index) => {
       if (total <= 1) return PADDING;
       return (index / (total - 1)) * (WIDTH - 2 * PADDING) + PADDING;
     };
 
-    const pts = data.map((d, i) => ({
+    const pts = smoothedData.map((d, i) => ({
       x: getX(i),
       y: getY(d.accuracy),
       val: d.accuracy,
-      // ✅ FIX (array-index-as-key): clave estable basada en datos reales.
-      // Si d tiene un id propio, usarlo aquí es aún mejor.
       key: `${d.accuracy}-${i}`,
     }));
 
@@ -88,15 +104,14 @@ const AccuracyLineChart = ({ data }) => {
           />
         )}
 
-        {/* ✅ FIX (array-index-as-key): key derivada del valor + posición, no solo índice */}
         {points.map((p) => (
           <circle
             key={p.key}
             cx={p.x}
             cy={p.y}
-            r="1.5"
+            r="1.2" // Achicado levemente para que acompañe la fluidez de la curva
             fill="#ff9800"
-            style={{ opacity: 0.8 }}
+            style={{ opacity: 0.6 }}
           />
         ))}
       </svg>

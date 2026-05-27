@@ -53,12 +53,49 @@ export const GameImport = ({ onGameSelect }) => {
     loadingId: null,
     isFetching: false,
     isFetchingMore: false,
+    isScanning: false,
     error: '',
     customPgn: '',
     batchStatus: null,
   });
 
-  const { loadingId, isFetching, isFetchingMore, error, customPgn, batchStatus } = uiState;
+  const { loadingId, isFetching, isFetchingMore, isScanning, error, customPgn, batchStatus } = uiState;
+
+  const [hideAnalyzed, setHideAnalyzed] = useState(false);
+  const [emptyPagesCount, setEmptyPagesCount] = useState(0);
+
+  // ── Derived ──────────────────────────────────────────────────────
+  // Build Set from the lightweight analysedGameIds (all entries, no LIMIT)
+  const analysedIds = useMemo(() => new Set(analysedGameIds), [analysedGameIds]);
+
+  const displayedGames = useMemo(() => {
+    if (!hideAnalyzed) return games;
+    return games.filter(g => !analysedIds.has(String(g.id)));
+  }, [games, analysedIds, hideAnalyzed]);
+
+  const allSelected = useMemo(() => {
+    if (displayedGames.length === 0) return false;
+    return displayedGames.every(g => selectedGameIds.includes(g.id));
+  }, [displayedGames, selectedGameIds]);
+
+  const handleToggleAll = useCallback(() => {
+    if (allSelected) {
+      const visibleIds = new Set(displayedGames.map(g => g.id));
+      const newSelected = selectedGameIds.filter(id => !visibleIds.has(id));
+      useGameStore.setState({ selectedGameIds: newSelected });
+    } else {
+      const newSelected = Array.from(new Set([...selectedGameIds, ...displayedGames.map(g => g.id)]));
+      useGameStore.setState({ selectedGameIds: newSelected });
+    }
+  }, [allSelected, displayedGames, selectedGameIds]);
+
+  const handleToggleHideAnalyzed = useCallback(() => {
+    setHideAnalyzed(prev => {
+      const newVal = !prev;
+      setEmptyPagesCount(0);
+      return newVal;
+    });
+  }, [setHideAnalyzed, setEmptyPagesCount]);
 
   // updateUi supports both plain patches and functional updaters (prevents stale closures)
   const updateUi = useCallback(
@@ -67,7 +104,11 @@ export const GameImport = ({ onGameSelect }) => {
   );
 
   const listRef = useRef(null);
-  const sentinelRef = useRef(null);
+  const fetchingRef = useRef(false);
+  const [sentinelNode, setSentinelNode] = useState(null);
+  const sentinelRef = useCallback((node) => {
+    setSentinelNode(node);
+  }, []);
 
   // ── Sync analysedGameIds and batch status ────────────────────────
   useEffect(() => {
@@ -97,6 +138,7 @@ export const GameImport = ({ onGameSelect }) => {
         case 'batch_analysis_cancelled':
           updateUi({ batchStatus: null });
           clearSelection();
+          setEmptyPagesCount(0); // Reset empty count so we can auto-search more after a batch completes
           // Refresh the full analysed IDs set after a batch completes
           backendService.getAnalysedIds();
           break;
@@ -107,19 +149,21 @@ export const GameImport = ({ onGameSelect }) => {
     backendService.getAnalysedIds();
 
     return () => cleanup();
-  }, [setAnalysedGameIds, clearSelection, updateUi]);
+  }, [setAnalysedGameIds, clearSelection, updateUi, setEmptyPagesCount]);
 
   // ── Handlers ─────────────────────────────────────────────────────
   const handlePlatformSwitch = (p) => {
     setSearchPlatform(p);
     resetGames();
     updateUi({ error: '' });
+    setEmptyPagesCount(0);
   };
 
   const performSearch = useCallback(async (targetUsername, targetPlatform) => {
     if (!targetUsername.trim()) return;
     updateUi({ isFetching: true, error: '' });
     resetGames();
+    setEmptyPagesCount(0);
 
     try {
       if (targetPlatform === 'lichess') {
@@ -139,38 +183,100 @@ export const GameImport = ({ onGameSelect }) => {
     } finally {
       updateUi({ isFetching: false });
     }
-  }, [lichessToken, setImportedGames, setPagination, resetGames, updateUi]);
+  }, [lichessToken, setImportedGames, setPagination, resetGames, updateUi, setEmptyPagesCount]);
 
+  // ── Fetch a single page and append unique games ──────────────────
+  // Returns: { fetchedGames, hasMore } or null on error
+  const fetchOnePage = useCallback(async () => {
+    const storeState = useGameStore.getState();
+    const currentLastTimestamp = storeState.lastTimestamp;
+    const currentChesscomPagination = storeState.chesscomPagination;
+    const currentHasMore = storeState.hasMoreGames;
+
+    if (!currentHasMore) return null;
+
+    let fetchedGames = [];
+    if (platform === 'lichess') {
+      const result = await fetchLichessGames(username.trim(), 15, currentLastTimestamp, lichessToken);
+      fetchedGames = result.games;
+      const existingIds = new Set(useGameStore.getState().importedGames.map(g => g.id));
+      appendImportedGames(fetchedGames.filter(g => !existingIds.has(g.id)));
+      setPagination({ lastTimestamp: result.lastTimestamp, chesscomPagination: null, hasMoreGames: result.hasMore });
+      return { fetchedGames, hasMore: result.hasMore };
+    } else if (platform === 'chesscom') {
+      const result = await fetchChesscomGames(username.trim(), 15, currentChesscomPagination);
+      fetchedGames = result.games;
+      const existingIds = new Set(useGameStore.getState().importedGames.map(g => g.id));
+      appendImportedGames(fetchedGames.filter(g => !existingIds.has(g.id)));
+      setPagination({ lastTimestamp: null, chesscomPagination: result.pagination, hasMoreGames: result.hasMore });
+      return { fetchedGames, hasMore: result.hasMore };
+    }
+    return null;
+  }, [platform, username, lichessToken, appendImportedGames, setPagination]);
+
+  // ── Normal scroll: load one page (used when filter is off) ───────
   const loadMore = useCallback(async () => {
-    if (isFetching || isFetchingMore || !hasMoreGames || !username) return;
+    if (fetchingRef.current || !hasMoreGames || !username) return;
+    fetchingRef.current = true;
     updateUi({ isFetchingMore: true });
     try {
-      if (platform === 'lichess') {
-        const result = await fetchLichessGames(username.trim(), 15, lastTimestamp, lichessToken);
-        appendImportedGames(result.games);
-        setPagination({ lastTimestamp: result.lastTimestamp, chesscomPagination, hasMoreGames: result.hasMore });
-      } else if (platform === 'chesscom') {
-        const result = await fetchChesscomGames(username.trim(), 15, chesscomPagination);
-        appendImportedGames(result.games);
-        setPagination({ lastTimestamp: null, chesscomPagination: result.pagination, hasMoreGames: result.hasMore });
-      }
+      await fetchOnePage();
     } catch (err) {
       console.error('Error loading more games:', err);
     } finally {
+      fetchingRef.current = false;
       updateUi({ isFetchingMore: false });
     }
-  }, [isFetching, isFetchingMore, hasMoreGames, username, platform, lastTimestamp, chesscomPagination, lichessToken, appendImportedGames, setPagination, updateUi]);
+  }, [hasMoreGames, username, fetchOnePage, updateUi]);
+
+  // ── Filter scan: loop pages until unanalyzed games found ─────────
+  // Reads analysedIds from Zustand to always have the latest set.
+  const scanUntilUnanalyzed = useCallback(async () => {
+    if (fetchingRef.current || !username) return;
+    if (!useGameStore.getState().hasMoreGames) return;
+
+    fetchingRef.current = true;
+    updateUi({ isScanning: true, isFetchingMore: false });
+    try {
+      while (true) {
+        const currentAnalysedIds = new Set(useGameStore.getState().analysedGameIds.map(String));
+        const result = await fetchOnePage();
+        if (!result) break;
+
+        const { fetchedGames, hasMore } = result;
+        const foundUnanalysed = fetchedGames.some(g => !currentAnalysedIds.has(String(g.id)));
+        if (foundUnanalysed) break;
+        if (!hasMore) break;
+
+        // Small delay between pages to avoid rate-limiting
+        await new Promise(r => setTimeout(r, 300));
+      }
+    } catch (err) {
+      console.error('Error scanning for unanalyzed games:', err);
+    } finally {
+      fetchingRef.current = false;
+      updateUi({ isScanning: false });
+    }
+  }, [username, fetchOnePage, updateUi]);
 
   // Infinite scroll observer
   useEffect(() => {
-    if (!hasMoreGames || isFetching) return;
+    if (!hasMoreGames || isFetching || !sentinelNode) return;
     const observer = new IntersectionObserver(
-      (entries) => { if (entries[0].isIntersecting && !isFetchingMore) loadMore(); },
+      (entries) => {
+        if (entries[0].isIntersecting && !fetchingRef.current) {
+          if (hideAnalyzed) {
+            scanUntilUnanalyzed();
+          } else {
+            loadMore();
+          }
+        }
+      },
       { root: listRef.current, rootMargin: '200px', threshold: 0.1 }
     );
-    if (sentinelRef.current) observer.observe(sentinelRef.current);
+    observer.observe(sentinelNode);
     return () => observer.disconnect();
-  }, [hasMoreGames, isFetching, isFetchingMore, loadMore]);
+  }, [hasMoreGames, isFetching, loadMore, scanUntilUnanalyzed, hideAnalyzed, sentinelNode]);
 
   // Auto-search logic
   const lastSearchRef = useRef({ username: '', platform: '' });
@@ -225,21 +331,6 @@ export const GameImport = ({ onGameSelect }) => {
     }
   };
 
-  // ── Derived ──────────────────────────────────────────────────────
-  // Build Set from the lightweight analysedGameIds (all entries, no LIMIT)
-  const analysedIds = useMemo(() => new Set(analysedGameIds), [analysedGameIds]);
-
-  const unanalysedIds = useMemo(() =>
-    games.reduce((acc, g) => {
-      if (!analysedIds.has(String(g.id))) acc.push(g.id);
-      return acc;
-    }, []), [games, analysedIds]);
-
-  const allSelected = games.length > 0 && (
-    (unanalysedIds.length > 0 && unanalysedIds.every(id => selectedGameIds.includes(id))) ||
-    (selectedGameIds.length > 0 && selectedGameIds.length === games.length)
-  );
-
   return (
     <div className="gi-root">
       <div className="gi-header-bar">
@@ -265,15 +356,19 @@ export const GameImport = ({ onGameSelect }) => {
             error={error}
             listTitle={username ? `Partidas de ${username}` : 'Búsqueda de partidas'}
             allSelected={allSelected}
-            onToggleAll={() => allSelected ? clearSelection() : selectAllGames()}
+            onToggleAll={handleToggleAll}
             analysedIds={analysedIds}
             selectedGameIds={selectedGameIds}
             loadingId={loadingId}
             onToggleGameSelection={toggleGameSelection}
             onLoadGame={handleLoadGame}
             isFetchingMore={isFetchingMore}
+            isScanning={isScanning}
             listRef={listRef}
             sentinelRef={sentinelRef}
+            hideAnalyzed={hideAnalyzed}
+            onToggleHideAnalyzed={handleToggleHideAnalyzed}
+            hasMoreGames={hasMoreGames}
           />
 
           <BatchProgressOverlay batchStatus={batchStatus} onCancel={() => backendService.cancel()} />
