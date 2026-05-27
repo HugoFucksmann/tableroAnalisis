@@ -19,7 +19,7 @@ export const GameCard = ({
         title="Seleccionar para acción masiva"
         aria-label={isSelected ? 'Deseleccionar partida' : 'Seleccionar partida'}
       >
-        {isSelected ? <CheckSquare size={15} /> : <Square size={15} />}
+        {isSelected ? <CheckSquare className="gi-card-icon" /> : <Square className="gi-card-icon" />}
       </button>
 
       <button
@@ -37,12 +37,12 @@ export const GameCard = ({
           <div className="gi-card-status">
             {isAnalyzed && (
               <span className="gi-analyzed-badge" title="Partida analizada">
-                <Zap size={10} fill="currentColor" />
+                <Zap className="gi-card-icon-xs" fill="currentColor" />
               </span>
             )}
             {loadingId === game.id
-              ? <Loader size={13} className="gi-spin" />
-              : <ExternalLink size={13} className="gi-ext-icon" />}
+              ? <Loader className="gi-card-icon gi-spin" />
+              : <ExternalLink className="gi-card-icon gi-ext-icon" />}
           </div>
         </div>
       </button>

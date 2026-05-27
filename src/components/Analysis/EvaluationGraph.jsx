@@ -199,7 +199,7 @@ export const EvaluationGraph = () => {
           {isAnalyzing && <span className="graph-analyzing-dot" title="Analizando..." />}
         </div>
 
-        {/* Navegación de errores — sin caja/botón switch, solo contador y flechas */}
+        {/* Navegación de errores */}
         {analysisReady && mistakeIndices.length > 0 && (
           <div className="graph-mistake-nav">
             <button
@@ -341,9 +341,8 @@ export const EvaluationGraph = () => {
       {analysisReady && accuracyByPhase?.length > 0 && (
         <div className="phase-accuracy-minimal-row">
           {gameResult !== null && gameResult !== undefined && (
-            <span className={`game-result-badge game-result-badge--${
-              gameResult === 1 ? 'win' : gameResult === 0 ? 'draw' : 'loss'
-            }`}>
+            <span className={`game-result-badge game-result-badge--${gameResult === 1 ? 'win' : gameResult === 0 ? 'draw' : 'loss'
+              }`}>
               {gameResult === 1 ? 'Victoria' : gameResult === 0 ? 'Tablas' : 'Derrota'}
             </span>
           )}

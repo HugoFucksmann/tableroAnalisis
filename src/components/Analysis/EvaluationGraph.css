@@ -1,7 +1,7 @@
 /* EvaluationGraph.css */
 
 .evaluation-graph-container {
-  padding: var(--space-2) var(--space-4) var(--space-2) var(--space-6);
+  padding: var(--space-2) var(--space-4);
 }
 
 .evaluation-graph-container:hover {
@@ -89,14 +89,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 1.5rem;
+  height: 1.5rem;
   border: none;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.2s ease;
+  border-radius: 4px;
+  transition: var(--transition);
 }
 
 .graph-nav-btn:hover:not(:disabled) {
@@ -109,12 +109,12 @@
   cursor: default;
 }
 
-/* Contador de errores — sin caja, solo texto + icono */
+/* Contador de errores */
 .graph-mistake-label {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: var(--text-sm);
+  gap: 4px;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: var(--warning-primary);
   cursor: pointer;
@@ -241,20 +241,25 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-5);
+  gap: var(--space-2);
+  /* Reducido de space-5 para evitar desbordamientos */
   margin-top: var(--space-2);
+  flex-wrap: wrap;
+  /* Permite saltos de línea elegantes si el panel es muy angosto */
 }
 
 .phase-accuracy-minimal-item {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--text-xs);
+  gap: var(--space-1);
+  /* Espaciado más compacto */
+  font-size: var(--text-2xs);
+  /* Reducido de text-xs para ajustarse al layout */
 }
 
 .phase-accuracy-dot {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -271,11 +276,13 @@
 
 /* ── Game Result Badge ───────────────────────────────────────────── */
 .game-result-badge {
-  font-size: var(--text-xs);
+  font-size: var(--text-2xs);
+  /* Reducido de text-xs para que nunca se desborde */
   font-weight: 700;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
-  padding: 2px 8px;
+  padding: 1px 6px;
+  /* Padding más compacto */
   border-radius: 999px;
   border: 1px solid transparent;
   flex-shrink: 0;
@@ -283,8 +290,15 @@
 }
 
 @keyframes fade-in-badge {
-  from { opacity: 0; transform: scale(0.9); }
-  to   { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .game-result-badge--win {
@@ -294,13 +308,13 @@
 }
 
 .game-result-badge--draw {
-  color: var(--text-muted);
+  color: var(--text-secondary);
   background: rgba(255, 255, 255, 0.06);
   border-color: rgba(255, 255, 255, 0.12);
 }
 
 .game-result-badge--loss {
-  color: var(--error-primary, #e05555);
-  background: rgba(224, 85, 85, 0.12);
-  border-color: rgba(224, 85, 85, 0.25);
-}
+  color: var(--error-primary);
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.25);
+}

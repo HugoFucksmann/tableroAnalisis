@@ -17,7 +17,7 @@
     transform: translate(-50%, -50%);
 
     font-family: 'ui-monospace', 'SFMono-Regular', 'Menlo', monospace;
-    font-size: 10px;
+    font-size: 0.625rem; /* 10px equivalent, scales with root */
     font-weight: 700;
     line-height: 1;
     letter-spacing: -0.02em;

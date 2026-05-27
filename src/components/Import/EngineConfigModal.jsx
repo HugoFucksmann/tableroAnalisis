@@ -79,7 +79,7 @@ export const EngineConfigModal = ({ onClose }) => {
           {!isConnected && (
             <div className="ecm-section" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', padding: '12px', borderRadius: '8px', border: '1px solid rgba(245, 158, 11, 0.2)', marginBottom: '16px' }}>
               <h4 className="ecm-section-title" style={{ color: '#f59e0b', marginBottom: '4px' }}>Desconectado</h4>
-              <p style={{ fontSize: '12px', color: '#fbbf24', margin: 0 }}>
+              <p style={{ fontSize: '0.75rem', color: '#fbbf24', margin: 0 }}>
                 No se pudo conectar con el backend en <code>ws://localhost:9001</code>. 
                 Asegúrate de que el servidor Node.js esté ejecutándose.
               </p>

@@ -33,7 +33,7 @@ export const PlatformSelector = ({ platform, onPlatformSwitch }) => {
         onClick={() => onPlatformSwitch('pgn')}
         title="PGN Manual"
       >
-        <FileText size={16} className="gi-platform-icon" />
+        <FileText className="gi-platform-icon" />
       </button>
     </div>
   );

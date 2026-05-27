@@ -138,11 +138,11 @@ export const StatsDetailView = () => {
                                 >
                                     {item.win === 1 ? 'Victoria' : item.win === -1 ? 'Derrota' : 'Empate'} vs {item.opponent || 'Desconocido'}
                                 </span>
-                                <span className="sbi-date" style={{ fontSize: '0.8rem', color: '#888' }}>
+                                <span className="sbi-date" style={{ fontSize: 'var(--text-xs)', color: '#888' }}>
                                     {item.date ? new Date(item.date).toLocaleDateString() : 'Sin fecha'}
                                 </span>
                                 {item.opening && (
-                                    <span className="sbi-opening" style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    <span className="sbi-opening" style={{ fontSize: 'var(--text-xs)', color: '#aaa', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                         {item.eco ? `${item.eco} - ` : ''}{item.opening}
                                     </span>
                                 )}
