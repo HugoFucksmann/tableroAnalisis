@@ -4,6 +4,7 @@ import { BoardControls } from '../Board/BoardControls';
 import { MoveList } from '../History/MoveList';
 import { OpeningExplorer } from './OpeningExplorer';
 import { GameImport } from '../Import/GameImport';
+import { BotPanel } from './BotPanel';
 import { Key, Cpu, Download, Bot, Sliders } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
@@ -72,10 +73,7 @@ export const AnalysisPanels = ({
         </div>
         <div className="controls-content">
           {analysisSubView === 'bot' ? (
-            <div className="bot-panel-placeholder" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
-              <Bot size={36} style={{ marginBottom: '12px', opacity: 0.6 }} />
-              <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>Panel del Bot (Próximamente)</p>
-            </div>
+            <BotPanel />
           ) : (
             <>
               <EvaluationGraph />

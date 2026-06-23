@@ -1,3 +1,5 @@
+import { replayTo } from '../../utils/chessUtils';
+
 export const createUISlice = (set, get) => ({
   clocks: { white: null, black: null },
   players: { white: 'Blancas', black: 'Negras' },
@@ -42,4 +44,52 @@ export const createUISlice = (set, get) => ({
 
   analysisSubView: 'analysis',
   setAnalysisSubView: (view) => set({ analysisSubView: view }),
+
+  botActive: false,
+  botDifficulty: 'intermediate',
+  botColor: 'black',
+  botActualColor: 'black',
+  botMemory: {},
+
+  setBotActive: (active) => set({ botActive: active }),
+  setBotDifficulty: (diff) => set({ botDifficulty: diff }),
+  setBotColor: (color) => set({ botColor: color }),
+  setBotActualColor: (color) => set({ botActualColor: color }),
+  clearBotMemory: () => set({ botMemory: {} }),
+  addBotMemoryDiscard: (fen, move) => set((state) => {
+    const current = state.botMemory[fen] || [];
+    if (current.includes(move)) return state;
+    return { botMemory: { ...state.botMemory, [fen]: [...current, move] } };
+  }),
+
+  takebackBotMove: () => {
+    const state = get();
+    if (state.history.length === 0) return;
+    
+    const lastMoveIdx = state.history.length - 1;
+    const lastMove = state.history[lastMoveIdx];
+    
+    // Si es el turno del bot (o acaba de mover el bot), el último movimiento en el historial es del bot.
+    const isBotTurn = (lastMoveIdx % 2 === 1 && state.botActualColor === 'black') || 
+                      (lastMoveIdx % 2 === 0 && state.botActualColor === 'white');
+    
+    if (isBotTurn) {
+      const beforeMoveIndex = lastMoveIdx - 1;
+      const beforeFen = beforeMoveIndex === -1 ? state.startFen || 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1' : state.history[beforeMoveIndex].after;
+      
+      get().addBotMemoryDiscard(beforeFen, lastMove.san);
+      get().addBotMemoryDiscard(beforeFen, lastMove.lan ?? (lastMove.from + lastMove.to + (lastMove.promotion || '')));
+      
+      get().trimAnalysisState(beforeMoveIndex);
+      
+      const gameCopy = replayTo(state.history, beforeMoveIndex, state.startFen);
+      set({
+        game: gameCopy,
+        fen: gameCopy.fen(),
+        history: state.history.slice(0, beforeMoveIndex + 1),
+        currentMoveIndex: beforeMoveIndex,
+        arrows: [],
+      });
+    }
+  }
 });

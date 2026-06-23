@@ -13,6 +13,7 @@ import { StatsDetailView } from '../Stats/StatsDetailView';
 import { AnalysisPanels } from '../Analysis/AnalysisPanels';
 import { usePanelManagement, useSidebarResize } from '../../hooks/useDashboardLayout';
 import { useBackendSync } from '../../hooks/useBackendSync';
+import { useBotGame } from '../../hooks/useBotGame';
 import { useState } from 'react';
 import './Dashboard.css';
 
@@ -29,6 +30,8 @@ export const Dashboard = () => {
 
   // Sincronización de eventos de red y análisis con el backend
   useBackendSync();
+  // Gestión de jugadas automáticas del bot de ajedrez
+  useBotGame();
 
   const {
     appMode, selectedStatCategory
