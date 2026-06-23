@@ -515,3 +515,42 @@ body.is-resizing {
     min-height: 10rem;
   }
 }
+
+/* ── Analysis view toggle (bot / analysis) ───────────────────────── */
+.analysis-view-toggle {
+  display: flex;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  padding: 3px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.analysis-view-toggle .view-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition);
+  flex-shrink: 0;
+}
+
+.analysis-view-toggle .view-btn:hover {
+  color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.analysis-view-toggle .view-btn.active {
+  background: var(--accent-glow);
+  color: var(--accent-primary);
+}
+
+.bot-panel-placeholder {
+  animation: fadeIn 0.4s ease-out;
+}

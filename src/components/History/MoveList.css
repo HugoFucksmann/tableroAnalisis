@@ -148,3 +148,27 @@
   font-style: italic;
   font-size: var(--text-sm);
 }
+
+/* ── Eval spinner animation ──────────────────────────────────────── */
+.eval-loading-spinner {
+  background: var(--bg-surface-elevated, #242526);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.eval-loading-spinner::after {
+  content: '';
+  box-sizing: border-box;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  border: 1px solid transparent;
+  border-top-color: var(--accent-primary, #ff9800);
+  border-right-color: var(--accent-primary, #ff9800);
+  animation: eval-spinner-rotate 0.6s linear infinite;
+}
+
+@keyframes eval-spinner-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}

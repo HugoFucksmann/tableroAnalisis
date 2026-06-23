@@ -39,4 +39,7 @@ export const createUISlice = (set, get) => ({
 
   targetPly: null,
   setTargetPly: (ply) => set({ targetPly: ply }),
+
+  analysisSubView: 'analysis',
+  setAnalysisSubView: (view) => set({ analysisSubView: view }),
 });

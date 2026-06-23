@@ -4,7 +4,7 @@ import { BoardControls } from '../Board/BoardControls';
 import { MoveList } from '../History/MoveList';
 import { OpeningExplorer } from './OpeningExplorer';
 import { GameImport } from '../Import/GameImport';
-import { Key, Cpu, Download } from 'lucide-react';
+import { Key, Cpu, Download, Bot, Sliders } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
@@ -25,7 +25,9 @@ export const AnalysisPanels = ({
     openingName,
     lichessToken,
     showTokenInput,
-    setShowTokenInput
+    setShowTokenInput,
+    analysisSubView,
+    setAnalysisSubView
   } = useGameStore(useShallow(state => ({
     history: state.history,
     analysisReady: state.analysisReady,
@@ -34,7 +36,9 @@ export const AnalysisPanels = ({
     openingName: state.openingName,
     lichessToken: state.lichessToken,
     showTokenInput: state.showTokenInput,
-    setShowTokenInput: state.setShowTokenInput
+    setShowTokenInput: state.setShowTokenInput,
+    analysisSubView: state.analysisSubView,
+    setAnalysisSubView: state.setAnalysisSubView
   })));
 
   const explorerTitle = (openingName && openingName !== 'Initial Position') ? openingName : 'Explorador';
@@ -47,12 +51,37 @@ export const AnalysisPanels = ({
   return (
     <>
       <div className="panel-container controls-panel">
-        <div className="panel-header">
-          <h3>Análisis</h3>
+        <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <h3>{analysisSubView === 'analysis' ? 'Análisis' : 'Bot'}</h3>
+          <div className="analysis-view-toggle">
+            <button
+              className={`view-btn ${analysisSubView === 'analysis' ? 'active' : ''}`}
+              onClick={() => setAnalysisSubView('analysis')}
+              title="Panel de Análisis"
+            >
+              <Sliders size={14} />
+            </button>
+            <button
+              className={`view-btn ${analysisSubView === 'bot' ? 'active' : ''}`}
+              onClick={() => setAnalysisSubView('bot')}
+              title="Panel del Bot"
+            >
+              <Bot size={14} />
+            </button>
+          </div>
         </div>
         <div className="controls-content">
-          <EvaluationGraph />
-          <BoardControls />
+          {analysisSubView === 'bot' ? (
+            <div className="bot-panel-placeholder" style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)' }}>
+              <Bot size={36} style={{ marginBottom: '12px', opacity: 0.6 }} />
+              <p style={{ margin: 0, fontSize: 'var(--text-sm)' }}>Panel del Bot (Próximamente)</p>
+            </div>
+          ) : (
+            <>
+              <EvaluationGraph />
+              <BoardControls />
+            </>
+          )}
         </div>
       </div>
 

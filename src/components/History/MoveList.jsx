@@ -31,14 +31,16 @@ const RenderMove = ({ move, side, currentMoveIndex, goToMove }) => {
         {piece && <span className={`piece-icon ${side}`}>{getPieceIcon(piece, side)}</span>}
         <span className="move-text">{moveText}</span>
       </span>
-      {config && (
+      {move.loading ? (
+        <span className="eval-icon eval-loading-spinner" title="Analizando..."></span>
+      ) : config ? (
         <span
           className="eval-icon"
           style={{ color: config.color, backgroundColor: config.bg }}
         >
           {config.icon}
         </span>
-      )}
+      ) : null}
     </div>
   );
 };
@@ -51,6 +53,8 @@ export const MoveList = () => {
     goToMove,
     isExploreMode,
     restoreMainLine,
+    isAnalyzing,
+    isReviewRequested,
   } = useGameStore(useShallow(state => ({
     history: state.history,
     moveEvaluations: state.moveEvaluations,
@@ -58,6 +62,8 @@ export const MoveList = () => {
     goToMove: state.goToMove,
     isExploreMode: state.isExploreMode,
     restoreMainLine: state.restoreMainLine,
+    isAnalyzing: state.isAnalyzing,
+    isReviewRequested: state.isReviewRequested,
   })));
 
   const scrollRef = useRef(null);
@@ -75,16 +81,31 @@ export const MoveList = () => {
   const movePairs = useMemo(() => {
     const pairs = [];
     for (let i = 0; i < history.length; i += 2) {
+      const isWhiteLoading = isAnalyzing && (isReviewRequested || currentMoveIndex === i) && !moveEvaluations[i];
+      const isBlackLoading = isAnalyzing && (isReviewRequested || currentMoveIndex === i + 1) && !moveEvaluations[i + 1];
+
       pairs.push({
         round: Math.floor(i / 2) + 1,
-        white: { ...history[i], san: getSan(history[i]), index: i, eval: moveEvaluations[i] },
+        white: {
+          ...history[i],
+          san: getSan(history[i]),
+          index: i,
+          eval: moveEvaluations[i],
+          loading: isWhiteLoading,
+        },
         black: history[i + 1]
-          ? { ...history[i + 1], san: getSan(history[i + 1]), index: i + 1, eval: moveEvaluations[i + 1] }
+          ? {
+              ...history[i + 1],
+              san: getSan(history[i + 1]),
+              index: i + 1,
+              eval: moveEvaluations[i + 1],
+              loading: isBlackLoading,
+            }
           : null,
       });
     }
     return pairs;
-  }, [history, moveEvaluations]);
+  }, [history, moveEvaluations, isAnalyzing, isReviewRequested, currentMoveIndex]);
 
   return (
     <div className="move-list-container premium-scroll">
