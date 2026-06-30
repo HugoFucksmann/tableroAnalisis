@@ -14,6 +14,9 @@ const getWhiteWinProb = (score, mate, isBlackTurn) => {
 export const useLiveEvaluation = () => {
     const fen = useGameStore(state => state.fen);
     const currentMoveIndex = useGameStore(state => state.currentMoveIndex);
+    const botActive = useGameStore(state => state.botActive);
+    const botActualColor = useGameStore(state => state.botActualColor);
+    const history = useGameStore(state => state.history);
 
     const setAnalyzing = useGameStore(state => state.setAnalyzing);
     const setEvaluation = useGameStore(state => state.setEvaluation);
@@ -40,6 +43,13 @@ export const useLiveEvaluation = () => {
 
         if (currentMoveIndex < -1 || isFullGameAnalysisRunning) return;
 
+        // Evitar colisión si el bot está jugando y es su turno
+        const isWhiteTurn = !fen.includes(' b ');
+        const isBotTurn = botActive && ((isWhiteTurn && botActualColor === 'white') || (!isWhiteTurn && botActualColor === 'black'));
+        const isAtEnd = currentMoveIndex === history.length - 1;
+
+        if (isBotTurn && isAtEnd) return;
+
         let isActive = true;
 
         analysisBridge.analyzePosition(fen, currentMoveIndex, {
@@ -59,39 +69,41 @@ export const useLiveEvaluation = () => {
                             updates.evaluation = normalized;
                         }
 
-                        // Classify the move if we have the previous evaluation
-                        const i = result.moveIndex;
-                        if (i >= 0) {
-                            const beforeEval = updates.evaluationHistory[i - 1] || state.evaluationHistory[i - 1];
-                            const movePlayed = state.history[i];
-                            if (beforeEval && movePlayed) {
-                                const isWhiteMove = (i % 2 === 0);
-                                const wpBefore = getWhiteWinProb(beforeEval.score, beforeEval.mate, !isWhiteMove);
-                                const wpAfter = getWhiteWinProb(normalized.score, normalized.mate, isWhiteMove);
-                                const rawWpLoss = isWhiteMove ? (wpBefore - wpAfter) : (wpAfter - wpBefore);
+                        // Classify the move if we have the previous evaluation (only on final position_result)
+                        if (result.type === 'position_result') {
+                            const i = result.moveIndex;
+                            if (i >= 0) {
+                                const beforeEval = updates.evaluationHistory[i - 1] || state.evaluationHistory[i - 1];
+                                const movePlayed = state.history[i];
+                                if (beforeEval && movePlayed) {
+                                    const isWhiteMove = (i % 2 === 0);
+                                    const wpBefore = getWhiteWinProb(beforeEval.score, beforeEval.mate, !isWhiteMove);
+                                    const wpAfter = getWhiteWinProb(normalized.score, normalized.mate, isWhiteMove);
+                                    const rawWpLoss = isWhiteMove ? (wpBefore - wpAfter) : (wpAfter - wpBefore);
 
-                                const bestMoveBefore = state.bestMoves[i - 1];
-                                const playedLan = movePlayed.lan ?? (movePlayed.from + movePlayed.to + (movePlayed.promotion || ''));
-                                const isEngineBest = bestMoveBefore && (playedLan === bestMoveBefore);
+                                    const bestMoveBefore = state.bestMoves[i - 1];
+                                    const playedLan = movePlayed.lan ?? (movePlayed.from + movePlayed.to + (movePlayed.promotion || ''));
+                                    const isEngineBest = bestMoveBefore && (playedLan === bestMoveBefore);
 
-                                let label = 'Excelente';
-                                if (isEngineBest && rawWpLoss <= -0.05) {
-                                    label = 'Brillante';
-                                } else if (isEngineBest) {
-                                    label = 'Mejor';
-                                } else {
-                                    const wpLoss = Math.max(0, rawWpLoss);
-                                    if (wpLoss <= 0.02) label = 'Excelente';
-                                    else if (wpLoss <= 0.05) label = 'Bueno';
-                                    else if (wpLoss <= 0.10) label = 'Imprecisión';
-                                    else if (wpLoss <= 0.20) label = 'Error';
-                                    else label = 'Error grave';
+                                    let label = 'Excelente';
+                                    if (isEngineBest && rawWpLoss <= -0.05) {
+                                        label = 'Brillante';
+                                    } else if (isEngineBest) {
+                                        label = 'Mejor';
+                                    } else {
+                                        const wpLoss = Math.max(0, rawWpLoss);
+                                        if (wpLoss <= 0.02) label = 'Excelente';
+                                        else if (wpLoss <= 0.05) label = 'Bueno';
+                                        else if (wpLoss <= 0.10) label = 'Imprecisión';
+                                        else if (wpLoss <= 0.20) label = 'Error';
+                                        else label = 'Error grave';
+                                    }
+
+                                    updates.moveEvaluations = {
+                                        ...state.moveEvaluations,
+                                        [i]: label
+                                    };
                                 }
-
-                                updates.moveEvaluations = {
-                                    ...state.moveEvaluations,
-                                    [i]: label
-                                };
                             }
                         }
                     }
@@ -116,5 +128,5 @@ export const useLiveEvaluation = () => {
             isActive = false;
             analysisBridge.cancel();
         };
-    }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing, appMode, isConnected]);
+    }, [fen, currentMoveIndex, setEvaluation, setBestMoveForIndex, setAlternativeLinesForIndex, setAnalyzing, appMode, isConnected, botActive, botActualColor, history]);
 };

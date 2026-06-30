@@ -2,6 +2,14 @@ import { useEffect, useRef } from 'react';
 import { useGameStore } from '../store/useGameStore';
 import { analysisBridge } from '../services/analysisBridge';
 
+const getWhiteWinProb = (score, mate, isBlackTurn) => {
+    if (mate !== null && mate !== undefined) {
+        return (mate > 0) === !isBlackTurn ? 1.0 : 0.0;
+    }
+    const cpWhite = score * 100;
+    return 1 / (1 + Math.exp(-0.00368208 * cpWhite));
+};
+
 export const useBotGame = () => {
     const fen = useGameStore(state => state.fen);
     const currentMoveIndex = useGameStore(state => state.currentMoveIndex);
@@ -15,7 +23,10 @@ export const useBotGame = () => {
     const isBotThinking = useRef(false);
 
     useEffect(() => {
-        if (!botActive) return;
+        if (!botActive) {
+            isBotThinking.current = false;
+            return;
+        }
 
         // Determine whose turn it is
         const isWhiteTurn = !fen.includes(' b ');
@@ -40,8 +51,70 @@ export const useBotGame = () => {
                 elo: elo,
                 depth: 12,
                 multiPv: 4, // Get top 4 moves to allow discarded alternatives
-            }, {
+                onStatus: (status) => {
+                    useGameStore.getState().setAnalyzing(status);
+                    if (!status) {
+                        isBotThinking.current = false;
+                    }
+                },
                 onResult: (result) => {
+                    // Update score/mate for the evaluation bar on both progress and final result
+                    if (result.score !== undefined) {
+                        useGameStore.setState((state) => {
+                            const normalized = { score: result.score, mate: result.mate };
+                            const updates = {
+                                evaluationHistory: {
+                                    ...state.evaluationHistory,
+                                    [result.moveIndex]: { moveIndex: result.moveIndex, ...normalized }
+                                }
+                            };
+                            if (result.moveIndex === state.currentMoveIndex) {
+                                updates.evaluation = normalized;
+                            }
+
+                            // Classify the user's move (only on final position_result)
+                            if (result.type === 'position_result') {
+                                const i = result.moveIndex;
+                                if (i >= 0) {
+                                    const beforeEval = updates.evaluationHistory[i - 1] || state.evaluationHistory[i - 1];
+                                    const movePlayed = state.history[i];
+                                    if (beforeEval && movePlayed) {
+                                        const isWhiteMove = (i % 2 === 0);
+                                        const wpBefore = getWhiteWinProb(beforeEval.score, beforeEval.mate, !isWhiteMove);
+                                        const wpAfter = getWhiteWinProb(normalized.score, normalized.mate, isWhiteMove);
+                                        const rawWpLoss = isWhiteMove ? (wpBefore - wpAfter) : (wpAfter - wpBefore);
+
+                                        const bestMoveBefore = state.bestMoves[i - 1];
+                                        const playedLan = movePlayed.lan ?? (movePlayed.from + movePlayed.to + (movePlayed.promotion || ''));
+                                        const isEngineBest = bestMoveBefore && (playedLan === bestMoveBefore);
+
+                                        let label = 'Excelente';
+                                        if (isEngineBest && rawWpLoss <= -0.05) {
+                                            label = 'Brillante';
+                                        } else if (isEngineBest) {
+                                            label = 'Mejor';
+                                        } else {
+                                            const wpLoss = Math.max(0, rawWpLoss);
+                                            if (wpLoss <= 0.02) label = 'Excelente';
+                                            else if (wpLoss <= 0.05) label = 'Bueno';
+                                            else if (wpLoss <= 0.10) label = 'Imprecisión';
+                                            else if (wpLoss <= 0.20) label = 'Error';
+                                            else label = 'Error grave';
+                                        }
+
+                                        updates.moveEvaluations = {
+                                            ...state.moveEvaluations,
+                                            [i]: label
+                                        };
+                                    }
+                                }
+                            }
+                            return updates;
+                        });
+                    }
+
+                    if (result.type !== 'position_result') return;
+
                     isBotThinking.current = false;
 
                     const discarded = botMemory[fen] || [];

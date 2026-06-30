@@ -40,20 +40,22 @@ export const BotPanel = () => {
     resetGame();
     clearBotMemory();
 
-    // Determine actual color
-    let actualColor = botColor;
+    // Determine player's chosen color
+    let playerColorChoice = botColor;
     if (botColor === 'random') {
-      actualColor = Math.random() < 0.5 ? 'white' : 'black';
+      playerColorChoice = Math.random() < 0.5 ? 'white' : 'black';
     }
 
-    setBotActualColor(actualColor);
+    // Bot actual color is the opposite of the player color choice
+    const calculatedBotColor = playerColorChoice === 'white' ? 'black' : 'white';
+
+    setBotActualColor(calculatedBotColor);
     setBotActive(true);
 
     // If bot plays White, it will trigger automatically in the useBotGame hook
     // We should orient the board to the player's perspective
-    const playerPersp = actualColor === 'white' ? 'white' : 'black';
-    useGameStore.getState().setBoardOrientation(playerPersp);
-    useGameStore.getState().setPlayerColor(playerPersp);
+    useGameStore.getState().setBoardOrientation(playerColorChoice);
+    useGameStore.getState().setPlayerColor(playerColorChoice);
   };
 
   const handleStopGame = () => {
@@ -140,7 +142,7 @@ export const BotPanel = () => {
               </span>
             </div>
             <div className="opponent-text">
-              Juegas con <strong>{botActualColor === 'white' ? 'Blancas' : 'Negras'}</strong> contra Stockfish
+              Juegas con <strong>{botActualColor === 'white' ? 'Negras' : 'Blancas'}</strong> contra Stockfish
             </div>
           </div>
 

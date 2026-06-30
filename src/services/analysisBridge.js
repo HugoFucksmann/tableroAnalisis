@@ -184,8 +184,8 @@ class AnalysisBridge {
         });
     }
 
-    async analyzePosition(fen, moveIndex, callbacks = {}) {
-        const { onResult, onStatus } = callbacks;
+    async analyzePosition(fen, moveIndex, options = {}) {
+        const { onResult, onStatus, ...customConfig } = options;
         const state = useGameStore.getState();
         const engineConfig = state.engineConfig ?? {};
 
@@ -215,7 +215,8 @@ class AnalysisBridge {
         backendService.analyzePosition(fen, moveIndex, {
             ...engineConfig,
             depth: engineConfig.liveDepth ?? engineConfig.depth ?? 18,
-            multiPv: engineConfig.liveMultiPv ?? engineConfig.multiPv ?? 1
+            multiPv: engineConfig.liveMultiPv ?? engineConfig.multiPv ?? 1,
+            ...customConfig
         });
     }
 
