@@ -2,6 +2,7 @@ import React, { useReducer, useEffect } from 'react';
 import { backendService } from '../../services/backendService';
 import { ChevronLeft, Trash2, Calendar, Hash } from 'lucide-react';
 import './Puzzle.css';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 const initialState = {
   puzzles: [],
@@ -161,7 +162,7 @@ export const PuzzleLibrary = ({ onBack }) => {
 
       <div className="pl-list premium-scroll">
         {isLoading ? (
-          <div className="pl-loading">Cargando biblioteca…</div>
+          <LoadingSpinner message="Cargando biblioteca…" />
         ) : puzzles.length === 0 ? (
           <div className="pl-empty">No hay puzzles guardados. Ve a "Extraer Puzzles" para empezar.</div>
         ) : (

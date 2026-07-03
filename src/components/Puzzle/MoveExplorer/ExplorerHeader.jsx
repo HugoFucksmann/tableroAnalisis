@@ -1,7 +1,12 @@
 import React from 'react';
-import { BarChart2, Cpu } from 'lucide-react';
+import { BarChart2 } from 'lucide-react';
 import './ExplorerHeader.css';
-import { EVAL_CONFIG } from '../../../constants/chessConstants.jsx';
+import { ViewToggle } from '../../common/ViewToggle';
+
+const COLOR_OPTIONS = [
+  { value: 'white', label: 'W', title: 'Ver como Blancas' },
+  { value: 'black', label: 'B', title: 'Ver como Negras' },
+];
 
 export const ExplorerHeader = ({ 
   ecoCode, 
@@ -26,22 +31,11 @@ export const ExplorerHeader = ({
         </div>
 
         <div className="header-actions">
-          <div className="perspective-toggle">
-            <button
-              className={`toggle-btn ${playerColor === 'white' ? 'active' : ''}`}
-              onClick={() => handleSetColor('white')}
-              title="Ver como Blancas"
-            >
-              W
-            </button>
-            <button
-              className={`toggle-btn ${playerColor === 'black' ? 'active' : ''}`}
-              onClick={() => handleSetColor('black')}
-              title="Ver como Negras"
-            >
-              B
-            </button>
-          </div>
+          <ViewToggle
+            options={COLOR_OPTIONS}
+            value={playerColor}
+            onChange={handleSetColor}
+          />
         </div>
       </div>
     </header>

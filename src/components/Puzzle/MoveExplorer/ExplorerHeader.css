@@ -73,43 +73,6 @@
   gap: 12px;
 }
 
-/* ── Toggle de perspectiva W / B (Moderno) ── */
-.move-explorer-view .perspective-toggle {
-  display: flex;
-  background: rgba(0, 0, 0, 0.4);
-  padding: 3px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.3);
-}
-
-.move-explorer-view .toggle-btn {
-  background: transparent;
-  border: none;
-  color: #666;
-  width: 28px;
-  height: 24px;
-  font-size: 0.7rem;
-  font-weight: 900;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.move-explorer-view .toggle-btn.active {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5), 
-              inset 0 1px 1px rgba(255, 255, 255, 0.1);
-}
-
-.move-explorer-view .toggle-btn:hover:not(.active) {
-  color: #999;
-}
-
 /* ── Botón de Acción del Explorador ── */
 .move-explorer-view .explorer-action-btn {
   background: transparent;

@@ -1,7 +1,12 @@
 import React from 'react';
 import { LayoutDashboard, List, AlertTriangle } from 'lucide-react';
 import './StatsTabs.css';
+import { ViewToggle } from '../../common/ViewToggle';
 
+const STATS_TAB_OPTIONS = [
+  { value: 'stats',   icon: <LayoutDashboard size={14} />, title: 'Dashboard' },
+  { value: 'history', icon: <List size={14} />,            title: 'Historial' },
+];
 
 export const StatsTabs = ({ 
   activeTab, 
@@ -30,23 +35,13 @@ export const StatsTabs = ({
             <AlertTriangle size={13} /> Borrar {selectedCount}
           </button>
         )}
-        <div className="stats-view-toggle">
-          <button
-            className={`view-btn ${activeTab === 'stats' ? 'active' : ''}`}
-            onClick={() => onTabChange('stats')}
-            title="Dashboard"
-          >
-            <LayoutDashboard size={14} />
-          </button>
-          <button
-            className={`view-btn ${activeTab === 'history' ? 'active' : ''}`}
-            onClick={() => onTabChange('history')}
-            title="Historial"
-          >
-            <List size={14} />
-          </button>
-        </div>
+        <ViewToggle
+          options={STATS_TAB_OPTIONS}
+          value={activeTab}
+          onChange={onTabChange}
+        />
       </div>
     </header>
   );
 };
+

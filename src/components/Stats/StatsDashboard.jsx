@@ -12,6 +12,7 @@ import { StatsTabs } from './StatsDashboard/StatsTabs';
 import { StatsFilterBar } from './StatsDashboard/StatsFilterBar';
 import { StatsSummaryView } from './StatsDashboard/StatsSummaryView';
 import { HistoryListView } from './StatsDashboard/HistoryListView';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 const PAGE_SIZE = 50;
 
@@ -139,12 +140,7 @@ export const StatsDashboard = () => {
     }
   }, [removeAnalyses]);
 
-  if (loading) return (
-    <div className="stats-loading">
-      <div className="spinner"></div>
-      <span>Cargando perfil…</span>
-    </div>
-  );
+  if (loading) return <LoadingSpinner message="Cargando perfil…" />;
 
   return (
     <motion.div

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { backendService } from '../../services/backendService';
-import { Play, Download, Trash2, Loader2 } from 'lucide-react';
+import { Play, Download, Trash2 } from 'lucide-react';
 import { Chessboard } from 'react-chessboard';
 import { PuzzlePlayer } from './PuzzlePlayer';
 import { PuzzleImporter } from './PuzzleImporter';
 import './Puzzle.css';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 const LazyChessboard = React.memo(({ fen, orientation }) => {
   const [isVisible, setIsVisible] = useState(false);
@@ -144,10 +145,7 @@ export const PuzzleDashboard = () => {
       </div>
 
       {loading ? (
-        <div className="puzzle-loading">
-          <Loader2 className="spinner" size={32} />
-          <p>Cargando biblioteca…</p>
-        </div>
+        <LoadingSpinner message="Cargando biblioteca…" />
       ) : puzzles.length === 0 ? (
         <div className="puzzle-empty">
           <p>No hay puzzles guardados.</p>

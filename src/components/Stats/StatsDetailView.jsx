@@ -3,8 +3,9 @@ import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { backendService } from '../../services/backendService';
 import { Chessboard } from 'react-chessboard';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import './StatsDetailView.css';
+import { LoadingSpinner } from '../common/LoadingSpinner';
 
 const LazyChessboard = React.memo(({ fen }) => {
     const [isVisible, setIsVisible] = useState(false);
@@ -109,8 +110,7 @@ export const StatsDetailView = () => {
 
             {loading ? (
                 <div className="stats-detail-loading">
-                    <Loader2 className="spinner" size={32} />
-                    <p>Analizando historial de posiciones…</p>
+                    <LoadingSpinner message="Analizando historial de posiciones…" />
                 </div>
             ) : details.length === 0 ? (
                 <div className="stats-detail-empty">

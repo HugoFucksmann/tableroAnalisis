@@ -1,0 +1,34 @@
+/* ── LoadingSpinner: Shared full-area loading state ─────────────────────── */
+.loading-spinner-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 1rem;
+  color: var(--text-muted);
+}
+
+.loading-spinner-container span {
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+/* Inline variant — used inside content (e.g., section headers) */
+.loading-spinner-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: var(--text-sm);
+  color: var(--text-muted);
+}
+
+/* Shared spin keyframe (if not already defined elsewhere) */
+@keyframes view-toggle-spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: view-toggle-spin 1s linear infinite;
+}

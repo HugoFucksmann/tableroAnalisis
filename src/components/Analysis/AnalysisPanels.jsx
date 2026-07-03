@@ -9,6 +9,7 @@ import { Key, Cpu, Download, Bot, Sliders } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import { useShallow } from 'zustand/react/shallow';
 import { generateAnnotatedPgn, downloadPgn } from '../../utils/pgnExport';
+import { ViewToggle } from '../common/ViewToggle';
 
 export const AnalysisPanels = ({
   isHistoryCollapsed,
@@ -49,27 +50,21 @@ export const AnalysisPanels = ({
     const pgn = generateAnnotatedPgn(history, moveEvaluations, evaluationHistory, engineConfig, gameHeaders, pgnCommentsByIndex);
     downloadPgn(pgn, 'analisis_partida.pgn');
   };
+  const ANALYSIS_VIEW_OPTIONS = [
+    { value: 'analysis', icon: <Sliders size={14} />, title: 'Panel de Análisis' },
+    { value: 'bot',      icon: <Bot size={14} />,     title: 'Panel del Bot' },
+  ];
+
   return (
     <>
       <div className="panel-container controls-panel">
         <div className="panel-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h3>{analysisSubView === 'analysis' ? 'Análisis' : 'Bot'}</h3>
-          <div className="analysis-view-toggle">
-            <button
-              className={`view-btn ${analysisSubView === 'analysis' ? 'active' : ''}`}
-              onClick={() => setAnalysisSubView('analysis')}
-              title="Panel de Análisis"
-            >
-              <Sliders size={14} />
-            </button>
-            <button
-              className={`view-btn ${analysisSubView === 'bot' ? 'active' : ''}`}
-              onClick={() => setAnalysisSubView('bot')}
-              title="Panel del Bot"
-            >
-              <Bot size={14} />
-            </button>
-          </div>
+          <ViewToggle
+            options={ANALYSIS_VIEW_OPTIONS}
+            value={analysisSubView}
+            onChange={setAnalysisSubView}
+          />
         </div>
         <div className="controls-content">
           {analysisSubView === 'bot' ? (
