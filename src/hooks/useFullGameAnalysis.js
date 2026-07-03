@@ -14,22 +14,14 @@ export const useFullGameAnalysis = () => {
     const lichessToken     = useGameStore(state => state.lichessToken);
     const playerColor      = useGameStore(state => state.playerColor);
 
-    const setAnalyzing             = useGameStore(state => state.setAnalyzing);
-    const setAnalysisProgress      = useGameStore(state => state.setAnalysisProgress);
-    const setAnalysisReady         = useGameStore(state => state.setAnalysisReady);
-    const setEvaluation            = useGameStore(state => state.setEvaluation);
-    const setMoveEvaluation        = useGameStore(state => state.setMoveEvaluation);
-    const setBestMoveForIndex      = useGameStore(state => state.setBestMoveForIndex);
-    const setAlternativeLinesForIndex = useGameStore(state => state.setAlternativeLinesForIndex);
-    const setAccuracy              = useGameStore(state => state.setAccuracy);
-    const setEcoCode               = useGameStore(state => state.setEcoCode);
-    const setOpeningPly            = useGameStore(state => state.setOpeningPly);
-    const setOpeningDetected       = useGameStore(state => state.setOpeningDetected);
-    const setOpeningName           = useGameStore(state => state.setOpeningName);
+    const setAnalyzing        = useGameStore(state => state.setAnalyzing);
+    const setAnalysisProgress = useGameStore(state => state.setAnalysisProgress);
 
     // historyRef evita que el closure capture una historia obsoleta.
     const historyRef = useRef(history);
-    historyRef.current = history;
+    useEffect(() => {
+        historyRef.current = history;
+    });
 
     useEffect(() => {
         // analysisRequestId es null si nunca se pidió análisis.

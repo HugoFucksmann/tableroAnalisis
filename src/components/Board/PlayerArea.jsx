@@ -29,13 +29,13 @@ const ClockDisplay = ({ time, isActive }) => {
     );
 };
 
+// Captured pieces component
 const CapturedPieces = ({ pieces }) => {
     if (!pieces?.length) return null;
     return (
         <div className="captured-pieces" aria-label="Captured pieces">
             {pieces.map((p, i) => {
                 const side = p === p.toUpperCase() ? 'white' : 'black';
-                // eslint-disable-next-line react/no-array-index-key
                 return (
                     <span key={`${p}-${i}`} className={`captured-piece ${side}`}>
                         {getPieceIcon(p)}
@@ -47,8 +47,6 @@ const CapturedPieces = ({ pieces }) => {
 };
 
 export const PlayerArea = React.memo(({ side, name, elo, clock, material, isActive }) => {
-    const initial = name?.[0]?.toUpperCase() ?? '?';
-
     return (
         <div
             className={`player-area ${side}${isActive ? ' active' : ''}`}

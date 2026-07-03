@@ -7,7 +7,7 @@ export function replayTo(history, index, startFen = null) {
   for (const m of moves) {
     try {
       g.move(m);
-    } catch (e) {
+    } catch {
       console.warn('Invalid move in history:', m);
     }
   }

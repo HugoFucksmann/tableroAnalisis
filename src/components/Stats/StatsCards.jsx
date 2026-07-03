@@ -1,5 +1,6 @@
 import React from 'react';
-import { m } from 'framer-motion';
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion';
 import { Zap, Target, BookOpen, AlertTriangle, Clock, Brain, Timer } from 'lucide-react';
 import { useGameStore } from '../../store/useGameStore';
 import './StatsCards.css';
@@ -41,7 +42,7 @@ export const PhaseStatsCard = ({ stats }) => (
               <strong>{p.accuracy}%</strong>
             </div>
             <div className="stats-progress-bar">
-              <m.div
+              <motion.div
                 className="stats-progress-bar-fill"
                 initial={{ width: 0 }}
                 animate={{ width: `${p.accuracy}%` }}
@@ -87,7 +88,7 @@ export const QualityStatsCard = ({ stats }) => (
             <span className="t-label-m">{t.label}</span>
             <span className="t-count-m">{t.pct}%</span>
             <div className="stats-progress-bar">
-              <m.div
+              <motion.div
                 className="stats-progress-bar-fill"
                 initial={{ width: 0 }}
                 animate={{ width: `${t.pct}%` }}
@@ -183,7 +184,7 @@ export const PsychologicalProfileCard = ({ stats }) => {
           <div className="psycho-data">
             <span className="psycho-val">{conversionRate}%</span>
             <div className="stats-progress-bar">
-              <m.div className="stats-progress-bar-fill" initial={{ width: 0 }} animate={{ width: `${conversionRate}%` }} style={{ background: '#4caf50' }} />
+              <motion.div className="stats-progress-bar-fill" initial={{ width: 0 }} animate={{ width: `${conversionRate}%` }} style={{ background: '#4caf50' }} />
             </div>
           </div>
         </div>
@@ -209,7 +210,7 @@ export const PsychologicalProfileCard = ({ stats }) => {
           <div className="psycho-data">
             <span className="psycho-val">{resilienceRate}%</span>
             <div className="stats-progress-bar">
-              <m.div className="stats-progress-bar-fill" initial={{ width: 0 }} animate={{ width: `${resilienceRate}%` }} style={{ background: '#2196f3' }} />
+              <motion.div className="stats-progress-bar-fill" initial={{ width: 0 }} animate={{ width: `${resilienceRate}%` }} style={{ background: '#2196f3' }} />
             </div>
           </div>
         </div>

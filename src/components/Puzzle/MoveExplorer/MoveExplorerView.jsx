@@ -12,7 +12,7 @@ import { MoveSection } from './MoveSection';
 
 import './MoveExplorerView.css';
 
-export const MoveExplorerView = ({ onBack }) => {
+export const MoveExplorerView = () => {
   const {
     fen,
     explorerData,
@@ -34,8 +34,6 @@ export const MoveExplorerView = ({ onBack }) => {
     setEcoCode,
     openingName,
     ecoCode,
-    evaluationHistory,
-    moveEvaluations
   } = useGameStore(useShallow(state => ({
     fen: state.fen,
     explorerData: state.explorerData,
@@ -57,32 +55,27 @@ export const MoveExplorerView = ({ onBack }) => {
     setEcoCode: state.setEcoCode,
     openingName: state.openingName,
     ecoCode: state.ecoCode,
-    evaluationHistory: state.evaluationHistory,
-    moveEvaluations: state.moveEvaluations
   })));
 
-  const currentEval = evaluationHistory[currentMoveIndex];
   const [loading, setLoading] = useState(false);
   const [isStale, setIsStale] = useState(false);
   const [loadingMasters, setLoadingMasters] = useState(false);
-  const [lastMoveStats, setLastMoveStats] = useState(null);
   const lastScrollTime = useRef(0);
   const loadingTimerRef = useRef(null);
   const containerRef = useRef(null);
 
-  // ─── Capturar estadísticas del movimiento realizado ─────────────────────────
-  useEffect(() => {
-    if (history.length > 0 && currentMoveIndex >= 0) {
+  const lastMoveStats = (() => {
+    if (history.length > 0 && currentMoveIndex >= 0 && explorerData) {
       const lastMove = history[currentMoveIndex];
-      const perspective = lastMove.color === 'w' ? explorerData?.whitePerspective : explorerData?.blackPerspective;
+      const perspective = lastMove.color === 'w' ? explorerData.whitePerspective : explorerData.blackPerspective;
       const stats = perspective?.userMoves?.find(m => m.san === lastMove.san) ||
         perspective?.opponentMoves?.find(m => m.san === lastMove.san);
-
       if (stats) {
-        setLastMoveStats({ ...stats, color: lastMove.color });
+        return { ...stats, color: lastMove.color };
       }
     }
-  }, [fen, currentMoveIndex, explorerData, history]);
+    return null;
+  })();
 
   const updatePlayerNames = useCallback((color) => {
     const name = searchUsername || 'Mi Usuario';
@@ -132,7 +125,6 @@ export const MoveExplorerView = ({ onBack }) => {
   }, [fen]);
 
   const fetchMastersData = useCallback(async () => {
-    const cleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
     setLoadingMasters(true);
     try {
       const data = await lichessExplorerService.fetchMastersData(fen, lichessToken);
@@ -169,8 +161,10 @@ export const MoveExplorerView = ({ onBack }) => {
 
   useEffect(() => {
     const currentCleanFen = fen.trim().split(' ').slice(0, 4).join(' ');
-    fetchExplorerData();
-    fetchMastersData();
+    const fetchTimer = setTimeout(() => {
+      fetchExplorerData();
+      fetchMastersData();
+    }, 0);
 
     const removeHandler = backendService.addHandler((msg) => {
       if (msg.type === 'move_explorer_data') {
@@ -181,10 +175,15 @@ export const MoveExplorerView = ({ onBack }) => {
           setLoading(false);
           setIsStale(false);
         }
+      } else if (msg.type === 'error') {
+        if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
+        setLoading(false);
+        setIsStale(false);
       }
     });
 
     return () => {
+      clearTimeout(fetchTimer);
       if (loadingTimerRef.current) clearTimeout(loadingTimerRef.current);
       removeHandler();
       setHoveredExplorerMove(null);

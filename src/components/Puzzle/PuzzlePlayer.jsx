@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useGameStore } from '../../store/useGameStore';
 import { backendService } from '../../services/backendService';
 import { ArrowLeft, ChevronLeft, ChevronRight, Eye, SkipForward, CheckCircle2, XCircle, RotateCcw } from 'lucide-react';
@@ -8,9 +8,8 @@ export const PuzzlePlayer = ({ puzzles, initialIndex, onBack }) => {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [showSolution, setShowSolution] = useState(false);
     const [showOriginal, setShowOriginal] = useState(false);
-    const [isWrong, setIsWrong] = useState(false);
-    const [isSolved, setIsSolved] = useState(false);
     const opponentTimerRef = useRef(null);
+    const hasNotifiedSolvedRef = useRef(null);
 
     const {
         loadFen, setBoardOrientation, setPuzzleState, puzzleState,
@@ -24,68 +23,78 @@ export const PuzzlePlayer = ({ puzzles, initialIndex, onBack }) => {
     const contextMoves = Array.isArray(puzzle?.contextMoves) ? puzzle.contextMoves : [];
     const playerColor = puzzle?.playerColor || (puzzle?.fen && puzzle.fen.includes(' w ') ? 'white' : 'black');
 
-    const initPuzzle = () => {
+    const isWrong = puzzleState?.isWrong || false;
+    const isSolved = puzzleState?.isSolved || false;
+
+    const initPuzzle = useCallback(() => {
         if (!puzzle) return;
         if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
 
         setShowSolution(false);
         setShowOriginal(false);
-        setIsWrong(false);
-        setIsSolved(false);
         setArrows([]);
+        hasNotifiedSolvedRef.current = null;
+
+        const currentSolutionSequence = Array.isArray(puzzle.solutionSequence) ? puzzle.solutionSequence : [];
+        const currentContextMoves = Array.isArray(puzzle.contextMoves) ? puzzle.contextMoves : [];
+        const currentPlayerColor = puzzle.playerColor || (puzzle.fen && puzzle.fen.includes(' w ') ? 'white' : 'black');
 
         if (puzzle.baseFen && puzzle.playedMove) {
             loadFen(puzzle.baseFen);
-            setBoardOrientation(playerColor);
-            contextMoves.forEach(m => makeMove(m));
+            setBoardOrientation(currentPlayerColor);
+            currentContextMoves.forEach(m => makeMove(m));
             setPuzzleState({ sequence: ['__animating__'], currentStep: 0, isWrong: false, isSolved: false, isAnimating: true });
             opponentTimerRef.current = setTimeout(() => {
                 makeMove(puzzle.playedMove);
-                setPuzzleState({ sequence: solutionSequence, currentStep: 0, isWrong: false, isSolved: false });
+                setPuzzleState({ sequence: currentSolutionSequence, currentStep: 0, isWrong: false, isSolved: false });
             }, 1000);
         } else if (puzzle.preBlunderFen && puzzle.playedMove) {
             loadFen(puzzle.preBlunderFen);
-            setBoardOrientation(playerColor);
+            setBoardOrientation(currentPlayerColor);
             setPuzzleState({ sequence: ['__animating__'], currentStep: 0, isWrong: false, isSolved: false, isAnimating: true });
             opponentTimerRef.current = setTimeout(() => {
                 makeMove(puzzle.playedMove);
-                setPuzzleState({ sequence: solutionSequence, currentStep: 0, isWrong: false, isSolved: false });
+                setPuzzleState({ sequence: currentSolutionSequence, currentStep: 0, isWrong: false, isSolved: false });
             }, 1000);
         } else {
             loadFen(puzzle.fen);
-            setBoardOrientation(playerColor);
-            setPuzzleState({ sequence: solutionSequence, currentStep: 0, isWrong: false, isSolved: false });
+            setBoardOrientation(currentPlayerColor);
+            setPuzzleState({ sequence: currentSolutionSequence, currentStep: 0, isWrong: false, isSolved: false });
         }
-    };
+    }, [puzzle, loadFen, setBoardOrientation, makeMove, setPuzzleState, setArrows]);
 
     useEffect(() => {
-        initPuzzle();
+        const timer = setTimeout(() => {
+            initPuzzle();
+        }, 0);
         return () => {
+            clearTimeout(timer);
             if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
             setPuzzleState(null);
             setArrows([]);
         };
-    }, [currentIndex]);
+    }, [initPuzzle, setPuzzleState, setArrows]);
 
     useEffect(() => {
-        if (!puzzleState || isSolved) return;
-        if (puzzleState.isWrong) {
-            setIsWrong(true);
-            return;
-        }
+        if (!puzzleState) return;
 
         const step = puzzleState.currentStep;
         const sequence = puzzleState.sequence || [];
 
-        if (step >= sequence.length && sequence.length > 0) {
-            setIsSolved(true);
-            setIsWrong(false);
-            backendService.puzzleSolved(puzzle.id);
-            playChessSound('notify');
+        if (step >= sequence.length && sequence.length > 0 && !puzzleState.isWrong && !puzzleState.isSolved) {
+            if (hasNotifiedSolvedRef.current !== puzzle.id) {
+                hasNotifiedSolvedRef.current = puzzle.id;
+                backendService.puzzleSolved(puzzle.id);
+                playChessSound('notify');
+                const solveTimer = setTimeout(() => {
+                    setPuzzleState(prev => ({ ...prev, isSolved: true }));
+                }, 0);
+                return () => clearTimeout(solveTimer);
+            }
             return;
         }
 
-        if (step % 2 === 1) {
+        if (step % 2 === 1 && !puzzleState.isSolved && !puzzleState.isWrong) {
             const oppUci = sequence[step];
             const oppMove = { from: oppUci.slice(0, 2), to: oppUci.slice(2, 4), ...(oppUci.length === 5 ? { promotion: oppUci[4] } : {}) };
             opponentTimerRef.current = setTimeout(() => {
@@ -97,7 +106,7 @@ export const PuzzlePlayer = ({ puzzles, initialIndex, onBack }) => {
         return () => {
             if (opponentTimerRef.current) clearTimeout(opponentTimerRef.current);
         };
-    }, [puzzleState?.currentStep, puzzleState?.isWrong]);
+    }, [puzzleState, puzzle.id, setPuzzleState, makeMove]);
 
     useEffect(() => {
         if (currentMoveIndex >= 0 && history[currentMoveIndex]) {

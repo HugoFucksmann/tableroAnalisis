@@ -5,13 +5,12 @@ import { Clock, Zap, Brain, Sparkles, AlertCircle, CheckCircle2 } from 'lucide-r
 import './TimeErrorBreakdown.css';
 
 export const TimeErrorBreakdown = ({ mistakeCounts }) => {
-  const { moveEvaluations, errorTimeClasses, playerColor, analysisReady, history, pgnCommentsByIndex } =
+  const { moveEvaluations, errorTimeClasses, playerColor, analysisReady, pgnCommentsByIndex } =
     useGameStore(useShallow(state => ({
       moveEvaluations: state.moveEvaluations,
       errorTimeClasses: state.errorTimeClasses,
       playerColor: state.playerColor,
       analysisReady: state.analysisReady,
-      history: state.history,
       pgnCommentsByIndex: state.pgnCommentsByIndex,
     })));
 

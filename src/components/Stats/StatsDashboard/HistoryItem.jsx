@@ -1,4 +1,5 @@
 import React from 'react';
+import { Trash2 } from 'lucide-react';
 import './HistoryItem.css';
 
 const formatTimeControl = (tc) => {
@@ -116,6 +117,13 @@ export const HistoryItem = React.memo(({ item, selected, onToggle, onDelete }) =
           {item.color === 'white' ? item.white?.accuracy : item.black?.accuracy}%
         </div>
         <div className="hi-acc-label">precisión</div>
+        <button
+          className="hi-delete-btn"
+          title="Eliminar análisis"
+          onClick={(e) => { e.stopPropagation(); onDelete(item.id, e); }}
+        >
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   );

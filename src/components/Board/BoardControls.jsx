@@ -14,17 +14,15 @@ import './BoardControls.css';
 
 export const BoardControls = () => {
   const {
-    resetGame, goToMove,
+    goToMove,
     currentMoveIndex, history,
     boardOrientation, setBoardOrientation,
-    analysisReady,
   } = useGameStore(useShallow(state => ({
     goToMove: state.goToMove,
     currentMoveIndex: state.currentMoveIndex,
     history: state.history,
     boardOrientation: state.boardOrientation,
     setBoardOrientation: state.setBoardOrientation,
-    analysisReady: state.analysisReady,
   })));
 
   const handleToggleOrientation = () => {

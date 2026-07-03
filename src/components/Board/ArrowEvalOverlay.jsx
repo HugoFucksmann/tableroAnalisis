@@ -17,7 +17,7 @@ export const ArrowEvalOverlay = React.memo(({ arrowsWithDelta, orientation }) =>
             style={{ width: '100%', height: '100%' }}
             aria-hidden="true"
         >
-            {arrowsWithDelta.map((item, i) => {
+            {arrowsWithDelta.map((item) => {
                 const coords = squareToPct(item.arrow.endSquare, orientation);
                 if (!coords) return null;
 

@@ -51,11 +51,17 @@ export const StatsDetailView = () => {
 
     const [details, setDetails] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [prevCategory, setPrevCategory] = useState(selectedStatCategory);
+
+    if (selectedStatCategory !== prevCategory) {
+        setPrevCategory(selectedStatCategory);
+        setLoading(true);
+        setDetails([]);
+    }
 
     useEffect(() => {
         if (!selectedStatCategory) return;
         
-        setLoading(true);
         // Podemos usar los mismos filtros globales de stats si estuvieran en el store, 
         // pero por simplicidad pasamos {} o los guardamos.
         backendService.getStatDetails(selectedStatCategory, { username: searchUsername })
@@ -67,7 +73,7 @@ export const StatsDetailView = () => {
                 console.error(err);
                 setLoading(false);
             });
-    }, [selectedStatCategory]);
+    }, [selectedStatCategory, searchUsername]);
 
     if (!selectedStatCategory) return null;
 
@@ -112,7 +118,7 @@ export const StatsDetailView = () => {
                 </div>
             ) : (
                 <div className="stats-detail-grid">
-                    {details.map((item, index) => (
+                    {details.map((item) => (
                         <div 
                             key={`${item.gameId}-${item.ply ?? 'null'}`} 
                             className="stat-board-card"

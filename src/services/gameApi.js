@@ -29,7 +29,7 @@ export async function fetchLichessGames(username, max = 15, until = null, token 
           createdAt: game.createdAt,
           timeControl,
         });
-      } catch (e) {
+      } catch {
         console.warn('Línea NDJSON corrupta ignorada (Conexión cortada por el servidor)');
       }
       return acc;

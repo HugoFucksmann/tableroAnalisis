@@ -1,5 +1,6 @@
 import React from 'react';
-import { m } from 'framer-motion';
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion';
 import { useGameStore } from '../../store/useGameStore';
 import './EvaluationBar.css';
 
@@ -29,7 +30,7 @@ export const EvaluationBar = ({ orientation = 'vertical' }) => {
       aria-label={`Evaluación: ${displayValue}`}
     >
       <div className="eval-bar-container">
-        <m.div
+        <motion.div
           className="eval-bar-fill"
           initial={isVertical ? { height: '50%' } : { width: '50%' }}
           animate={isVertical

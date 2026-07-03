@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import { Dashboard } from './components/Layout/Dashboard';
 import './index.css';
-import { useGameStore } from './store/useGameStore';
 import { backendService } from './services/backendService';
 import { LazyMotion, domAnimation } from 'framer-motion';
 

@@ -1,7 +1,7 @@
 class BackendService {
     constructor() {
         this.ws = null;
-        this.url = 'ws://localhost:9001';
+        this.url = import.meta.env.VITE_WS_URL || 'ws://localhost:9001';
         this.isConnected = false;
         this.handlers = new Set();
         this._reconnectTimer = null;

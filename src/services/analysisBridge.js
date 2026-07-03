@@ -202,10 +202,12 @@ class AnalysisBridge {
             if (msg.type === 'position_result') {
                 onStatus?.(false);
                 this.isRunning = false;
+                removeHandler();
             }
             if (msg.type === 'error') {
                 onStatus?.(false);
                 this.isRunning = false;
+                removeHandler();
             }
         });
 

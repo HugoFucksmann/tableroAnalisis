@@ -116,6 +116,9 @@ export const PuzzleLibrary = ({ onBack }) => {
         if (msg.type === 'puzzle_deleted' && msg.id === id) {
           dispatch({ type: 'PUZZLE_DELETED', payload: id });
           removeHandler();
+        } else if (msg.type === 'error') {
+          alert(`Error al eliminar puzzle: ${msg.message}`);
+          removeHandler();
         }
       });
       backendService.deletePuzzle(id);
@@ -127,6 +130,9 @@ export const PuzzleLibrary = ({ onBack }) => {
       const removeHandler = backendService.addHandler((msg) => {
         if (msg.type === 'puzzles_cleared') {
           dispatch({ type: 'PUZZLES_CLEARED' });
+          removeHandler();
+        } else if (msg.type === 'error') {
+          alert(`Error al vaciar biblioteca: ${msg.message}`);
           removeHandler();
         }
       });

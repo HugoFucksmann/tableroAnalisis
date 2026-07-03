@@ -20,19 +20,17 @@ export const GameImport = ({ onGameSelect }) => {
 
   const {
     username, platform, games, lichessToken,
-    lastTimestamp, chesscomPagination, hasMoreGames,
+    hasMoreGames,
     selectedGameIds, analysedGameIds,
     setSearchUsername, setSearchPlatform,
     setImportedGames, appendImportedGames, setPagination, resetGames,
-    toggleGameSelection, selectAllGames, clearSelection,
+    toggleGameSelection, clearSelection,
     setAnalysedGameIds,
   } = useGameStore(useShallow(state => ({
     username: state.searchUsername,
     platform: state.searchPlatform,
     games: state.importedGames,
     lichessToken: state.lichessToken,
-    lastTimestamp: state.lastTimestamp,
-    chesscomPagination: state.chesscomPagination,
     hasMoreGames: state.hasMoreGames,
     selectedGameIds: state.selectedGameIds,
     analysedGameIds: state.analysedGameIds,
@@ -43,7 +41,6 @@ export const GameImport = ({ onGameSelect }) => {
     setPagination: state.setPagination,
     resetGames: state.resetGames,
     toggleGameSelection: state.toggleGameSelection,
-    selectAllGames: state.selectAllGames,
     clearSelection: state.clearSelection,
     setAnalysedGameIds: state.setAnalysedGameIds,
   })));
@@ -62,7 +59,6 @@ export const GameImport = ({ onGameSelect }) => {
   const { loadingId, isFetching, isFetchingMore, isScanning, error, customPgn, batchStatus } = uiState;
 
   const [hideAnalyzed, setHideAnalyzed] = useState(false);
-  const [emptyPagesCount, setEmptyPagesCount] = useState(0);
 
   // ── Derived ──────────────────────────────────────────────────────
   // Build Set from the lightweight analysedGameIds (all entries, no LIMIT)
@@ -90,12 +86,8 @@ export const GameImport = ({ onGameSelect }) => {
   }, [allSelected, displayedGames, selectedGameIds]);
 
   const handleToggleHideAnalyzed = useCallback(() => {
-    setHideAnalyzed(prev => {
-      const newVal = !prev;
-      setEmptyPagesCount(0);
-      return newVal;
-    });
-  }, [setHideAnalyzed, setEmptyPagesCount]);
+    setHideAnalyzed(prev => !prev);
+  }, [setHideAnalyzed]);
 
   // updateUi supports both plain patches and functional updaters (prevents stale closures)
   const updateUi = useCallback(
@@ -138,9 +130,13 @@ export const GameImport = ({ onGameSelect }) => {
         case 'batch_analysis_cancelled':
           updateUi({ batchStatus: null });
           clearSelection();
-          setEmptyPagesCount(0); // Reset empty count so we can auto-search more after a batch completes
+          // Batch completed — refresh analysed IDs
           // Refresh the full analysed IDs set after a batch completes
           backendService.getAnalysedIds();
+          break;
+        case 'error':
+          updateUi({ batchStatus: null, error: msg.message || 'Error durante el análisis.' });
+          clearSelection();
           break;
       }
     });
@@ -149,21 +145,21 @@ export const GameImport = ({ onGameSelect }) => {
     backendService.getAnalysedIds();
 
     return () => cleanup();
-  }, [setAnalysedGameIds, clearSelection, updateUi, setEmptyPagesCount]);
+  }, [setAnalysedGameIds, clearSelection, updateUi]);
 
   // ── Handlers ─────────────────────────────────────────────────────
   const handlePlatformSwitch = (p) => {
     setSearchPlatform(p);
     resetGames();
     updateUi({ error: '' });
-    setEmptyPagesCount(0);
+
   };
 
   const performSearch = useCallback(async (targetUsername, targetPlatform) => {
     if (!targetUsername.trim()) return;
     updateUi({ isFetching: true, error: '' });
     resetGames();
-    setEmptyPagesCount(0);
+
 
     try {
       if (targetPlatform === 'lichess') {
@@ -183,7 +179,7 @@ export const GameImport = ({ onGameSelect }) => {
     } finally {
       updateUi({ isFetching: false });
     }
-  }, [lichessToken, setImportedGames, setPagination, resetGames, updateUi, setEmptyPagesCount]);
+  }, [lichessToken, setImportedGames, setPagination, resetGames, updateUi]);
 
   // ── Fetch a single page and append unique games ──────────────────
   // Returns: { fetchedGames, hasMore } or null on error

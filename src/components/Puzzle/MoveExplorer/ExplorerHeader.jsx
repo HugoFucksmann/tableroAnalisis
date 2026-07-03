@@ -6,7 +6,6 @@ import { EVAL_CONFIG } from '../../../constants/chessConstants.jsx';
 export const ExplorerHeader = ({ 
   ecoCode, 
   openingName, 
-  currentMoveIndex,
   playerColor,
   handleSetColor
 }) => {

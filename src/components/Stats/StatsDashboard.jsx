@@ -1,5 +1,6 @@
-import React, { useEffect, useMemo, useCallback, useReducer, useRef } from 'react';
-import { m } from 'framer-motion';
+import React, { useEffect, useCallback, useReducer, useRef } from 'react';
+// eslint-disable-next-line no-unused-vars
+import { motion } from 'framer-motion';
 import { useShallow } from 'zustand/react/shallow';
 import { backendService } from '../../services/backendService';
 import { useGameStore } from '../../store/useGameStore';
@@ -32,6 +33,7 @@ export const StatsDashboard = () => {
   const lastStatsRequestId = useRef(null);
   const filterTimeoutRef = useRef(null);
   const loadingRef = useRef(loading);
+  const prevFiltersRef = useRef({ time: timeFilter, duration: durationFilter, count: countFilter });
 
   useEffect(() => {
     loadingRef.current = loading;
@@ -88,6 +90,18 @@ export const StatsDashboard = () => {
 
   useEffect(() => {
     if (loading) return;
+
+    const prev = prevFiltersRef.current;
+    if (
+      prev.time === timeFilter &&
+      prev.duration === durationFilter &&
+      prev.count === countFilter
+    ) {
+      return;
+    }
+
+    prevFiltersRef.current = { time: timeFilter, duration: durationFilter, count: countFilter };
+
     if (filterTimeoutRef.current) clearTimeout(filterTimeoutRef.current);
     filterTimeoutRef.current = setTimeout(fetchStats, 300);
     return () => clearTimeout(filterTimeoutRef.current);
@@ -133,7 +147,7 @@ export const StatsDashboard = () => {
   );
 
   return (
-    <m.div
+    <motion.div
       className={`stats-dashboard-new ${isFiltering ? 'is-filtering' : ''}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -169,6 +183,6 @@ export const StatsDashboard = () => {
       ) : (
         <StatsSummaryView stats={rawData} />
       )}
-    </m.div>
+    </motion.div>
   );
 };

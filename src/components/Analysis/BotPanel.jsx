@@ -18,7 +18,6 @@ export const BotPanel = () => {
     takebackBotMove,
     resetGame,
     history,
-    currentMoveIndex,
   } = useGameStore(useShallow(state => ({
     botActive: state.botActive,
     botDifficulty: state.botDifficulty,
@@ -32,7 +31,6 @@ export const BotPanel = () => {
     takebackBotMove: state.takebackBotMove,
     resetGame: state.resetGame,
     history: state.history,
-    currentMoveIndex: state.currentMoveIndex,
   })));
 
   const handleStartGame = () => {
